@@ -60,3 +60,10 @@ fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots/**/*.png
 fastlane/test_output
+
+# Local Shogun build outputs
+DerivedData/
+build/
+
+# macOS metadata
+.DS_Store
