@@ -18,7 +18,7 @@ Native iPhone app for iOS 17+, built with SwiftUI and Apple frameworks only.
 - Placeholder profile, tab navigation, and automatic system light/dark appearance.
 - Original poster artwork generated locally by SwiftUI shapes, gradients, text and SF Symbols. No remote images or asset downloads.
 
-The demo has six personal titles and three family titles, including an overlapping movie and two VHS copies of the same movie. Changes are in memory and reset when the app restarts. Account creation, invitations, adding movies, persistence, Supabase and TMDB are intentionally outside Phase 1.
+The demo has six personal titles and three family titles, including an overlapping movie and two VHS copies of the same movie. Changes are in memory and reset when the app restarts. Account creation, invitations, full catalog/manual movie entry, persistence, Supabase and TMDB remain outside this preview. The Library redesign includes a small local sample-copy sheet behind the + button.
 
 ## Architecture
 
@@ -41,3 +41,15 @@ Xcode reported CoreSimulator service failures and a version mismatch (installed 
 Manual checks in Xcode: switch libraries, search by title/year, open details from both tabs, change watched/rating then open the same title through the other library, clear rating, and check light/dark mode and large Dynamic Type. Restart to confirm the documented demo reset.
 
 See AGENTS.md for project conventions. No signing team or production icon is configured; add these before distribution.
+
+## Library redesign preview
+
+Branch: `feature/library-redesign`, based on `dev`. Implements the supplied Figma screenshots with warm off-white/charcoal canvas colors, vintage-red controls, compact Library header, library selector, local search, and muted poster placeholders. Named color assets carry light/dark variants. Native tab navigation is retained and tinted to match.
+
+The view menu immediately left of + offers Zoom In/Out across 2–5 columns. Dense grids omit captions; VoiceOver still reads movie title, year and formats. Accessibility Dynamic Type uses two columns. + opens a minimal local sample-copy form, defaults to the current writable library, and shows ownership across accessible libraries. This is not the full planned TMDB/manual-entry flow.
+
+Verification: Debug simulator build and model/store checks pass, including zoom bounds, invalid-library rejection and adding a copy without duplicating metadata. Runtime visual verification remains unavailable from the agent environment because CoreSimulator services cannot be reached. In Xcode, run both appearances, open the view menu and check both bounds, switch libraries, search/no results, open a movie and return, add a sample copy, and check large text/VoiceOver. Compare the overall layout with the supplied screenshot; exact live Figma token inspection was unavailable due to the Starter-plan tool limit.
+
+## Styling organization
+
+`Shogun/DesignSystem/Theme/ShogunTheme.swift` is the central reference for colors, semantic type, spacing, radii, sizes and procedural poster styling. `SystemAppearance.swift` configures native bars. `Styles/ViewStyles.swift` owns reusable surface, canvas, brand, movie text and rating-button treatments. `Components/ShogunIcon.swift` owns header icon sizing. Feature views keep their structural stacks, alignment, navigation and behavior. This extraction preserves the existing layout and asset values.
