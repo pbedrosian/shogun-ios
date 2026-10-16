@@ -7,6 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+BF1000000000000000000000 = {isa = PBXBuildFile; fileRef = BF0000000000000000000000; };
+BF1000000000000000000001 = {isa = PBXBuildFile; fileRef = BF0000000000000000000001; };
+BF1000000000000000000002 = {isa = PBXBuildFile; fileRef = BF0000000000000000000002; };
+BF1000000000000000000003 = {isa = PBXBuildFile; fileRef = BF0000000000000000000003; };
+		AF1000000000000000000001 = {isa = PBXBuildFile; fileRef = AF1000000000000000000002; };
 		AF0000000000000000000000 /* ShogunApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6D0BB6E3081A93A00887AC8 /* ShogunApp.swift */; };
 		AF0000000000000000000001 /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6D0BB703081A93A00887AC8 /* LibraryView.swift */; };
 		AF0000000000000000000002 /* MovieDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6D0BB713081A93A00887AC8 /* MovieDetailView.swift */; };
@@ -19,6 +24,11 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+BF0000000000000000000000 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShogunTheme.swift; sourceTree = "<group>"; };
+BF0000000000000000000001 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemAppearance.swift; sourceTree = "<group>"; };
+BF0000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewStyles.swift; sourceTree = "<group>"; };
+BF0000000000000000000003 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShogunIcon.swift; sourceTree = "<group>"; };
+		AF1000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		000000000000000000000004 /* Shogun.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = Shogun.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D6D0BB6A3081A93A00887AC8 /* AGENTS.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = AGENTS.md; sourceTree = "<group>"; };
 		D6D0BB6B3081A93A00887AC8 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
@@ -45,6 +55,10 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+BF2000000000000000000000 = {isa = PBXGroup; path = Theme; sourceTree = "<group>"; children = (BF0000000000000000000000,BF0000000000000000000001); };
+BF2000000000000000000001 = {isa = PBXGroup; path = Styles; sourceTree = "<group>"; children = (BF0000000000000000000002); };
+BF2000000000000000000002 = {isa = PBXGroup; path = Components; sourceTree = "<group>"; children = (BF0000000000000000000003); };
+BF3000000000000000000000 = {isa = PBXGroup; path = DesignSystem; sourceTree = "<group>"; children = (BF2000000000000000000000,BF2000000000000000000001,BF2000000000000000000002); };
 		000000000000000000000002 = {
 			isa = PBXGroup;
 			children = (
@@ -143,6 +157,8 @@
 		D6D0BB7F3081A93A00887AC8 /* Shogun */ = {
 			isa = PBXGroup;
 			children = (
+				BF3000000000000000000000 /* DesignSystem */,
+				AF1000000000000000000002 /* Assets.xcassets */,
 				D6D0BB6F3081A93A00887AC8 /* App */,
 				D6D0BB773081A93A00887AC8 /* Features */,
 				D6D0BB793081A93A00887AC8 /* Models */,
@@ -204,6 +220,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AF1000000000000000000001,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -214,6 +231,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+BF1000000000000000000000,
+BF1000000000000000000001,
+BF1000000000000000000002,
+BF1000000000000000000003,
+
 				AF0000000000000000000000 /* ShogunApp.swift in Sources */,
 				AF0000000000000000000001 /* LibraryView.swift in Sources */,
 				AF0000000000000000000002 /* MovieDetailView.swift in Sources */,

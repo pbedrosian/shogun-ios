@@ -17,6 +17,8 @@ enum MockCatalog {
     static let copies = [
         OwnedCopy(id: "c1", libraryID: "personal", movieID: "arrival-2016", format: .uhd),
         OwnedCopy(id: "c2", libraryID: "personal", movieID: "arrival-2016", format: .digital),
+        OwnedCopy(id: "c12", libraryID: "personal", movieID: "arrival-2016", format: .bluRay),
+        OwnedCopy(id: "c13", libraryID: "personal", movieID: "arrival-2016", format: .vhs),
         OwnedCopy(id: "c3", libraryID: "personal", movieID: "grand-budapest-2014", format: .bluRay),
         OwnedCopy(id: "c4", libraryID: "personal", movieID: "interstellar-2014", format: .uhd),
         OwnedCopy(id: "c5", libraryID: "personal", movieID: "spirited-away-2001", format: .dvd),

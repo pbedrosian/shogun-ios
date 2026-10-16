@@ -2,7 +2,9 @@ import SwiftUI
 
 final class CatalogStore: ObservableObject {
     let movies = MockCatalog.movies
-    let copies = MockCatalog.copies
+    @Published private(set) var copies = MockCatalog.copies
+    @Published var libraryColumns = 3
+    @Published var showingAddMovie = false
     @Published var libraryQuery = ""
     @Published var searchQuery = ""
     @Published var selectedLibraryID = "personal"
@@ -18,6 +20,16 @@ final class CatalogStore: ObservableObject {
     func movies(in libraryID: String) -> [Movie] { movies.filter { !copies(for: $0, libraryID: libraryID).isEmpty } }
     func state(for movie: Movie) -> PersonalMovieState {
         personalStates.first { $0.userID == MockCatalog.userID && $0.movieID == movie.id } ?? PersonalMovieState(userID: MockCatalog.userID, movieID: movie.id)
+    }
+    var writableLibraries: [MovieLibrary] {
+        libraries.filter { library in MockCatalog.memberships.contains { $0.userID == MockCatalog.userID && $0.libraryID == library.id && $0.role != .viewer } }
+    }
+    func zoomIn() { libraryColumns = max(2, libraryColumns - 1) }
+    func zoomOut() { libraryColumns = min(5, libraryColumns + 1) }
+    @discardableResult func addCopy(movie: Movie, format: MovieFormat, libraryID: String) -> Bool {
+        guard writableLibraries.contains(where: { $0.id == libraryID }), movies.contains(movie) else { return false }
+        copies.append(OwnedCopy(id: UUID().uuidString, libraryID: libraryID, movieID: movie.id, format: format))
+        return true
     }
     func update(_ movie: Movie, watched: Bool? = nil, rating: Int? = nil, clearRating: Bool = false) {
         var value = state(for: movie)
