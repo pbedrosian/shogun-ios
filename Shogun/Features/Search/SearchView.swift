@@ -2,7 +2,7 @@ import SwiftUI
 
 struct SearchView: View {
     @EnvironmentObject private var store: CatalogStore
-    private var results: [Movie] { store.movies.filter { store.searchQuery.isEmpty || $0.title.localizedCaseInsensitiveContains(store.searchQuery) || String($0.year).contains(store.searchQuery) } }
+    private var results: [Movie] { store.searchResults }
     var body: some View {
         NavigationStack {
             List {

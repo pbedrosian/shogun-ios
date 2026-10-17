@@ -4,9 +4,7 @@ struct LibraryView: View {
     @EnvironmentObject private var store: CatalogStore
     @Environment(\.dynamicTypeSize) private var typeSize
     private var columnCount: Int { typeSize.isAccessibilitySize ? 2 : store.libraryColumns }
-    private var movies: [Movie] {
-        store.movies(in: store.selectedLibraryID).filter { store.libraryQuery.isEmpty || $0.title.localizedCaseInsensitiveContains(store.libraryQuery) }
-    }
+    private var movies: [Movie] { store.libraryResults }
     var body: some View {
         NavigationStack {
             ScrollView {

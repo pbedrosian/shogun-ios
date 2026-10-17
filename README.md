@@ -53,3 +53,36 @@ Verification: Debug simulator build and model/store checks pass, including zoom 
 ## Styling organization
 
 `Shogun/DesignSystem/Theme/ShogunTheme.swift` is the central reference for colors, semantic type, spacing, radii, sizes and procedural poster styling. `SystemAppearance.swift` configures native bars. `Styles/ViewStyles.swift` owns reusable surface, canvas, brand, movie text and rating-button treatments. `Components/ShogunIcon.swift` owns header icon sizing. Feature views keep their structural stacks, alignment, navigation and behavior. This extraction preserves the existing layout and asset values.
+
+## Unit tests
+
+Open `Shogun.xcodeproj`, select the shared **Shogun** scheme and an iPhone simulator, then press **Command-U**. The scheme includes `ShogunTests` and collects code coverage.
+
+From the repository directory:
+
+```sh
+xcodebuild -project Shogun.xcodeproj -scheme Shogun \
+  -destination 'platform=iOS Simulator,name=iPhone 17' \
+  -enableCodeCoverage YES CODE_SIGNING_ALLOWED=NO test
+```
+
+Use an installed simulator name from `xcrun simctl list devices available` if yours differs. To run one concern, add e.g. `-only-testing:ShogunTests/SearchTests`.
+
+The suite is organized under `ShogunTests`, with fresh stores per test and deterministic shared fixtures in `TestFixtures.swift`:
+
+| File | Concern |
+| --- | --- |
+| `ModelTests.swift` | Format identifiers/serialization, movie equality, personal-state defaults |
+| `CatalogIntegrityTests.swift` | Demo identifiers, references, memberships, formats, metadata reuse |
+| `LibraryAccessTests.swift` | Membership filtering, owner/editor/viewer permissions, selection fallback |
+| `OwnershipTests.swift` | Cross-library copies, library scoping, repeated copies, deduplicated movie cards |
+| `PersonalMovieStateTests.swift` | Watched/rating updates, bounds, clearing, user/movie isolation |
+| `AddCopyTests.swift` | Valid additions, rejected writes, unique copy IDs, metadata/state preservation |
+| `SearchTests.swift` | Global title/year search, library title search, query isolation, empty results |
+| `PresentationStateTests.swift` | Zoom bounds, initial presentation state, in-memory reset on a fresh store |
+
+Search and Library views consume the tested `CatalogStore.searchResults` and `libraryResults`. Store initialization accepts catalog/user inputs so permission tests can include viewers, other users, and inaccessible libraries without mutating global demo data. The default initializer preserves the existing app behavior. Result order remains catalog order; there is no sorting feature yet.
+
+SHO-12 verification: 60 tests passed with zero failures on the iPhone 17 simulator (iOS 27.0). Xcode reported 100% executable-line coverage for `CatalogStore.swift` and `Models.swift`; this is not a claim of complete UI or branch coverage. Existing standalone checks in `Checks/main.swift` also passed.
+
+Unit tests cover the current business logic, not rendered SwiftUI layout. Profile's library list uses the same tested access rules; its static account/about text, navigation, sheets, poster layout, accessibility, Dynamic Type, orientation, native appearance, and the Search/Profile header gap (SHO-11) still require UI/device verification. The demo assumes at least one accessible library when displaying `selectedLibrary`; a no-membership account screen is not implemented. No network, persistence, sign-in, invitations, or remote lookup behavior exists to test yet.
