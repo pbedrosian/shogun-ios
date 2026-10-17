@@ -49,7 +49,7 @@ struct LibraryView: View {
                             Button { store.libraryQuery = "" } label: { Image(systemName: "xmark.circle.fill") }.accessibilityLabel("Clear search")
                         }
                     }.shogunSurface()
-                    Text("\(movies.count) movies  ·  \(store.copies.filter { $0.libraryID == store.selectedLibraryID }.count) copies")
+                    Text("\(movies.count) \(movies.count == 1 ? "movie" : "movies")")
                         .font(ShogunTheme.Typography.caption).foregroundStyle(ShogunTheme.muted)
                     if movies.isEmpty {
                         ContentUnavailableView.search(text: store.libraryQuery)
