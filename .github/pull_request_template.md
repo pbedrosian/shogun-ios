@@ -13,9 +13,9 @@
 
 <!-- Give reproducible steps and the expected result so the reviewer can test the change. Include prerequisites, device/simulator, and iOS version where relevant. -->
 
-1. 
-2. 
-3. 
+1.
+2.
+3.
 
 **Checks run and results:**
 <!-- Record only checks actually run. Note anything not tested. -->
