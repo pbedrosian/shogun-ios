@@ -15,7 +15,9 @@
 ## Git workflow
 
 - `main` is the stable, tested branch. `dev` is the integration branch.
-- Start each change on a new descriptive branch from the latest `dev` (for example, `feature/local-persistence` or `fix/library-search`).
+- Start each change from the latest `dev`. Every new work branch must use `<devName>/sho-<ticket-number>` with lowercase `sho` and the matching Notion ticket number.
+- Use `peterbedrosian` as the developer name for this user; for example, ticket SHO-2 uses branch `peterbedrosian/sho-2`. Do not use `feature/`, `fix/`, or `docs/` branch names for new work.
+- Confirm the developer name and ticket number from the task context before creating a branch; ask for any missing value rather than inventing one.
 - Make changes and run appropriate checks, then leave all work uncommitted for the user to review.
 - Do not commit, merge, or push automatically. Wait for the user to review the changes and explicitly authorize each requested action. Completing work or passing tests is not authorization.
 - Authorization to commit does not authorize pushing or merging; perform only the actions the user explicitly requests.
