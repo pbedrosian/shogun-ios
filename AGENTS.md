@@ -16,8 +16,10 @@
 
 - `main` is the stable, tested branch. `dev` is the integration branch.
 - Start each change on a new descriptive branch from the latest `dev` (for example, `feature/local-persistence` or `fix/library-search`).
-- Merge completed work into `dev`, then run build checks, model checks, and appropriate simulator tests on the integrated changes.
-- Merge `dev` into `main` only after testing passes. Push the updated branches.
+- Make changes and run appropriate checks, then leave all work uncommitted for the user to review.
+- Do not commit, merge, or push automatically. Wait for the user to review the changes and explicitly authorize each requested action. Completing work or passing tests is not authorization.
+- Authorization to commit does not authorize pushing or merging; perform only the actions the user explicitly requests.
+- When explicitly authorized, merge completed work into `dev` and run build checks, model checks, and appropriate simulator tests on the integrated changes. Merge `dev` into `main` only after testing passes and the user explicitly authorizes that merge. Push only when explicitly authorized.
 - Do not develop directly on `main` or `dev`; use a separate branch for each change.
 
 ## Design system
