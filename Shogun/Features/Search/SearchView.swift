@@ -27,7 +27,9 @@ struct SearchView: View {
             .overlay { if results.isEmpty { ContentUnavailableView.search(text: store.searchQuery) } }
             .scrollContentBackground(.hidden).background(ShogunTheme.canvas)
             .navigationTitle("Search")
-            .searchable(text: $store.searchQuery, prompt: "Title or release year")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.visible, for: .navigationBar)
+            .searchable(text: $store.searchQuery, placement: .navigationBarDrawer(displayMode: .always), prompt: "Title or release year")
             .navigationDestination(for: Movie.self) { MovieDetailView(movie: $0) }
         }
     }

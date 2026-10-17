@@ -2,8 +2,16 @@ import Foundation
 
 enum MockCatalog {
     static let userID = "demo-user"
-    static let libraries = [MovieLibrary(id: "personal", name: "My Library", isShared: false), MovieLibrary(id: "family", name: "Family Collection", isShared: true)]
-    static let memberships = [LibraryMembership(userID: userID, libraryID: "personal", role: .owner), LibraryMembership(userID: userID, libraryID: "family", role: .editor)]
+    static let libraries = [
+        MovieLibrary(id: "personal", name: "My Library", isShared: false),
+        MovieLibrary(id: "family", name: "Family Collection", isShared: true),
+        MovieLibrary(id: "movie-club", name: "The Incredibly Extensive Shared Movie Collection of Family, Friends, Neighbors, and the Friday Night Film Appreciation Society", isShared: true)
+    ]
+    static let memberships = [
+        LibraryMembership(userID: userID, libraryID: "personal", role: .owner),
+        LibraryMembership(userID: userID, libraryID: "family", role: .editor),
+        LibraryMembership(userID: userID, libraryID: "movie-club", role: .editor)
+    ]
     static let movies: [Movie] = [
         Movie(id: "arrival-2016", title: "Arrival", year: 2016, symbol: "moonphase.waning.crescent", palette: 0, synopsis: "A linguist searches for meaning when mysterious visitors arrive on Earth."),
         Movie(id: "grand-budapest-2014", title: "The Grand Budapest Hotel With a very long long title that could go one for some time so we'll see how long and the ui reposnds to this", year: 2014, symbol: "building.2.crop.circle", palette: 1, synopsis: "A legendary concierge and his young colleague become entangled in an extraordinary adventure."),
@@ -27,6 +35,8 @@ enum MockCatalog {
         OwnedCopy(id: "c8", libraryID: "family", movieID: "arrival-2016", format: .bluRay),
         OwnedCopy(id: "c9", libraryID: "family", movieID: "spirited-away-2001", format: .bluRay),
         OwnedCopy(id: "c10", libraryID: "family", movieID: "moonrise-2012", format: .dvd),
-        OwnedCopy(id: "c11", libraryID: "personal", movieID: "jaws-1975", format: .vhs)
+        OwnedCopy(id: "c11", libraryID: "personal", movieID: "jaws-1975", format: .vhs),
+        OwnedCopy(id: "c14", libraryID: "movie-club", movieID: "metropolis-1927", format: .bluRay),
+        OwnedCopy(id: "c15", libraryID: "movie-club", movieID: "moonrise-2012", format: .dvd)
     ]
 }

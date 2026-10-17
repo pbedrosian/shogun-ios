@@ -12,7 +12,9 @@ struct LibraryView: View {
                     VStack(alignment: .leading, spacing: ShogunTheme.Spacing.compact) {
                         Text("SHOGUN").shogunBrand()
                         HStack(alignment: .center, spacing: ShogunTheme.Spacing.tight) {
-                            Text(store.selectedLibrary.name).font(ShogunTheme.Typography.title).frame(maxWidth: .infinity, alignment: .leading)
+                            Text(store.selectedLibrary.name).font(ShogunTheme.Typography.title)
+                                .lineLimit(2).truncationMode(.tail)
+                                .frame(maxWidth: .infinity, alignment: .leading)
                             Menu {
                                 Section("View Options") {
                                     Button { withAnimation { store.zoomIn() } } label: { Label("Zoom In", systemImage: "plus.magnifyingglass") }.disabled(store.libraryColumns <= 2 || typeSize.isAccessibilitySize)
@@ -30,12 +32,13 @@ struct LibraryView: View {
                     }
                     Menu {
                         Picker("Library", selection: $store.selectedLibraryID) {
-                            ForEach(store.libraries) { Text($0.name).tag($0.id) }
+                            ForEach(store.libraries) { Text($0.name).lineLimit(1).truncationMode(.tail).tag($0.id) }
                         }
                     } label: {
                         HStack {
                             Image(systemName: store.selectedLibrary.isShared ? "person.2" : "person")
                             Text(store.selectedLibrary.name).fontWeight(.semibold)
+                                .lineLimit(1).truncationMode(.tail)
                             Spacer()
                             Image(systemName: "chevron.down").font(ShogunTheme.Typography.disclosure)
                         }.font(ShogunTheme.Typography.body).foregroundStyle(ShogunTheme.ink).shogunSurface(padding: ShogunTheme.Spacing.selector)
