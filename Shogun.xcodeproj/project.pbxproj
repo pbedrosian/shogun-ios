@@ -21,6 +21,15 @@ BF1000000000000000000003 = {isa = PBXBuildFile; fileRef = BF00000000000000000000
 		AF0000000000000000000006 /* CatalogStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6D0BB7A3081A93A00887AC8 /* CatalogStore.swift */; };
 		AF0000000000000000000007 /* MockCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6D0BB7B3081A93A00887AC8 /* MockCatalog.swift */; };
 		AF0000000000000000000008 /* PosterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6D0BB7D3081A93A00887AC8 /* PosterView.swift */; };
+CA00000000000000000000C8 = {isa = PBXBuildFile; fileRef = CA0000000000000000000064; };
+CA00000000000000000000C9 = {isa = PBXBuildFile; fileRef = CA0000000000000000000065; };
+CA00000000000000000000CA = {isa = PBXBuildFile; fileRef = CA0000000000000000000066; };
+CA00000000000000000000CB = {isa = PBXBuildFile; fileRef = CA0000000000000000000067; };
+CA00000000000000000000CC = {isa = PBXBuildFile; fileRef = CA0000000000000000000068; };
+CA00000000000000000000CD = {isa = PBXBuildFile; fileRef = CA0000000000000000000069; };
+CA00000000000000000000CE = {isa = PBXBuildFile; fileRef = CA000000000000000000006A; };
+CA00000000000000000000CF = {isa = PBXBuildFile; fileRef = CA000000000000000000006B; };
+CA00000000000000000000D0 = {isa = PBXBuildFile; fileRef = CA000000000000000000006C; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -42,6 +51,16 @@ BF0000000000000000000003 = {isa = PBXFileReference; lastKnownFileType = sourceco
 		D6D0BB7A3081A93A00887AC8 /* CatalogStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogStore.swift; sourceTree = "<group>"; };
 		D6D0BB7B3081A93A00887AC8 /* MockCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockCatalog.swift; sourceTree = "<group>"; };
 		D6D0BB7D3081A93A00887AC8 /* PosterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PosterView.swift; sourceTree = "<group>"; };
+CA0000000000000000000064 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddCopyTests.swift; sourceTree = "<group>"; };
+CA0000000000000000000065 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogIntegrityTests.swift; sourceTree = "<group>"; };
+CA0000000000000000000066 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryAccessTests.swift; sourceTree = "<group>"; };
+CA0000000000000000000067 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelTests.swift; sourceTree = "<group>"; };
+CA0000000000000000000068 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OwnershipTests.swift; sourceTree = "<group>"; };
+CA0000000000000000000069 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonalMovieStateTests.swift; sourceTree = "<group>"; };
+CA000000000000000000006A = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PresentationStateTests.swift; sourceTree = "<group>"; };
+CA000000000000000000006B = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchTests.swift; sourceTree = "<group>"; };
+CA000000000000000000006C = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestFixtures.swift; sourceTree = "<group>"; };
+CA0000000000000000000001 = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = ShogunTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -52,6 +71,7 @@ BF0000000000000000000003 = {isa = PBXFileReference; lastKnownFileType = sourceco
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+CA0000000000000000000004 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -62,6 +82,7 @@ BF3000000000000000000000 = {isa = PBXGroup; path = DesignSystem; sourceTree = "<
 		000000000000000000000002 = {
 			isa = PBXGroup;
 			children = (
+				CA0000000000000000000002 /* ShogunTests */,
 				D6D0BB6A3081A93A00887AC8 /* AGENTS.md */,
 				D6D0BB6C3081A93A00887AC8 /* Checks */,
 				D6D0BB6D3081A93A00887AC8 /* README.md */,
@@ -74,6 +95,7 @@ BF3000000000000000000000 = {isa = PBXGroup; path = DesignSystem; sourceTree = "<
 			isa = PBXGroup;
 			children = (
 				000000000000000000000004 /* Shogun.app */,
+CA0000000000000000000001 /* ShogunTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -168,6 +190,7 @@ BF3000000000000000000000 = {isa = PBXGroup; path = DesignSystem; sourceTree = "<
 			path = Shogun;
 			sourceTree = "<group>";
 		};
+CA0000000000000000000002 = {isa = PBXGroup; path = ShogunTests; sourceTree = "<group>"; children = (CA0000000000000000000064,CA0000000000000000000065,CA0000000000000000000066,CA0000000000000000000067,CA0000000000000000000068,CA0000000000000000000069,CA000000000000000000006A,CA000000000000000000006B,CA000000000000000000006C); };
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -188,8 +211,25 @@ BF3000000000000000000000 = {isa = PBXGroup; path = DesignSystem; sourceTree = "<
 			productReference = 000000000000000000000004 /* Shogun.app */;
 			productType = "com.apple.product-type.application";
 		};
+CA0000000000000000000005 /* ShogunTests */ = {
+isa = PBXNativeTarget;
+buildConfigurationList = CA0000000000000000000006;
+buildPhases = (CA0000000000000000000003, CA0000000000000000000004);
+buildRules = ();
+dependencies = (CA000000000000000000000A);
+name = ShogunTests;
+productName = ShogunTests;
+productReference = CA0000000000000000000001;
+productType = "com.apple.product-type.bundle.unit-test";
+};
 /* End PBXNativeTarget section */
 
+/* Begin PBXContainerItemProxy section */
+CA0000000000000000000009 = {isa = PBXContainerItemProxy; containerPortal = 000000000000000000000001; proxyType = 1; remoteGlobalIDString = 000000000000000000000005; remoteInfo = Shogun; };
+/* End PBXContainerItemProxy section */
+/* Begin PBXTargetDependency section */
+CA000000000000000000000A = {isa = PBXTargetDependency; target = 000000000000000000000005; targetProxy = CA0000000000000000000009; };
+/* End PBXTargetDependency section */
 /* Begin PBXProject section */
 		000000000000000000000001 /* Project object */ = {
 			isa = PBXProject;
@@ -210,6 +250,7 @@ BF3000000000000000000000 = {isa = PBXGroup; path = DesignSystem; sourceTree = "<
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
+CA0000000000000000000005 /* ShogunTests */,
 				000000000000000000000005 /* Shogun */,
 			);
 		};
@@ -248,6 +289,7 @@ BF1000000000000000000003,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+CA0000000000000000000003 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (CA00000000000000000000C8,CA00000000000000000000C9,CA00000000000000000000CA,CA00000000000000000000CB,CA00000000000000000000CC,CA00000000000000000000CD,CA00000000000000000000CE,CA00000000000000000000CF,CA00000000000000000000D0); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
@@ -383,6 +425,26 @@ BF1000000000000000000003,
 			};
 			name = Release;
 		};
+CA0000000000000000000007 = {isa = XCBuildConfiguration; buildSettings = {
+BUNDLE_LOADER = "$(TEST_HOST)";
+TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Shogun.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Shogun";
+GENERATE_INFOPLIST_FILE = YES;
+PRODUCT_BUNDLE_IDENTIFIER = com.petebedrosian.shogun.tests;
+PRODUCT_NAME = "$(TARGET_NAME)";
+TARGETED_DEVICE_FAMILY = 1;
+SWIFT_VERSION = 5.0;
+LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@loader_path/Frameworks");
+}; name = Debug; };
+CA0000000000000000000008 = {isa = XCBuildConfiguration; buildSettings = {
+BUNDLE_LOADER = "$(TEST_HOST)";
+TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Shogun.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Shogun";
+GENERATE_INFOPLIST_FILE = YES;
+PRODUCT_BUNDLE_IDENTIFIER = com.petebedrosian.shogun.tests;
+PRODUCT_NAME = "$(TARGET_NAME)";
+TARGETED_DEVICE_FAMILY = 1;
+SWIFT_VERSION = 5.0;
+LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@loader_path/Frameworks");
+}; name = Release; };
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -404,6 +466,7 @@ BF1000000000000000000003,
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+CA0000000000000000000006 = {isa = XCConfigurationList; buildConfigurations = (CA0000000000000000000007, CA0000000000000000000008); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
 /* End XCConfigurationList section */
 	};
 	rootObject = 000000000000000000000001 /* Project object */;
