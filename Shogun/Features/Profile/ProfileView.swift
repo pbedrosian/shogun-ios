@@ -22,6 +22,8 @@ struct ProfileView: View {
                     Text("All content is local sample data. No account is connected.").font(ShogunTheme.Typography.footnote).foregroundStyle(.secondary)
                 }
             }.scrollContentBackground(.hidden).background(ShogunTheme.canvas).navigationTitle("Profile")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.visible, for: .navigationBar)
         }
     }
 }

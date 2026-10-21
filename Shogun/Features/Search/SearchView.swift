@@ -6,10 +6,6 @@ struct SearchView: View {
     var body: some View {
         NavigationStack {
             List {
-                Section {
-                    Text("Explore a small sample catalog. Movie lookup and adding copies will arrive in a future phase.").font(ShogunTheme.Typography.body).foregroundStyle(.secondary)
-                }
-                Section("Sample movies") {
                     ForEach(results) { movie in
                         NavigationLink(value: movie) {
                             HStack(spacing: ShogunTheme.Spacing.selector) {
@@ -22,12 +18,14 @@ struct SearchView: View {
                             }.padding(.vertical, ShogunTheme.Spacing.tight)
                         }
                     }
-                }
+                
             }
             .overlay { if results.isEmpty { ContentUnavailableView.search(text: store.searchQuery) } }
             .scrollContentBackground(.hidden).background(ShogunTheme.canvas)
             .navigationTitle("Search")
-            .searchable(text: $store.searchQuery, prompt: "Title or release year")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.visible, for: .navigationBar)
+            .searchable(text: $store.searchQuery, placement: .navigationBarDrawer(displayMode: .always), prompt: "Title or release year")
             .navigationDestination(for: Movie.self) { MovieDetailView(movie: $0) }
         }
     }

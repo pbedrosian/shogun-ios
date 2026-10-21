@@ -21,7 +21,7 @@ print("PASS: stable IDs, references, memberships, all formats, repeated copies, 
 let arrivalCopyCount = MockCatalog.copies.filter { $0.movieID == "arrival-2016" }.count
 let store = CatalogStore()
 let arrival = movies.first { $0.id == "arrival-2016" }!
-check(store.libraries.count == 2, "Accessible libraries")
+check(store.libraries.count == 3, "Accessible libraries")
 check(store.copies(for: arrival).count == arrivalCopyCount, "Ownership spans accessible libraries")
 store.update(arrival, watched: false, rating: 3)
 store.selectedLibraryID = "family"
