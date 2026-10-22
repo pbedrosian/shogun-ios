@@ -86,3 +86,9 @@ Search and Library views consume the tested `CatalogStore.searchResults` and `li
 SHO-12 verification: 60 tests passed with zero failures on the iPhone 17 simulator (iOS 27.0). Xcode reported 100% executable-line coverage for `CatalogStore.swift` and `Models.swift`; this is not a claim of complete UI or branch coverage. Existing standalone checks in `Checks/main.swift` also passed.
 
 Unit tests cover the current business logic, not rendered SwiftUI layout. Profile's library list uses the same tested access rules; its static account/about text, navigation, sheets, poster layout, accessibility, Dynamic Type, orientation, native appearance, and the Search/Profile header gap (SHO-11) still require UI/device verification. The demo assumes at least one accessible library when displaying `selectedLibrary`; a no-membership account screen is not implemented. No network, persistence, sign-in, invitations, or remote lookup behavior exists to test yet.
+
+## Continuous integration (SHO-13)
+
+GitHub Actions and the optional Jenkinsfile use `python3 scripts/ci/run.py` for unsigned simulator builds, Xcode static analysis, XCTest with coverage, and standalone model checks. Core store/model line coverage is enforced; reports include all app Swift sources. SonarQube Cloud analysis activates when its project, organization, and token are configured.
+
+See [CI setup and local reproduction](docs/CI.md) for the pinned hosted toolchain, artifacts, coverage policy, Jenkins requirements, Sonar activation, and remaining hosted acceptance checks.

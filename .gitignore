@@ -67,3 +67,7 @@ build/
 
 # macOS metadata
 .DS_Store
+
+# CI tooling and SonarScanner local outputs
+__pycache__/
+.scannerwork/
