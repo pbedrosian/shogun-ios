@@ -1,0 +1,81 @@
+name: Shogun CI
+
+on:
+  pull_request:
+    branches: [dev, main]
+  push:
+    branches: [dev, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: shogun-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: iOS build, tests and coverage
+    runs-on: macos-15
+    timeout-minutes: 35
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
+    steps:
+      - name: Check out source and full history
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Build, analyze, test and check coverage
+        run: python3 scripts/ci/run.py
+
+      - name: Publish test and coverage summary
+        if: always()
+        run: |
+          if [ -f build/ci/summary.md ]; then
+            cat build/ci/summary.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'Validation stopped before a complete test/coverage report. Inspect the diagnostic artifacts.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Retain diagnostic artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: shogun-ci-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: |
+            build/ci/*.log
+            build/ci/*.json
+            build/ci/*.xml
+            build/ci/summary.md
+            build/ci/Tests.xcresult
+
+      - name: Validate enabled SonarQube Cloud configuration
+        if: success() && vars.SONAR_ENABLED == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY }}
+          SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION }}
+        run: |
+          test -n "$SONAR_TOKEN" || { echo 'SONAR_ENABLED requires the SONAR_TOKEN secret.'; exit 1; }
+          test -n "$SONAR_PROJECT_KEY" || { echo 'Set the SONAR_PROJECT_KEY repository variable.'; exit 1; }
+          test -n "$SONAR_ORGANIZATION" || { echo 'Set the SONAR_ORGANIZATION repository variable.'; exit 1; }
+
+      - name: SonarQube Cloud analysis and quality gate
+        if: success() && vars.SONAR_ENABLED == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: SonarSource/sonarqube-scan-action@c7ee0f9df90b7aa20e8dcf9695dcfe2e7da5b4f2 # v7
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
+        with:
+          args: >
+            -Dsonar.projectKey=${{ vars.SONAR_PROJECT_KEY }}
+            -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }}
+
+      - name: Explain inactive SonarQube analysis
+        if: success() && (vars.SONAR_ENABLED != 'true' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository))
+        run: echo 'SonarQube analysis was not run (not enabled, or this is a fork PR). Local tests and core coverage checks still ran.' >> "$GITHUB_STEP_SUMMARY"
