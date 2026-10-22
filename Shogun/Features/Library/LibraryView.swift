@@ -3,6 +3,9 @@ import SwiftUI
 struct LibraryView: View {
     @EnvironmentObject private var store: CatalogStore
     @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var pinchStartingColumns: Int?
+    @GestureState private var isPinching = false
     private var columnCount: Int { typeSize.isAccessibilitySize ? 2 : store.libraryColumns }
     private var movies: [Movie] { store.libraryResults }
     var body: some View {
@@ -28,7 +31,6 @@ struct LibraryView: View {
                                 ShogunIcon(systemName: "plus")
                             }.accessibilityLabel("Add movie").disabled(store.writableLibraries.isEmpty)
                         }
-
                     }
                     Menu {
                         Picker("Library", selection: $store.selectedLibraryID) {
@@ -59,11 +61,31 @@ struct LibraryView: View {
                             ForEach(movies) { movie in
                                 NavigationLink(value: movie) {
                                     MovieCard(movie: movie, compact: columnCount >= 4, formats: MovieFormat.allCases.filter { format in store.copies(for: movie, libraryID: store.selectedLibraryID).contains { $0.format == format } }.map(\.rawValue).joined(separator: " · "))
-                                }.buttonStyle(.plain)
+                                }.buttonStyle(.plain).disabled(isPinching)
                             }
                         }
+
                     }
                 }.padding(.horizontal, ShogunTheme.Spacing.screen).padding(.top, ShogunTheme.Spacing.regular).padding(.bottom, ShogunTheme.Spacing.large)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .contentShape(Rectangle())
+            .highPriorityGesture(
+                MagnifyGesture(minimumScaleDelta: 0.01)
+                .updating($isPinching) { _, active, _ in active = true }
+                .onChanged { value in
+                    guard !typeSize.isAccessibilitySize else { return }
+                    let startingColumns = pinchStartingColumns ?? store.libraryColumns
+                    pinchStartingColumns = startingColumns
+                    withAnimation(reduceMotion ? nil : .interactiveSpring(response: 0.2, dampingFraction: 0.9)) {
+                        store.updateLibraryPinch(magnification: Double(value.magnification), startingColumns: startingColumns)
+                    }
+                }
+                .onEnded { _ in pinchStartingColumns = nil },
+                including: typeSize.isAccessibilitySize ? .subviews : .all
+            )
+            .onChange(of: isPinching) { _, active in
+                if !active { pinchStartingColumns = nil }
             }
             .shogunCanvas()
             .toolbar(.hidden, for: .navigationBar)
