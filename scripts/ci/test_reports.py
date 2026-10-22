@@ -92,11 +92,34 @@ class ReportTests(unittest.TestCase):
             output = root / "reports"
             with patch("reports.xcode_json", side_effect=responses):
                 with self.assertRaisesRegex(ValueError, "XCTest run did not pass"):
-                    export(root / "Tests.xcresult", output, root, {"Shogun/Models/Models.swift": 1.0})
+                    export(root / "Tests.xcresult", output, root,
+                           {"minimumAppCoverage": 0.85, "files": {"Shogun/Models/Models.swift": 1.0}})
             self.assertIsNotNone(ET.parse(output / "junit.xml").find("testcase/failure"))
             lines = ET.parse(output / "sonarqube-coverage.xml").findall("file/lineToCover")
             self.assertEqual([line.attrib["covered"] for line in lines], ["true", "false"])
             self.assertIn("below 100.0%", (output / "summary.md").read_text())
+
+    def test_app_coverage_gate_accepts_85_percent_and_rejects_less(self):
+        for covered in [16, 17, 18]:
+            with self.subTest(covered=covered), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                source = str(root / "Shogun/Features/Example.swift")
+                responses = [
+                    {"result": "Passed", "totalTestCount": 1, "skippedTests": 0},
+                    {"testNodes": [{"nodeType": "Test Case", "name": "flow", "result": "Passed"}]},
+                    {"targets": [{"name": "Shogun.app", "files": [
+                        {"path": source, "executableLines": 20, "coveredLines": covered, "lineCoverage": covered / 20}]}]},
+                    {source: [{"line": line, "isExecutable": True, "executionCount": int(line <= covered)}
+                              for line in range(1, 21)]}
+                ]
+                with patch("reports.xcode_json", side_effect=responses):
+                    if covered < 17:
+                        with self.assertRaisesRegex(ValueError, "below 85.0%"):
+                            export(root / "Tests.xcresult", root / "output", root,
+                                   {"minimumAppCoverage": 0.85, "files": {}})
+                    else:
+                        export(root / "Tests.xcresult", root / "output", root,
+                               {"minimumAppCoverage": 0.85, "files": {}})
 
 
 if __name__ == "__main__":

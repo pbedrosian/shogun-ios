@@ -66,7 +66,7 @@ SHO-2 verification: 67 XCTest tests passed with zero failures and zero skipped o
 
 ## Unit tests
 
-Open `Shogun.xcodeproj`, select the shared **Shogun** scheme and an iPhone simulator, then press **Command-U**. The scheme includes `ShogunTests` and collects code coverage.
+Open `Shogun.xcodeproj`, select the shared **Shogun** scheme and an iPhone simulator, then press **Command-U**. The scheme includes `ShogunTests` and `ShogunUITests` and collects combined code coverage. Native UI tests exercise library search, density controls/pinch, movie diary state across tabs, add-copy cancellation/saving, Search/Profile, dark appearance, and accessibility text sizes.
 
 From the repository directory:
 
@@ -99,6 +99,8 @@ Unit tests cover the current business logic, not rendered SwiftUI layout. Profil
 
 ## Continuous integration (SHO-13)
 
-GitHub Actions and the optional Jenkinsfile use `python3 scripts/ci/run.py` for unsigned simulator builds, Xcode static analysis, XCTest with coverage, and standalone model checks. Core store/model line coverage is enforced; reports include all app Swift sources. SonarQube Cloud analysis activates when its project, organization, and token are configured.
+GitHub Actions and the optional Jenkinsfile use `python3 scripts/ci/run.py` for unsigned simulator builds, Xcode static analysis, XCTest with coverage, and standalone model checks. At least 85% app-source line coverage and the existing 100% store/model baseline are enforced; reports include all app Swift sources without hiding views. SonarQube Cloud analysis activates when its project, organization, and token are configured.
 
 See [CI setup and local reproduction](docs/CI.md) for the pinned hosted toolchain, artifacts, coverage policy, Jenkins requirements, Sonar activation, and remaining hosted acceptance checks.
+
+SHO-13.1 verification: 72 app tests (67 unit + 5 UI), zero failures/skips, and 10 CI-tool tests passed locally on iPhone 16 / iOS 27 with Xcode 27. Combined app-source line coverage was 1234/1252 (98.6%), above the enforced 85% floor; core model/store files remained at 100%. Sonar's project-level new-code threshold must also be configured to 85% in its custom quality gate; it is not controlled by scanner properties.

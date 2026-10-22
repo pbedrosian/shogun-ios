@@ -27,6 +27,7 @@ struct LibraryView: View {
                             } label: {
                                 ShogunIcon(systemName: "line.3.horizontal.decrease", font: ShogunTheme.Typography.viewIcon)
                             }.accessibilityLabel("Library view options")
+                                .accessibilityIdentifier("library.viewOptions").accessibilityValue("\(columnCount)")
                             Button { store.showingAddMovie = true } label: {
                                 ShogunIcon(systemName: "plus")
                             }.accessibilityLabel("Add movie").disabled(store.writableLibraries.isEmpty)
@@ -44,7 +45,7 @@ struct LibraryView: View {
                             Spacer()
                             Image(systemName: "chevron.down").font(ShogunTheme.Typography.disclosure)
                         }.font(ShogunTheme.Typography.body).foregroundStyle(ShogunTheme.ink).shogunSurface(padding: ShogunTheme.Spacing.selector)
-                    }.accessibilityLabel("Select library, \(store.selectedLibrary.name)")
+                    }.accessibilityLabel("Select library, \(store.selectedLibrary.name)").accessibilityIdentifier("library.selector")
                     HStack(spacing: ShogunTheme.Spacing.medium) {
                         Image(systemName: "magnifyingglass").foregroundStyle(ShogunTheme.muted)
                         TextField("Search this library", text: $store.libraryQuery).font(ShogunTheme.Typography.body).autocorrectionDisabled()
@@ -61,7 +62,7 @@ struct LibraryView: View {
                             ForEach(movies) { movie in
                                 NavigationLink(value: movie) {
                                     MovieCard(movie: movie, compact: columnCount >= 4, formats: MovieFormat.allCases.filter { format in store.copies(for: movie, libraryID: store.selectedLibraryID).contains { $0.format == format } }.map(\.rawValue).joined(separator: " · "))
-                                }.buttonStyle(.plain).disabled(isPinching)
+                                }.buttonStyle(.plain).disabled(isPinching).accessibilityIdentifier("library.movie.\(movie.id)")
                             }
                         }
 
@@ -69,6 +70,7 @@ struct LibraryView: View {
                 }.padding(.horizontal, ShogunTheme.Spacing.screen).padding(.top, ShogunTheme.Spacing.regular).padding(.bottom, ShogunTheme.Spacing.large)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .accessibilityIdentifier("library.scroll")
             .contentShape(Rectangle())
             .highPriorityGesture(
                 MagnifyGesture(minimumScaleDelta: 0.01)
@@ -118,12 +120,14 @@ private struct LibraryAddMovieSheet: View {
                     }
                 }
                 if let movie = store.movies.first(where: { $0.id == draft.movieID }), !store.copies(for: movie).isEmpty {
-                    Section("Already owned") {
+                    Section {
                         ForEach(store.libraries) { library in
                             let copies = store.copies(for: movie, libraryID: library.id)
                             if !copies.isEmpty { LabeledContent(library.name, value: copies.map { $0.format.rawValue }.joined(separator: ", ")) }
                         }
                         Text("Saving adds another copy and keeps the existing movie record.").font(ShogunTheme.Typography.footnote)
+                    } header: {
+                        Text("Already owned").accessibilityIdentifier("addMovie.alreadyOwned")
                     }
                 }
                 Section { Text("Local demo only. Changes reset when Shogun restarts.").font(ShogunTheme.Typography.footnote).foregroundStyle(ShogunTheme.muted) }

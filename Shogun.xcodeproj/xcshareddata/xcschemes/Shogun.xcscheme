@@ -33,6 +33,9 @@
          <TestableReference skipped="NO">
             <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="CA0000000000000000000005" BuildableName="ShogunTests.xctest" BlueprintName="ShogunTests" ReferencedContainer="container:Shogun.xcodeproj"/>
          </TestableReference>
+         <TestableReference skipped="NO">
+            <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="CB0000000000000000000005" BuildableName="ShogunUITests.xctest" BlueprintName="ShogunUITests" ReferencedContainer="container:Shogun.xcodeproj"/>
+         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction

@@ -12,7 +12,7 @@ The pipeline:
 2. Checks whitespace and runs regression tests for the CI report exporter and coverage gate.
 3. Compiles/runs the existing standalone model checks.
 4. Builds the app and runs Xcode static analysis for Simulator. Swift/Clang compiler warnings are errors; signing is disabled.
-5. Runs the entire shared Shogun XCTest scheme with coverage enabled and parallel simulator testing disabled.
+5. Runs the shared Shogun scheme, including unit tests and native UI tests, with coverage enabled and parallel simulator testing disabled.
 6. Exports the xcresult bundle, JUnit XML, coverage JSON, Sonar generic coverage XML, and a readable summary. A failed test, unexpected skipped test, empty test run, missing core coverage, or coverage regression fails CI.
 7. Shuts down and deletes only the simulator created by this run.
 
@@ -22,11 +22,15 @@ No signing team, certificate, provisioning profile, API credentials, or live app
 
 ## Coverage policy
 
-`ci/coverage-policy.json` preserves the existing 100% executable-line baseline for CatalogStore.swift and Models.swift. Missing files or a zero-line report fail instead of passing an empty check. Views, services, mocks, and other app Swift sources remain visible in the overall report and Sonar coverage; UI files are not excluded to improve the percentage.
+`ci/coverage-policy.json` requires at least **85% app-source executable-line coverage** and preserves the existing 100% baseline for CatalogStore.swift and Models.swift. Missing files or a zero-line report fail instead of passing an empty check. Views, services, mocks, and other app Swift sources remain visible in the overall report and Sonar coverage; UI files are not excluded to improve the percentage.
 
-These core thresholds do not mean 100% whole-app coverage. Line coverage also does not establish branch coverage, rendered layout, two-finger gesture recognition, blank-space hit testing, VoiceOver behavior, or navigation suppression. Continue the ticket's device acceptance checks. As more business logic is added, add appropriate tests and extend the policy deliberately.
+The app-source 85% floor is separate from Sonar's 85% **new-code** condition; the denominators differ. These thresholds do not mean 100% whole-app coverage. Line coverage also does not establish branch coverage, rendered layout, two-finger gesture recognition, blank-space hit testing, VoiceOver behavior, or navigation suppression. The ShogunUITests target covers library filtering, shared menu/pinch density, movie diary editing, cross-tab state, copy-sheet cancellation/saving, Search empty/results states, Profile, dark appearance, and accessibility text sizes. Stable accessibility identifiers support these assertions without changing displayed labels. Continue device acceptance checks for layouts and behaviors beyond these assertions. As more business logic is added, add appropriate tests and extend the policy deliberately.
 
 The exporter rejects failed, empty, skipped, or inconsistent test results and preserves JUnit/diagnostic artifacts on test failures where Xcode produced a readable bundle. If Xcode cannot launch tests or generate coverage, the pipeline fails and retains the available logs; a missing bundle is not a successful run.
+
+### SHO-13.1 local verification
+
+On Xcode 27 / iOS 27 / a dedicated iPhone 16 simulator, the full pipeline passed 72 app tests (67 unit tests and five native UI tests), zero failures/skips, and all ten CI-tool tests. App-source executable-line coverage was 1234/1252 (**98.6%**) against the 85% minimum. CatalogStore and Models remained 100%; Library was 99.7%, movie details 95.3%, Search and Profile 100%. Build/static analysis, standalone model checks, report export, and simulator cleanup passed. This is a local result; the updated hosted workflow and Sonar report still need verification after review/push. The private Sonar project's gate has not been changed remotely by this branch.
 
 ## Run locally
 
@@ -74,6 +78,10 @@ Sonar integration is implemented but inactive until configured. It requires an e
 5. Confirm coverage imports and PR decoration in Sonar. The scanner waits up to five minutes for the configured Sonar quality gate and fails if it does not pass. Review the project's new-code definition and quality gate before making it a required MR check.
 
 Sonar credentials are not supplied to fork pull requests. The workflow uses pull_request, not pull_request_target, and has only contents:read permission. Source checkout credentials are not persisted. Official checkout, artifact, and Sonar scan actions are pinned to immutable commits, with Dependabot configured to propose Actions updates into dev.
+
+### Set the Sonar new-code target to 85%
+
+The coverage threshold is a SonarQube Cloud project quality-gate setting, not a sonar-project.properties scanner option. In your organization's Quality Gates page, copy the built-in Sonar way gate to a project-specific gate (for example, Shogun 85%). Preserve its security, reliability, maintainability, hotspot-review, and duplication conditions; change only the new-code coverage failure threshold from below 80% to below **85%**, then assign that gate to Shogun. Built-in gates cannot be edited directly. This remote setting requires a signed-in administrator and must be verified in Sonar after configuration; the repository's local 85% floor is enforced independently.
 
 Sonar settings live in sonar-project.properties; no project/organization keys are invented. The hosted integration targets https://sonarcloud.io. Self-hosted SonarQube is an alternative but Swift analysis requires a suitable commercial edition; it is not installed or configured by this change.
 

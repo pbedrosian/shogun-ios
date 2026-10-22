@@ -30,6 +30,7 @@ CA00000000000000000000CD = {isa = PBXBuildFile; fileRef = CA00000000000000000000
 CA00000000000000000000CE = {isa = PBXBuildFile; fileRef = CA000000000000000000006A; };
 CA00000000000000000000CF = {isa = PBXBuildFile; fileRef = CA000000000000000000006B; };
 CA00000000000000000000D0 = {isa = PBXBuildFile; fileRef = CA000000000000000000006C; };
+CB000000000000000000000B = {isa = PBXBuildFile; fileRef = CB000000000000000000000C; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -61,6 +62,8 @@ CA000000000000000000006A = {isa = PBXFileReference; lastKnownFileType = sourceco
 CA000000000000000000006B = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchTests.swift; sourceTree = "<group>"; };
 CA000000000000000000006C = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestFixtures.swift; sourceTree = "<group>"; };
 CA0000000000000000000001 = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = ShogunTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+CB000000000000000000000C = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppFlowTests.swift; sourceTree = "<group>"; };
+CB0000000000000000000001 = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = ShogunUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -72,6 +75,7 @@ CA0000000000000000000001 = {isa = PBXFileReference; explicitFileType = wrapper.c
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 CA0000000000000000000004 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+CB0000000000000000000004 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -83,6 +87,7 @@ BF3000000000000000000000 = {isa = PBXGroup; path = DesignSystem; sourceTree = "<
 			isa = PBXGroup;
 			children = (
 				CA0000000000000000000002 /* ShogunTests */,
+                CB0000000000000000000002 /* ShogunUITests */,
 				D6D0BB6A3081A93A00887AC8 /* AGENTS.md */,
 				D6D0BB6C3081A93A00887AC8 /* Checks */,
 				D6D0BB6D3081A93A00887AC8 /* README.md */,
@@ -96,6 +101,7 @@ BF3000000000000000000000 = {isa = PBXGroup; path = DesignSystem; sourceTree = "<
 			children = (
 				000000000000000000000004 /* Shogun.app */,
 CA0000000000000000000001 /* ShogunTests.xctest */,
+CB0000000000000000000001 /* ShogunUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -191,6 +197,7 @@ CA0000000000000000000001 /* ShogunTests.xctest */,
 			sourceTree = "<group>";
 		};
 CA0000000000000000000002 = {isa = PBXGroup; path = ShogunTests; sourceTree = "<group>"; children = (CA0000000000000000000064,CA0000000000000000000065,CA0000000000000000000066,CA0000000000000000000067,CA0000000000000000000068,CA0000000000000000000069,CA000000000000000000006A,CA000000000000000000006B,CA000000000000000000006C); };
+CB0000000000000000000002 = {isa = PBXGroup; path = ShogunUITests; sourceTree = "<group>"; children = (CB000000000000000000000C); };
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -222,13 +229,26 @@ productName = ShogunTests;
 productReference = CA0000000000000000000001;
 productType = "com.apple.product-type.bundle.unit-test";
 };
+CB0000000000000000000005 /* ShogunUITests */ = {
+isa = PBXNativeTarget;
+buildConfigurationList = CB0000000000000000000006;
+buildPhases = (CB0000000000000000000003, CB0000000000000000000004);
+buildRules = ();
+dependencies = (CB000000000000000000000A);
+name = ShogunUITests;
+productName = ShogunUITests;
+productReference = CB0000000000000000000001;
+productType = "com.apple.product-type.bundle.ui-testing";
+};
 /* End PBXNativeTarget section */
 
 /* Begin PBXContainerItemProxy section */
 CA0000000000000000000009 = {isa = PBXContainerItemProxy; containerPortal = 000000000000000000000001; proxyType = 1; remoteGlobalIDString = 000000000000000000000005; remoteInfo = Shogun; };
+CB0000000000000000000009 = {isa = PBXContainerItemProxy; containerPortal = 000000000000000000000001; proxyType = 1; remoteGlobalIDString = 000000000000000000000005; remoteInfo = Shogun; };
 /* End PBXContainerItemProxy section */
 /* Begin PBXTargetDependency section */
 CA000000000000000000000A = {isa = PBXTargetDependency; target = 000000000000000000000005; targetProxy = CA0000000000000000000009; };
+CB000000000000000000000A = {isa = PBXTargetDependency; target = 000000000000000000000005; targetProxy = CB0000000000000000000009; };
 /* End PBXTargetDependency section */
 /* Begin PBXProject section */
 		000000000000000000000001 /* Project object */ = {
@@ -251,6 +271,7 @@ CA000000000000000000000A = {isa = PBXTargetDependency; target = 0000000000000000
 			projectRoot = "";
 			targets = (
 CA0000000000000000000005 /* ShogunTests */,
+CB0000000000000000000005 /* ShogunUITests */,
 				000000000000000000000005 /* Shogun */,
 			);
 		};
@@ -290,6 +311,7 @@ BF1000000000000000000003,
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 CA0000000000000000000003 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (CA00000000000000000000C8,CA00000000000000000000C9,CA00000000000000000000CA,CA00000000000000000000CB,CA00000000000000000000CC,CA00000000000000000000CD,CA00000000000000000000CE,CA00000000000000000000CF,CA00000000000000000000D0); runOnlyForDeploymentPostprocessing = 0; };
+CB0000000000000000000003 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (CB000000000000000000000B); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
@@ -445,6 +467,26 @@ TARGETED_DEVICE_FAMILY = 1;
 SWIFT_VERSION = 5.0;
 LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@loader_path/Frameworks");
 }; name = Release; };
+CB0000000000000000000007 = {isa = XCBuildConfiguration; buildSettings = {
+GENERATE_INFOPLIST_FILE = YES;
+PRODUCT_BUNDLE_IDENTIFIER = com.petebedrosian.shogun.uitests;
+PRODUCT_NAME = "$(TARGET_NAME)";
+TEST_TARGET_NAME = Shogun;
+TARGETED_DEVICE_FAMILY = 1;
+SWIFT_VERSION = 5.0;
+CODE_SIGN_STYLE = Automatic;
+LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@loader_path/Frameworks");
+}; name = Debug; };
+CB0000000000000000000008 = {isa = XCBuildConfiguration; buildSettings = {
+GENERATE_INFOPLIST_FILE = YES;
+PRODUCT_BUNDLE_IDENTIFIER = com.petebedrosian.shogun.uitests;
+PRODUCT_NAME = "$(TARGET_NAME)";
+TEST_TARGET_NAME = Shogun;
+TARGETED_DEVICE_FAMILY = 1;
+SWIFT_VERSION = 5.0;
+CODE_SIGN_STYLE = Automatic;
+LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@loader_path/Frameworks");
+}; name = Release; };
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -467,6 +509,7 @@ LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@load
 			defaultConfigurationName = Release;
 		};
 CA0000000000000000000006 = {isa = XCConfigurationList; buildConfigurations = (CA0000000000000000000007, CA0000000000000000000008); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+CB0000000000000000000006 = {isa = XCConfigurationList; buildConfigurations = (CB0000000000000000000007, CB0000000000000000000008); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
 /* End XCConfigurationList section */
 	};
 	rootObject = 000000000000000000000001 /* Project object */;
