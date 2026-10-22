@@ -52,6 +52,12 @@ final class CatalogStore: ObservableObject {
     }
     func zoomIn() { libraryColumns = max(2, libraryColumns - 1) }
     func zoomOut() { libraryColumns = min(5, libraryColumns + 1) }
+    /// Always measure against the gesture's initial density so updates never compound.
+    func updateLibraryPinch(magnification: Double, startingColumns: Int) {
+        guard magnification.isFinite, magnification > 0, (2...5).contains(startingColumns) else { return }
+        let columns = (Double(startingColumns) / magnification).rounded()
+        libraryColumns = Int(min(5, max(2, columns)))
+    }
     @discardableResult func addCopy(movie: Movie, format: MovieFormat, libraryID: String) -> Bool {
         guard writableLibraries.contains(where: { $0.id == libraryID }), movies.contains(movie) else { return false }
         copies.append(OwnedCopy(id: UUID().uuidString, libraryID: libraryID, movieID: movie.id, format: format))
