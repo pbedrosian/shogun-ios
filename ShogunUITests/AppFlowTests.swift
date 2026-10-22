@@ -98,7 +98,7 @@ final class AppFlowTests: XCTestCase {
         app.buttons["Family Collection"].tap()
         app.buttons["Add movie"].tap()
         XCTAssertTrue(app.navigationBars["Add Movie"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Already owned"].exists)
+        XCTAssertTrue(app.staticTexts["addMovie.alreadyOwned"].waitForExistence(timeout: 5))
         app.buttons["Cancel"].tap()
         XCTAssertFalse(app.navigationBars["Add Movie"].exists)
         app.buttons["Add movie"].tap()

@@ -120,12 +120,14 @@ private struct LibraryAddMovieSheet: View {
                     }
                 }
                 if let movie = store.movies.first(where: { $0.id == draft.movieID }), !store.copies(for: movie).isEmpty {
-                    Section("Already owned") {
+                    Section {
                         ForEach(store.libraries) { library in
                             let copies = store.copies(for: movie, libraryID: library.id)
                             if !copies.isEmpty { LabeledContent(library.name, value: copies.map { $0.format.rawValue }.joined(separator: ", ")) }
                         }
                         Text("Saving adds another copy and keeps the existing movie record.").font(ShogunTheme.Typography.footnote)
+                    } header: {
+                        Text("Already owned").accessibilityIdentifier("addMovie.alreadyOwned")
                     }
                 }
                 Section { Text("Local demo only. Changes reset when Shogun restarts.").font(ShogunTheme.Typography.footnote).foregroundStyle(ShogunTheme.muted) }
