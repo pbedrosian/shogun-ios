@@ -44,7 +44,7 @@ def coverage_violations(files, policy):
 
 
 def junit_report(tree):
-    suite = ET.Element("testsuite", name="ShogunTests")
+    suite = ET.Element("testsuite", name="Shogun")
     counts = {"tests": 0, "failures": 0, "skipped": 0}
 
     def visit(node):
@@ -98,7 +98,7 @@ def export(bundle, output, root, policy):
     report = xcode_json("xccov", "view", "--report", "--json", bundle)
     (output / "coverage.json").write_text(json.dumps(report, indent=2) + "\n")
     files = app_files(report, root)
-    errors += coverage_violations(files, policy)
+    errors += coverage_violations(files, policy["files"])
     coverage = ET.Element("coverage", version="1")
     for relative, item in sorted(files.items()):
         raw = xcode_json("xccov", "view", "--archive", "--file", item["path"], "--json", bundle)
@@ -113,8 +113,13 @@ def export(bundle, output, root, policy):
     write_xml(coverage, output / "sonarqube-coverage.xml")
     covered = sum(item["coveredLines"] for item in files.values())
     executable = sum(item["executableLines"] for item in files.values())
+    minimum = policy["minimumAppCoverage"]
+    if not isinstance(minimum, (int, float)) or not 0 <= minimum <= 1:
+        raise ValueError("App coverage threshold must be a number from 0 to 1.")
+    if not executable or covered / executable < minimum:
+        errors.append(f"App source coverage {covered / executable if executable else 0:.1%} is below {minimum:.1%}")
     text = ["# Shogun CI", "", f"Tests: {counts['tests']}; failures: {counts['failures']}; skipped: {counts['skipped']}",
-            f"App source line coverage: {covered}/{executable} ({covered / executable:.1%})", "",
+            f"App source line coverage: {covered}/{executable} ({covered / executable if executable else 0:.1%}); required: {minimum:.1%}", "",
             "| Source | Covered / executable | Line coverage |", "| --- | --- | --- |"]
     for path, item in sorted(files.items()):
         text.append(f"| {path} | {item['coveredLines']}/{item['executableLines']} | {item['lineCoverage']:.1%} |")

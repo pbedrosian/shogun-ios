@@ -16,11 +16,11 @@ struct SearchView: View {
                                     if !store.copies(for: movie).isEmpty { Label("Already owned", systemImage: "checkmark.circle.fill").font(ShogunTheme.Typography.caption).foregroundStyle(.tint) }
                                 }
                             }.padding(.vertical, ShogunTheme.Spacing.tight)
-                        }
+                        }.accessibilityIdentifier("search.movie.\(movie.id)")
                     }
                 
             }
-            .overlay { if results.isEmpty { ContentUnavailableView.search(text: store.searchQuery) } }
+            .overlay { if results.isEmpty { ContentUnavailableView.search(text: store.searchQuery).accessibilityIdentifier("search.empty") } }
             .scrollContentBackground(.hidden).background(ShogunTheme.canvas)
             .navigationTitle("Search")
             .navigationBarTitleDisplayMode(.inline)

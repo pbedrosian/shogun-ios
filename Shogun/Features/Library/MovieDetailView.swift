@@ -47,6 +47,6 @@ struct MovieDetailView: View {
                 }
                 Text("Demo changes stay in memory and reset when the app restarts.").font(ShogunTheme.Typography.footnote).foregroundStyle(.secondary)
             }.padding()
-        }.shogunCanvas().navigationTitle("Movie").navigationBarTitleDisplayMode(.inline)
+        }.accessibilityIdentifier("movie.detail").shogunCanvas().navigationTitle("Movie").navigationBarTitleDisplayMode(.inline)
     }
 }
