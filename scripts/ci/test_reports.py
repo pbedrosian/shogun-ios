@@ -2,14 +2,42 @@
 import unittest
 from pathlib import Path
 import tempfile
+import subprocess
 from unittest.mock import patch
 import xml.etree.ElementTree as ET
 
 from reports import app_files, coverage_violations, export, junit_report
-from run import simulator_configuration
+from run import command, simulator_configuration, simulator_id
 
 
 class ReportTests(unittest.TestCase):
+    def test_structured_output_is_returned_directly_without_stderr(self):
+        def completed(args, **kwargs):
+            kwargs["stderr"].write("diagnostic warning\n")
+            return subprocess.CompletedProcess(args, 0, stdout='{"runtimes": []}')
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            with patch("run.subprocess.run", side_effect=completed):
+                captured = command(["xcrun", "simctl", "list", "runtimes", "-j"], output, "runtimes", capture=True)
+            self.assertEqual(captured, '{"runtimes": []}')
+            self.assertIn("diagnostic warning", (output / "runtimes.log").read_text())
+
+    def test_failed_structured_command_still_fails_ci(self):
+        with tempfile.TemporaryDirectory() as directory:
+            failed = subprocess.CompletedProcess(["xcrun"], 1, stdout="failed")
+            with patch("run.subprocess.run", return_value=failed):
+                with self.assertRaises(subprocess.CalledProcessError):
+                    command(["xcrun"], Path(directory), "failed", capture=True)
+
+    def test_simulator_id_rejects_paths_and_extra_output(self):
+        valid = "1185BD67-11BD-46CF-8F9F-F675EAF8D0B6"
+        self.assertEqual(simulator_id(valid + "\n"), valid)
+        self.assertEqual(simulator_id(valid.lower()), valid)
+        for value in ["", "../device", "/tmp/device", "--all", valid + "\nwarning", "not-a-uuid"]:
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                simulator_id(value)
+
     def test_missing_or_zero_coverage_fails_instead_of_passing(self):
         policy = {"Shogun/Models/Models.swift": 1.0}
         self.assertTrue(coverage_violations({}, policy))

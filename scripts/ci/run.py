@@ -7,23 +7,36 @@ from pathlib import Path
 import signal
 import subprocess
 import sys
+from uuid import UUID
 
 from reports import export
 
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def command(args, output, name, timeout=1200, check=True):
+def command(args, output, name, timeout=1200, check=True, capture=False):
     log = output / f"{name}.log"
     print(f"{name}: {' '.join(map(str, args))}", flush=True)
     with log.open("w") as stream:
-        result = subprocess.run(list(map(str, args)), cwd=ROOT, stdout=stream,
-                                stderr=subprocess.STDOUT, timeout=timeout)
+        if capture:
+            # Consume structured stdout directly. Logs are diagnostics, never input.
+            result = subprocess.run(list(map(str, args)), cwd=ROOT, stdout=subprocess.PIPE,
+                                    stderr=stream, text=True, timeout=timeout)
+            stream.write(result.stdout)
+        else:
+            result = subprocess.run(list(map(str, args)), cwd=ROOT, stdout=stream,
+                                    stderr=subprocess.STDOUT, timeout=timeout)
     if result.returncode:
         print("\n".join(log.read_text(errors="replace").splitlines()[-40:]), flush=True)
         if check:
             raise subprocess.CalledProcessError(result.returncode, args)
-    return result.returncode
+    return result.stdout if capture else result.returncode
+
+
+def simulator_id(value):
+    """Only a canonical UUID may be passed to simulator lifecycle commands."""
+    # Xcode destination matching expects CoreSimulator's uppercase representation.
+    return str(UUID(value.strip())).upper()
 
 
 def simulator_configuration(runtimes, requested=None):
@@ -60,14 +73,14 @@ def main():
     signal.signal(signal.SIGTERM, interrupted)
     signal.signal(signal.SIGINT, interrupted)
     try:
-        command(["xcodebuild", "-version"], output, "xcode-version", timeout=30)
-        version = (output / "xcode-version.log").read_text().splitlines()[0].split()[1]
+        version_output = command(["xcodebuild", "-version"], output, "xcode-version", timeout=30, capture=True)
+        version = version_output.splitlines()[0].split()[1]
         if tuple(int(part) for part in version.split(".")) < (16, 4):
             raise ValueError("CI report export requires Xcode 16.4 or later.")
-        command(["xcrun", "simctl", "list", "runtimes", "-j"], output, "runtimes", timeout=30)
-        runtime, device = simulator_configuration(json.loads((output / "runtimes.log").read_text()), args.runtime)
-        command(["xcrun", "simctl", "create", "Shogun CI", device["identifier"], runtime["identifier"]], output, "simulator-create", timeout=60)
-        simulator = (output / "simulator-create.log").read_text().strip()
+        runtimes_output = command(["xcrun", "simctl", "list", "runtimes", "-j"], output, "runtimes", timeout=30, capture=True)
+        runtime, device = simulator_configuration(json.loads(runtimes_output), args.runtime)
+        created = command(["xcrun", "simctl", "create", "Shogun CI", device["identifier"], runtime["identifier"]], output, "simulator-create", timeout=60, capture=True)
+        simulator = simulator_id(created)
         (output / "environment.json").write_text(json.dumps({"xcode": version, "runtime": runtime["name"],
                                                             "device": device["name"], "udid": simulator}, indent=2) + "\n")
         command(["xcrun", "simctl", "boot", simulator], output, "simulator-boot", timeout=60)

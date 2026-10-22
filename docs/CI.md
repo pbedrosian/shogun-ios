@@ -59,6 +59,8 @@ GitHub retains logs, JSON/XML reports, summary.md, and the complete Tests.xcresu
 
 If the job fails early, inspect xcode-version.log, runtimes.log, simulator logs, model-checks.log, build-analyze.log, and xctest.log as available. Install a compatible runtime if selection fails. The simulator creation and cleanup IDs are logged. Cancelled jobs are best-effort cleanup; on persistent Jenkins agents, remove only abandoned devices named Shogun CI after confirming no build owns them.
 
+Structured Xcode/simulator output is parsed directly from command stdout; diagnostic logs are not read back as configuration. Stderr stays separate from structured stdout, and simulator lifecycle commands accept a validated canonical UUID.
+
 GitHub-hosted macOS runners consume Actions capacity and can incur charges depending on repository visibility, plan, and usage. The workflow has a 35-minute timeout, avoids duplicate obsolete runs, and limits artifact retention. Jenkins requires an available Mac agent and its operating cost. See the current [GitHub billing documentation](https://docs.github.com/en/billing/concepts/product-billing/github-actions) rather than assuming a free allowance.
 
 ## SonarQube Cloud activation
