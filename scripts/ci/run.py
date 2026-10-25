@@ -88,10 +88,10 @@ def main():
         command(["git", "diff", "--check"], output, "whitespace", timeout=30)
         command(["python3", "-m", "unittest", "discover", "-s", "scripts/ci", "-p", "test_*.py"], output, "ci-tool-tests", timeout=60)
         command(["xcrun", "swiftc", "-module-cache-path", output / "ModuleCache",
-                 "Shogun/Models/Models.swift", "Shogun/Services/MockCatalog.swift",
-                 "Shogun/Services/CatalogStore.swift", "Checks/main.swift", "-o", output / "model-checks"], output, "model-compile")
+                 "apps/ios/Shogun/Models/Models.swift", "apps/ios/Shogun/Services/MockCatalog.swift",
+                 "apps/ios/Shogun/Services/CatalogStore.swift", "apps/ios/Checks/main.swift", "-o", output / "model-checks"], output, "model-compile")
         command([output / "model-checks"], output, "model-checks", timeout=60)
-        common = ["xcodebuild", "-project", "Shogun.xcodeproj", "-scheme", "Shogun",
+        common = ["xcodebuild", "-project", "apps/ios/Shogun.xcodeproj", "-scheme", "Shogun",
                   "-derivedDataPath", output / "DerivedData", "CODE_SIGNING_ALLOWED=NO",
                   "SWIFT_TREAT_WARNINGS_AS_ERRORS=YES", "GCC_TREAT_WARNINGS_AS_ERRORS=YES"]
         command(common + ["-destination", "generic/platform=iOS Simulator", "build", "analyze"], output, "build-analyze")

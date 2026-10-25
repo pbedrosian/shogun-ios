@@ -4,6 +4,14 @@ GitHub Actions is the default CI for Shogun. The optional Jenkinsfile calls the 
 
 ## Checks
 
+All CI commands still run from the repository root. GitHub Actions and Jenkins
+keep the same `python3 scripts/ci/run.py` entry point and `build/ci` artifacts.
+The runner targets `apps/ios/Shogun.xcodeproj`; source selection, core coverage
+policy, and Sonar paths are scoped to `apps/ios/Shogun`. Backend files are not
+included in the iOS coverage denominator. Backend tooling uses the root npm
+commands with the Supabase CLI workdir set to `backend`; hosted backend deployment
+and database CI remain SHO-27 work.
+
 The named GitHub check is **iOS build, tests and coverage**. It runs on pull requests into dev/main, pushes to those branches, and manual dispatch. Superseded runs on the same ref are cancelled.
 
 The pipeline:
@@ -33,6 +41,14 @@ The exporter rejects failed, empty, skipped, or inconsistent test results and pr
 On Xcode 27 / iOS 27 / a dedicated iPhone 16 simulator, the full pipeline passed 72 app tests (67 unit tests and five native UI tests), zero failures/skips, and all ten CI-tool tests. App-source executable-line coverage was 1234/1252 (**98.6%**) against the 85% minimum. CatalogStore and Models remained 100%; Library was 99.7%, movie details 95.3%, Search and Profile 100%. Build/static analysis, standalone model checks, report export, and simulator cleanup passed. This is a local result; the updated hosted workflow and Sonar report still need verification after review/push. The private Sonar project's gate has not been changed remotely by this branch.
 
 ## Run locally
+
+The folder reorganization was verified locally with the same runner on Xcode 27 /
+iOS 27: 72 app tests passed with no failures/skips, ten CI-tool tests passed,
+build/static analysis and standalone model checks passed, and app coverage was
+1243/1261 lines (98.6%). Core model/store coverage remained 100%. The generated
+Sonar report uses `apps/ios/Shogun/...` paths. Reports for this verification are in
+`/private/tmp/shogun-monorepo-ci`; the hosted workflow and remote Sonar scan have
+not run on these uncommitted changes.
 
 From the repository root, with full Xcode selected and an installed iOS simulator runtime:
 

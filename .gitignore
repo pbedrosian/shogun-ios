@@ -71,3 +71,11 @@ build/
 # CI tooling and SonarScanner local outputs
 __pycache__/
 .scannerwork/
+
+# Local backend tooling and credentials
+node_modules/
+.env
+.env.*
+!.env.example
+backend/supabase/signing_keys.json
+backend/supabase/fixtures/accounts.local.json
