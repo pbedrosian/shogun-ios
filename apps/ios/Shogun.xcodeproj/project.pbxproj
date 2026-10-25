@@ -40,7 +40,7 @@ BF0000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourceco
 BF0000000000000000000003 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShogunIcon.swift; sourceTree = "<group>"; };
 		AF1000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		000000000000000000000004 /* Shogun.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = Shogun.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		D6D0BB6A3081A93A00887AC8 /* AGENTS.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = AGENTS.md; sourceTree = "<group>"; };
+		D6D0BB6A3081A93A00887AC8 /* AGENTS.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = ../../AGENTS.md; sourceTree = "<group>"; };
 		D6D0BB6B3081A93A00887AC8 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		D6D0BB6D3081A93A00887AC8 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		D6D0BB6E3081A93A00887AC8 /* ShogunApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShogunApp.swift; sourceTree = "<group>"; };

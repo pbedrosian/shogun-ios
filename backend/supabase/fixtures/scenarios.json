@@ -1,0 +1,15 @@
+{
+  "description": "Local Auth accounts for SHO-18 permission scenarios. Roles below describe intended memberships, not Auth metadata or granted permissions.",
+  "accounts": [
+    { "name": "owner", "email": "owner@shogun.test" },
+    { "name": "editor", "email": "editor@shogun.test" },
+    { "name": "viewer", "email": "viewer@shogun.test" },
+    { "name": "outsider", "email": "outsider@shogun.test" }
+  ],
+  "libraryScenario": {
+    "name": "Local family library",
+    "memberships": { "owner": "owner", "editor": "editor", "viewer": "viewer" },
+    "excluded": ["outsider"],
+    "implementation": "Pending SHO-18: no libraries or memberships are created by SHO-25."
+  }
+}

@@ -1,0 +1,173 @@
+# Local Supabase backend (SHO-25)
+
+Supabase Auth and PostgreSQL are the confirmed Phase 2 backend. Backend sources
+live in `backend/supabase/` alongside the iOS project so schema and client changes can be
+reviewed together. Node is development tooling only; the app remains Swift/SwiftUI.
+The iOS app still uses its offline mock store and needs no backend to run.
+
+## Prerequisites
+
+- Node.js 22 or newer and npm. `package-lock.json` locks the development dependency
+  tree; Supabase CLI **2.122.0** is pinned exactly. Do not use an unpinned global CLI.
+- A running Docker Desktop with Linux containers (`docker info` must succeed).
+  Verified with Docker engine 29.9.2. Allow several GB for initial image downloads.
+- No Supabase account, hosted project, API credentials, or TMDB key is needed.
+
+## Start everything on macOS
+
+After the first `npm ci`, run this from the repository root:
+
+```sh
+npm run dev
+```
+
+This opens Docker Desktop if needed, waits up to two minutes for its engine,
+starts Supabase, starts or reuses Swagger UI, and opens the docs in your browser
+and the Shogun project in Xcode. Press **⌘R** in Xcode to run the iPhone app.
+The app still uses offline sample data until its integration tickets are complete.
+The launcher does not reset data or recreate fixtures.
+
+Keep Terminal open if it started Swagger UI. Ctrl-C stops that docs server;
+Supabase stays running. Use `npm run backend:stop` to stop Supabase. If Swagger UI
+was already running in another Terminal, that process is reused and remains there.
+Use `npm run dev -- --no-open` to start the services without opening browser/Xcode.
+
+## Individual service commands
+
+Run all commands from the repository root:
+
+```sh
+npm ci
+npm run backend:doctor
+npm run backend:start
+npm run backend:fixtures
+npm run backend:smoke
+```
+
+The first start downloads container images. Startup must pass its health checks;
+do not use `--ignore-health-check` to make a failed stack look healthy.
+
+| Local service | Address |
+| --- | --- |
+| REST/Auth API | http://127.0.0.1:54321 |
+| PostgreSQL | 127.0.0.1:54322 |
+| Studio | http://127.0.0.1:54323 |
+| Captured email (Mailpit) | http://127.0.0.1:54324 |
+
+`npm run backend:status` displays local endpoints and keys. Treat the admin/secret
+keys as server-only; never paste full status output into tickets or logs. Copy
+`.env.example` to ignored `.env.local` only if you need a configuration reference.
+The current app and scripts do not load it. Future client integration uses the
+URL and publishable/anon key, never the service-role key. Native callbacks and
+Apple/Google configuration belong to SHO-19/26; no OAuth provider is enabled here.
+
+## Interactive API documentation
+
+With Supabase running, open another Terminal in this repository and run:
+
+```sh
+npm run backend:docs
+```
+
+Open http://127.0.0.1:54328 for Swagger UI. Keep that command running; Ctrl-C
+stops only the docs server. Assets are installed locally, with no CDN or online
+spec validator. The viewer fetches the current PostgREST OpenAPI schema on load.
+Click **Load API** to refresh it after schema changes.
+
+Leave the token field empty for anonymous access. To explore as a signed-in user,
+paste a user session's access token (without the Bearer prefix), then click
+**Load API**. The schema reflects that user's database privileges, and Try it out
+uses their session with the local anon API key. Tokens are not persisted; clear
+the field and reload to return to anonymous access. Never use a service-role key.
+
+There are no movie/library endpoints until SHO-18 creates and grants access to
+them. This viewer covers the database REST API, not Auth or Edge Functions.
+Try it out executes real operations on the local database. The docs server binds
+only to 127.0.0.1:54328; it is development tooling and is not embedded in the iOS app.
+
+## Stop and rebuild
+
+```sh
+npm run backend:stop
+npm run backend:start
+# Destructive to this local project's data only:
+npm run backend:reset
+npm run backend:fixtures
+npm run backend:smoke
+```
+
+Stop preserves local data. Reset explicitly passes `--local` and rebuilds the
+database from `backend/supabase/migrations/`. There are no application migrations yet;
+SHO-18 adds them and the library/RLS SQL tests in `backend/supabase/tests/database/`.
+Reset removes Auth fixtures too, so run fixtures again afterward. Do not add
+`--linked` or a remote database URL to local reset commands.
+
+## Development fixtures and email testing
+
+`backend:fixtures` uses the local Auth admin API to create or refresh these users:
+
+| Scenario identity | Email |
+| --- | --- |
+| Owner | owner@shogun.test |
+| Editor | editor@shogun.test |
+| Viewer | viewer@shogun.test |
+| Unrelated account | outsider@shogun.test |
+
+All use the intentionally local password `Shogun-local-only-25!`. Fixture accounts
+are preconfirmed. Running fixtures repeatedly reuses their Auth IDs and restores
+the fixture password. Generated IDs are saved in ignored
+`backend/supabase/fixtures/accounts.local.json`; no keys or tokens are written there.
+`scenarios.json` describes intended owner/editor/viewer membership scenarios for
+SHO-18. These names grant **no permissions**; application tables and memberships
+do not exist yet. Never implement authorization using these names or user metadata.
+
+SQL seeding is disabled. Fixture scripts take no endpoint arguments and ignore
+environment credentials: they obtain keys from this project's local CLI status,
+require exactly the loopback API on port 54321, and refuse redirects. Fixtures
+are not migrations and cannot be applied by a hosted migration push.
+
+For a normal email confirmation test, use Studio's Auth tools or the local Auth
+signup API to create a new account (not a fixture), then inspect Mailpit. Email
+confirmation is enabled and SMTP delivery is captured locally. The browser redirect
+currently targets port 3000 as a placeholder; no web app is served there. Native
+confirmation/recovery routing is not implemented until SHO-19/26.
+
+## Simulator and physical iPhone
+
+The iPhone simulator can use `http://127.0.0.1:54321` once client integration exists.
+On a physical iPhone, loopback points to the phone: use your Mac's LAN IP and port
+54321 on the same trusted network. Verify container port publication and macOS
+firewall access; do not expose Studio, database, or admin keys publicly. Future
+Debug configuration may need local-network permission/usage text and an appropriate
+local HTTP transport policy. Do not weaken Release transport settings. SHO-19 owns
+these app changes; this ticket does not modify entitlements, networking, or routing.
+
+## Verification and troubleshooting
+
+```sh
+npm run backend:test
+```
+
+This verifies the local-only fixture boundary without Docker. `backend:smoke`
+requires a running stack and fixtures; it checks Auth health, the REST endpoint,
+and separate login identities for all four users without logging tokens. It does
+not prove library permissions, which need SHO-18 tests.
+
+If Docker fails, check `docker info` and Docker Desktop before retrying. If ports
+are occupied, stop the conflicting stack; the fixture script deliberately rejects
+alternative ports. Do not reset Docker Desktop or delete its disk to fix startup.
+
+Hosted provisioning, production migrations, backup configuration, TMDB integration,
+and iOS service wiring are covered by SHO-26/27, SHO-8, and SHO-19/20.
+
+Verification: clean `npm ci`, three local-boundary tests, script syntax, ignore
+rules, and whitespace checks passed. With Docker repaired, the stack started with
+healthy services. All four Auth fixtures signed in; repeated fixture creation kept
+the same IDs. A signup confirmation was captured in local Mailpit. Local database
+reset succeeded, and recreated fixtures passed the same smoke checks.
+Stop/start restored the database from its local backup; all four fixture accounts
+signed in again without rerunning fixtures. The stack was left running for review.
+
+References: [Supabase local development](https://supabase.com/docs/guides/local-development),
+[configuration](https://supabase.com/docs/guides/local-development/cli/config), and
+[environment management](https://supabase.com/docs/guides/deployment/managing-environments).

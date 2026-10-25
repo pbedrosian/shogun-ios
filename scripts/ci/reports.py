@@ -23,7 +23,7 @@ def app_files(report, root):
                 relative = path.relative_to(root).as_posix()
             except ValueError:
                 continue
-            if relative.startswith("Shogun/") and relative.endswith(".swift"):
+            if relative.startswith("apps/ios/Shogun/") and relative.endswith(".swift"):
                 files[relative] = item
     if not files:
         raise ValueError("No app source coverage found; refusing to report an empty success.")

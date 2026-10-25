@@ -1,7 +1,7 @@
 {
   "minimumAppCoverage": 0.85,
   "files": {
-    "Shogun/Services/CatalogStore.swift": 1.0,
-    "Shogun/Models/Models.swift": 1.0
+    "apps/ios/Shogun/Services/CatalogStore.swift": 1.0,
+    "apps/ios/Shogun/Models/Models.swift": 1.0
   }
 }

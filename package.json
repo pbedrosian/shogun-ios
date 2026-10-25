@@ -1,0 +1,24 @@
+{
+  "name": "shogun-backend-tools",
+  "private": true,
+  "description": "Local Supabase development tooling; not an iOS runtime dependency",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "node scripts/backend/dev.mjs",
+    "backend:docs": "node scripts/backend/docs.mjs",
+    "backend:doctor": "node scripts/backend/local.mjs doctor",
+    "backend:start": "supabase --workdir backend start",
+    "backend:stop": "supabase --workdir backend stop",
+    "backend:status": "supabase --workdir backend status",
+    "backend:reset": "supabase --workdir backend db reset --local",
+    "backend:fixtures": "node scripts/backend/local.mjs fixtures",
+    "backend:smoke": "node scripts/backend/local.mjs smoke",
+    "backend:test": "node --test scripts/backend/local.test.mjs"
+  },
+  "devDependencies": {
+    "supabase": "2.122.0",
+    "swagger-ui-dist": "5.34.0"
+  }
+}
