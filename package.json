@@ -15,7 +15,9 @@
     "backend:reset": "supabase --workdir backend db reset --local",
     "backend:fixtures": "node scripts/backend/local.mjs fixtures",
     "backend:smoke": "node scripts/backend/local.mjs smoke",
-    "backend:test": "node --test scripts/backend/local.test.mjs"
+    "backend:test": "node --test scripts/backend/local.test.mjs",
+    "backend:test:db": "supabase --workdir backend test db --local",
+    "backend:test:api": "node scripts/backend/permissions.mjs"
   },
   "devDependencies": {
     "supabase": "2.122.0",

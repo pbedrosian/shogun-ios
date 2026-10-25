@@ -10,7 +10,7 @@ The runner targets `apps/ios/Shogun.xcodeproj`; source selection, core coverage
 policy, and Sonar paths are scoped to `apps/ios/Shogun`. Backend files are not
 included in the iOS coverage denominator. Backend tooling uses the root npm
 commands with the Supabase CLI workdir set to `backend`; hosted backend deployment
-and database CI remain SHO-27 work.
+and broader deployment automation remain SHO-27 work.
 
 The named GitHub check is **iOS build, tests and coverage**. It runs on pull requests into dev/main, pushes to those branches, and manual dispatch. Superseded runs on the same ref are cancelled.
 
@@ -135,3 +135,13 @@ Branch-protection changes are a separate decision; no required checks or merge p
 - [Official SonarSource Swift coverage example](https://github.com/SonarSource/sonar-scanning-examples/tree/master/swift-coverage)
 - [Official Sonar scan action](https://github.com/SonarSource/sonarqube-scan-action)
 - [Jenkinsfile documentation](https://www.jenkins.io/doc/book/pipeline/jenkinsfile/)
+
+## Backend schema and permission CI
+
+The separate `backend-ci.yml` workflow runs **Backend schema and permissions** on
+Ubuntu 24.04 with Node 22 and Docker. It installs the pinned tools, starts a clean
+local Supabase stack (applying migrations), runs the SQL permission tests, creates
+local fixture accounts/memberships, and exercises REST permissions with real JWTs.
+It stops the stack on success or failure. No hosted credentials or production
+deployment are involved; backend results do not change the iOS coverage denominator.
+See [database documentation](DATABASE.md) for local reproduction and recovery.

@@ -44,7 +44,7 @@ Xcode reported CoreSimulator service failures and a version mismatch (installed 
 
 Manual checks in Xcode: switch libraries, search by title/year, open details from both tabs, change watched/rating then open the same title through the other library, clear rating, and check light/dark mode and large Dynamic Type. Restart to confirm the documented demo reset.
 
-See AGENTS.md for project conventions. No signing team or production icon is configured; add these before distribution.
+See AGENTS.md for project conventions. The AppIcon asset uses the supplied chrome Shogun artwork in Debug and Release. Verify signing and distribution settings before release.
 
 ## Library redesign preview
 

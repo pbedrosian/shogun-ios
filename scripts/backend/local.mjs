@@ -22,17 +22,18 @@ export function localSettings(status) {
   return { url: url.origin, admin: status.SERVICE_ROLE_KEY, anon: status.ANON_KEY };
 }
 
-function settings() {
+export function settings() {
   const status = execFileSync(cli, ['--workdir', path.join(root, 'backend'), 'status', '-o', 'json'],
     { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 20_000 });
   return localSettings(JSON.parse(status));
 }
 
-async function request(config, endpoint, { admin = false, method = 'GET', body } = {}) {
+async function request(config, endpoint, { admin = false, method = 'GET', body, upsert = false } = {}) {
   const key = admin ? config.admin : config.anon;
   const response = await fetch(config.url + endpoint, {
     method, redirect: 'error', signal: AbortSignal.timeout(15_000),
-    headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+    headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json',
+      Prefer: upsert ? 'resolution=merge-duplicates,return=representation' : 'return=representation' },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   // Do not print response bodies: Auth responses contain tokens and user information.
@@ -60,9 +61,26 @@ async function fixtures(config) {
     if (!id) throw new Error(`Auth did not return an ID for fixture ${account.name}.`);
     accounts.push({ ...account, id });
   }
+  const owner = accounts.find(account => account.name === 'owner');
+  const family = spec.libraryScenario;
+  await request(config, '/rest/v1/libraries?on_conflict=id', {
+    admin: true, method: 'POST', upsert: true,
+    body: { id: family.id, owner_id: owner.id, name: family.name, is_shared: true },
+  });
+  await request(config, '/rest/v1/library_memberships?on_conflict=library_id,user_id', {
+    admin: true, method: 'POST', upsert: true,
+    body: Object.entries(family.memberships).map(([name, role]) => ({
+      library_id: family.id, user_id: accounts.find(account => account.name === name).id, role,
+    })),
+  });
+  for (const name of family.excluded) {
+    const account = accounts.find(account => account.name === name);
+    await request(config, `/rest/v1/library_memberships?library_id=eq.${family.id}&user_id=eq.${account.id}`,
+      { admin: true, method: 'DELETE' });
+  }
   writeFileSync(path.join(root, 'backend/supabase/fixtures/accounts.local.json'),
-    JSON.stringify({ accounts, libraryScenario: spec.libraryScenario }, null, 2) + '\n', { mode: 0o600 });
-  console.log('Four local Auth fixtures ready. Library memberships await SHO-18.');
+    JSON.stringify({ accounts, libraryScenario: family }, null, 2) + '\n', { mode: 0o600 });
+  console.log('Four local Auth fixtures and the owner/editor/viewer family library are ready.');
 }
 
 async function smoke(config) {

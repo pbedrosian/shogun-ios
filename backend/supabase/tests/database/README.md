@@ -1,5 +1,9 @@
 # Database integration tests
 
-SHO-18 adds schema migrations and SQL permission tests here. Run them with the
-repository's pinned CLI (`npx --no-install supabase --workdir backend test db`) once SQL tests exist.
-No application tables or membership permissions exist in SHO-25.
+Run `npm run backend:test:db` from the repository root with local Supabase running.
+The pgTAP suite switches between authenticated/anonymous roles and four distinct
+user identities, verifies positive/negative access and data integrity, then rolls
+back the test data. Run `npm run backend:fixtures` and `npm run backend:test:api`
+to verify actual signed user sessions through the REST gateway as well.
+
+See [schema, permissions, and recovery](../../../../docs/DATABASE.md).
