@@ -9,6 +9,7 @@
 - PersonalMovieState is keyed by user and movie, independent of library ownership. Ratings are nil or 1–5.
 - Memberships scope accessible libraries. Mock filtering is demonstration only; future backend work must enforce permissions server-side and must not trust client-supplied user IDs.
 - The iOS app remains an offline, in-memory demo until its Phase 2 integration tickets are implemented. SHO-25 authorizes local Supabase tooling/configuration beside the app; SQL schema and server-side authorization belong to SHO-18. Do not connect the app to live services or add TMDB, remote artwork, or an SDK as part of backend setup. Never commit secrets.
+- Database changes belong in versioned SQL migrations. Every exposed application table needs explicit grants and RLS. Derive identities from auth.uid(), restrict SECURITY DEFINER helpers and pin their search paths, and run backend:test:db plus backend:test:api for permission changes. See docs/DATABASE.md for the role model and recovery instructions.
 - Posters use original procedural SwiftUI artwork. Preserve light/dark support, Dynamic Type, accessible labels, and native navigation.
 - Build: xcodebuild -project apps/ios/Shogun.xcodeproj -scheme Shogun -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
 - Run model checks: swiftc apps/ios/Shogun/Models/Models.swift apps/ios/Shogun/Services/MockCatalog.swift apps/ios/Shogun/Services/CatalogStore.swift apps/ios/Checks/main.swift -o /tmp/shogun-model-checks && /tmp/shogun-model-checks

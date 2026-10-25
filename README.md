@@ -64,7 +64,7 @@ npm run backend:smoke
 
 Fixtures provide separate owner/editor/viewer/outsider Auth identities. Their
 emails and local-only password are documented in [backend setup](docs/BACKEND.md).
-Actual library membership permissions arrive with SHO-18. The launcher does not
+Membership permissions are enforced by PostgreSQL row-level security. The launcher does not
 create fixtures or reset existing data.
 
 ## Daily startup and shutdown
@@ -104,9 +104,14 @@ quit them separately when finished.
 | PostgreSQL | 127.0.0.1:54322 |
 
 **The iOS app is not connected to Supabase yet.** It still displays sample data;
-app edits reset on relaunch. Movie/library tables and their Swagger endpoints
-will be added in SHO-18. Swagger currently documents the database REST API,
+app edits reset on relaunch. Movie/library tables and permission policies are available in the local backend. Swagger currently documents the database REST API,
 not Auth or Edge Functions. Its Try it out controls execute real local requests.
+
+To authenticate Swagger, use the local `ANON_KEY` from `npm run backend:status`
+to sign in through Supabase Auth, then paste the returned **user access_token**
+into Swagger and click **Load API**. The anon key itself does not go in Swagger's
+token field. Follow the [local Swagger sign-in walkthrough](docs/BACKEND.md#authenticate-swagger-with-local-supabase)
+for the exact command, fixture credentials, and switching between permission roles.
 
 ## Individual commands
 
@@ -119,6 +124,8 @@ Run these from the repository root:
 | `npm run backend:docs` | Start Swagger UI only; Supabase must already be running |
 | `npm run backend:status` | Show local endpoints and keys; do not share its full output |
 | `npm run backend:fixtures` | Create/refresh local test accounts without duplicating their IDs |
+| `npm run backend:test:db` | Run SQL schema, integrity, and role permission tests |
+| `npm run backend:test:api` | Test permissions through REST with fixture user JWTs |
 | `npm run backend:smoke` | Verify API health and fixture sign-ins |
 | `npm run backend:stop` | Stop Supabase and preserve local data |
 | `npm run backend:reset` | **Delete local database data** and rebuild from migrations |
@@ -139,6 +146,8 @@ With the backend running and fixtures created:
 
 ```sh
 npm run backend:smoke
+npm run backend:test:db
+npm run backend:test:api
 ```
 
 For the complete iOS build, static analysis, unit/UI tests, and coverage checks:
@@ -166,12 +175,13 @@ GitHub Actions and Jenkins use the same root-level runner.
 - **Xcode cannot find a simulator/runtime:** install an iOS runtime in Xcode
   settings and select its iPhone simulator. If command-line builds select the wrong
   Xcode, check `xcode-select -p` and Xcode's Command Line Tools setting.
-- **Swagger has no movie/library endpoints:** expected until SHO-18 adds tables
-  and grants; an empty schema does not mean the backend failed to start.
+- **Swagger has no movie/library endpoints:** anonymous clients have no table access.
+  Load a signed-in user access token and click Load API to discover their endpoints.
 
 More details: [iOS app and tests](apps/ios/README.md),
 [backend configuration, fixtures, and API docs](docs/BACKEND.md), and
-[CI, coverage, and Sonar setup](docs/CI.md).
+[CI, coverage, and Sonar setup](docs/CI.md), and
+[database schema, permissions, and recovery](docs/DATABASE.md).
 
 ## Release boundaries
 

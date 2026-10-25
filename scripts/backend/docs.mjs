@@ -13,7 +13,7 @@ const page = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Shogun API</title><link rel="stylesheet" href="/swagger-ui.css">
 <style>body{margin:0;background:#faf9f6}header{padding:20px;font:16px system-ui}input{width:min(600px,80%);padding:8px}button{padding:8px}#error{color:#b42318}</style></head>
-<body><header><h1>Shogun local API</h1><p>Live database REST documentation. Movie and library endpoints arrive with SHO-18. Auth endpoints are not included.</p>
+<body><header><h1>Shogun local API</h1><p>Live database REST documentation. Load a user access token to explore movie and library endpoints. Auth endpoints are not included.</p>
 <label for="token">Optional user access token (JWT, without “Bearer”)</label><br>
 <input id="token" type="password" autocomplete="off" placeholder="Leave empty for anonymous access">
 <button id="reload">Load API</button><p>Token stays in this page's memory. Try it out sends real requests to your local database.</p><p id="error" role="alert"></p></header>
