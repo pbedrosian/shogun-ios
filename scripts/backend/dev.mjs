@@ -8,6 +8,7 @@ const exec = promisify(execFile);
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const cli = path.join(root, 'node_modules/.bin/supabase');
 const docsURL = 'http://127.0.0.1:54328';
+const logsURL = 'http://127.0.0.1:54323/project/default/logs/explorer';
 const noOpen = process.argv.includes('--no-open');
 let server;
 let child;
@@ -74,10 +75,11 @@ try {
   } else console.log('Reusing the running Swagger UI server.');
 
   if (!noOpen && process.platform === 'darwin') {
-    await exec('open', [docsURL]);
+    await exec('open', [docsURL, logsURL]);
     await exec('open', [path.join(root,'apps/ios/Shogun.xcodeproj')]);
   }
   console.log(`Ready. Swagger UI: ${docsURL}\nStudio: http://127.0.0.1:54323\nPress Run (⌘R) in Xcode to launch the iPhone app.`);
+  console.log(`Backend service logs: ${logsURL} (Studio → Logs).`);
   console.log('The iOS app still uses offline demo data until SHO-19/20.');
   if (server) console.log('Keep this Terminal open for Swagger UI. Ctrl-C stops the docs server only.');
 } catch (error) {

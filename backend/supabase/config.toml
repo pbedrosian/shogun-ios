@@ -53,7 +53,7 @@ enable_confirmations = true
 secure_password_change = true
 max_frequency = "1s"
 
-# Keep the initial stack focused on Postgres, Auth, REST, Studio, and local email.
+# Optional application services remain disabled until their integration tickets.
 [realtime]
 enabled = false
 [storage]
@@ -61,4 +61,9 @@ enabled = false
 [edge_runtime]
 enabled = false
 [analytics]
-enabled = false
+# Start local Logflare and Vector with the backend so Studio can query service logs.
+enabled = true
+backend = "postgres"
+port = 54327
+# The default 54328 is used by our Swagger viewer; 54329 is reserved for pooler.
+vector_port = 54330
