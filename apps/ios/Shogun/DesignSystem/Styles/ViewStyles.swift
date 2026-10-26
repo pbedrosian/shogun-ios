@@ -44,3 +44,36 @@ extension View {
     func movieTitleStyle() -> some View { modifier(MovieTitleStyle()) }
     func movieMetadataStyle() -> some View { modifier(MovieMetadataStyle()) }
 }
+
+struct ShogunAuthFieldStyle: ViewModifier {
+    func body(content: Content) -> some View {
+        content.padding(.horizontal, ShogunTheme.Spacing.regular)
+            .padding(.vertical, ShogunTheme.Spacing.compact)
+            .frame(minHeight: ShogunTheme.Auth.fieldHeight)
+            .background(ShogunTheme.surface, in: RoundedRectangle(cornerRadius: ShogunTheme.Radius.control))
+    }
+}
+struct ShogunAuthPrimaryButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var enabled
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label.font(ShogunTheme.Typography.headline)
+            .frame(maxWidth: .infinity, minHeight: ShogunTheme.Auth.fieldHeight)
+            .padding(.vertical, ShogunTheme.Spacing.tight)
+            .foregroundStyle(ShogunTheme.onAccent)
+            .background(ShogunTheme.authPrimary, in: Capsule())
+            .contentShape(Capsule())
+            .opacity(enabled ? (configuration.isPressed ? 0.85 : 1) : 0.45)
+    }
+}
+extension View {
+    func shogunAuthField() -> some View { modifier(ShogunAuthFieldStyle()) }
+}
+
+struct ShogunAuthTextButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label.font(ShogunTheme.Typography.emphasizedBody)
+            .frame(minHeight: ShogunTheme.Size.touchTarget)
+            .contentShape(Rectangle()).foregroundStyle(ShogunTheme.accent)
+            .opacity(configuration.isPressed ? 0.7 : 1)
+    }
+}

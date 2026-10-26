@@ -1,19 +1,19 @@
-# Shogun — Phase 1
+# Shogun iOS
 
-Native iPhone app for iOS 17+, built with SwiftUI and Apple frameworks only.
+Native iPhone app for iOS 17+, built with SwiftUI and the official Supabase Auth SDK.
 
-Phase 2 local backend tooling is available alongside the offline iOS demo. See
+Real authentication is available; the sample catalog remains a Debug UI-test fixture. See [authentication setup](../../docs/AUTH.md) for accounts, sessions, password recovery, and phone networking. See
 [local Supabase setup](../../docs/BACKEND.md) for prerequisites, start/stop/reset commands,
-development Auth fixtures, and the boundary with upcoming schema and app integration.
+development Auth fixtures and backend verification.
 
 ## Open and run
 
-1. Open `apps/ios/Shogun.xcodeproj` in Xcode 15 or later (validated with Xcode 27).
+1. Open `apps/ios/Shogun.xcodeproj` in Xcode 16.4 or later (validated with Xcode 27).
 2. Select the **Shogun** scheme and an installed iPhone simulator with iOS 17 or later.
-3. Press **Run** (Command-R). No API keys or accounts are needed.
-4. For a physical iPhone, choose your development team under Signing & Capabilities and change `com.example.Shogun` to a unique bundle identifier.
+3. Run `npm run dev` from the repository root to configure local authentication, then press **Run** (Command-R). The app opens directly to Sign in.
+4. For a physical iPhone, choose your development team under Signing & Capabilities and use a unique bundle identifier if needed. Configure the Mac LAN host as described in the authentication guide.
 
-## Included
+## Debug catalog fixture (Phase 1)
 
 - Library poster grid with personal/shared library selector and collection search.
 - Movie details with title, year, synopsis, owned formats and copy counts across accessible libraries.
@@ -22,11 +22,11 @@ development Auth fixtures, and the boundary with upcoming schema and app integra
 - Placeholder profile, tab navigation, and automatic system light/dark appearance.
 - Original poster artwork generated locally by SwiftUI shapes, gradients, text and SF Symbols. No remote images or asset downloads.
 
-The demo has six personal titles and three family titles, including an overlapping movie and two VHS copies of the same movie. Changes are in memory and reset when the app restarts. Account creation, invitations, full catalog/manual movie entry, persistence, Supabase and TMDB remain outside this preview. The Library redesign includes a small local sample-copy sheet behind the + button.
+The Debug catalog fixture has six personal titles and three family titles, including an overlapping movie and two VHS copies of the same movie. Changes are in memory and reset when the app restarts. Authentication is connected separately; invitations, full catalog/manual movie entry, collection persistence, and TMDB remain outside this catalog fixture. The Library redesign includes a small local sample-copy sheet behind the + button.
 
 ## Architecture
 
-`App` owns one observable mock store. `Features` contains Library, Search and Profile views. `Shared` contains reusable poster/card views. `Models` separates stable movie metadata, library memberships, individual owned copies and user/movie viewing state. `Services` provides mock data and access filtering. Membership filtering is a local demonstration; future services must enforce authorization on the server.
+`App` owns the authentication store. Only the Debug catalog fixture creates a mock catalog store. `Features` contains Library, Search and Profile views. `Shared` contains reusable poster/card views. `Models` separates stable movie metadata, library memberships, individual owned copies and user/movie viewing state. `Services` provides mock data and access filtering. Membership filtering is a local demonstration; future services must enforce authorization on the server.
 
 ## Validation
 
@@ -99,7 +99,7 @@ Search and Library views consume the tested `CatalogStore.searchResults` and `li
 
 SHO-12 verification: 60 tests passed with zero failures on the iPhone 17 simulator (iOS 27.0). Xcode reported 100% executable-line coverage for `CatalogStore.swift` and `Models.swift`; this is not a claim of complete UI or branch coverage. Existing standalone checks in `apps/ios/Checks/main.swift` also passed.
 
-Unit tests cover the current business logic, not rendered SwiftUI layout. Profile's library list uses the same tested access rules; its static account/about text, navigation, sheets, poster layout, accessibility, Dynamic Type, orientation, native appearance, and the Search/Profile header gap (SHO-11) still require UI/device verification. The demo assumes at least one accessible library when displaying `selectedLibrary`; a no-membership account screen is not implemented. No network, persistence, sign-in, invitations, or remote lookup behavior exists to test yet.
+Unit tests cover the current business logic, not rendered SwiftUI layout. Profile's library list uses the same tested access rules; its static account/about text, navigation, sheets, poster layout, accessibility, Dynamic Type, orientation, native appearance, and the Search/Profile header gap (SHO-11) still require UI/device verification. The demo assumes at least one accessible library when displaying `selectedLibrary`; a no-membership account screen is not implemented. This section describes the historical catalog fixture. Authentication now has SDK, state, and UI tests documented in the authentication guide; invitations and remote movie lookup remain future work.
 
 ## Continuous integration (SHO-13)
 

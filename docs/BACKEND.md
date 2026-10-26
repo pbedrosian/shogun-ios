@@ -3,7 +3,7 @@
 Supabase Auth and PostgreSQL are the confirmed Phase 2 backend. Backend sources
 live in `backend/supabase/` alongside the iOS project so schema and client changes can be
 reviewed together. Node is development tooling only; the app remains Swift/SwiftUI.
-The iOS app still uses its offline mock store and needs no backend to run.
+The iOS app connects to Auth; the sample catalog is available only to Debug UI tests.
 
 ## Prerequisites
 
@@ -25,7 +25,7 @@ This opens Docker Desktop if needed, waits up to two minutes for its engine,
 starts Supabase and its logging services, starts or reuses Swagger UI, and opens
 Swagger plus Studio Logs in your browser
 and the Shogun project in Xcode. Press **⌘R** in Xcode to run the iPhone app.
-The app still uses offline sample data until its integration tickets are complete.
+The app opens its real sign-in flow; collection synchronization follows in SHO-20.
 The launcher does not reset data or recreate fixtures.
 
 Keep Terminal open if it started Swagger UI. Ctrl-C stops that docs server;
@@ -59,9 +59,9 @@ do not use `--ignore-health-check` to make a failed stack look healthy.
 `npm run backend:status` displays local endpoints and keys. Treat the admin/secret
 keys as server-only; never paste full status output into tickets or logs. Copy
 `.env.example` to ignored `.env.local` only if you need a configuration reference.
-The current app and scripts do not load it. Future client integration uses the
-URL and publishable/anon key, never the service-role key. Native callbacks and
-Apple/Google configuration belong to SHO-19/26; no OAuth provider is enabled here.
+The iOS app uses the URL/public key in its xcconfig, never the service-role key.
+Native email callbacks are connected in SHO-19; Apple/Google remain unconfigured.
+Optional server SMTP credentials use `backend/.env` as described in [EMAIL.md](EMAIL.md).
 
 ## Centralized service logs
 
@@ -74,8 +74,8 @@ Open [Studio → Logs](http://127.0.0.1:54323/project/default/logs/explorer). Th
 Gateway collection shows HTTP request paths, status codes and methods. Postgres
 shows database messages/errors; Auth and PostgREST have their own collections.
 The Explorer can query sources across collections. Local gateway events come
-from Kong, even though the source is named `edge_logs`. Disabled Storage,
-Realtime and Edge Functions do not produce events. This collects backend service
+from Kong, even though the source is named `edge_logs`. Disabled Storage and
+Realtime do not produce events. The Edge Functions runtime now serves account deletion. This collects backend service
 logs; Swift/iPhone app console logs are still viewed in Xcode.
 
 Generate requests in Swagger, then click **Refresh logs** in the relevant
@@ -223,11 +223,12 @@ environment credentials: they obtain keys from this project's local CLI status,
 require exactly the loopback API on port 54321, and refuse redirects. Fixtures
 are not migrations and cannot be applied by a hosted migration push.
 
-For a normal email confirmation test, use Studio's Auth tools or the local Auth
-signup API to create a new account (not a fixture), then inspect Mailpit. Email
-confirmation is enabled and SMTP delivery is captured locally. The browser redirect
-currently targets port 3000 as a placeholder; no web app is served there. Native
-confirmation/recovery routing is not implemented until SHO-19/26.
+Email confirmation is disabled for local development, so new sign-ups get a
+session immediately. To test confirmation, set `auth.email.enable_confirmations`
+to `true`, restart Supabase, and create a new account through the app or Auth API.
+Messages are captured in Mailpit. The browser redirect targets port 3000 as a
+placeholder; no web app is served there. Native confirmation/recovery routing uses
+`shogun://auth-callback` (SHO-19).
 
 ## Simulator and physical iPhone
 
@@ -269,3 +270,36 @@ signed in again without rerunning fixtures. The stack was left running for revie
 References: [Supabase local development](https://supabase.com/docs/guides/local-development),
 [configuration](https://supabase.com/docs/guides/local-development/cli/config), and
 [environment management](https://supabase.com/docs/guides/deployment/managing-environments).
+
+## Account deletion
+
+Local startup includes the Edge Functions runtime and `delete-account` endpoint at
+`POST /functions/v1/delete-account`. It requires the caller's session JWT and a JSON
+body containing only `password`. Auth validates the caller online, then verifies
+their current password. No caller-supplied account ID is accepted. The function
+uses its server-only service-role credential to hard-delete that verified Auth user.
+The temporary password-verification session is revoked if deletion fails.
+
+Existing foreign-key cascades remove the profile, libraries owned by the account
+(including shared libraries), their copies/memberships, personal movie state, and
+preferences. Other accounts are preserved. Shared movie metadata remains, with
+creator references cleared. Storage is disabled; a future upload feature must add
+owned-object cleanup before Auth deletion, which Supabase otherwise rejects.
+
+`npm run backend:test` checks handler authorization/error behavior without Docker.
+`npm run backend:test:deletion` runs real JWT/password/cascade checks against only
+the fixed local backend and cleans up its temporary accounts/data. Backend CI runs
+both. Never run deletion tests against real user accounts.
+
+For a hosted environment, deploy the function before enabling the iOS deletion UI:
+`npx supabase --workdir backend functions deploy delete-account --project-ref YOUR_PROJECT_REF`.
+The checked-in function configuration disables only the gateway's legacy JWT check;
+the handler always verifies the session with Auth before any privileged operation.
+Service-role credentials stay in the function environment and never enter the app.
+
+## Delivering auth mail to actual inboxes
+
+See [EMAIL.md](EMAIL.md) for verified-domain/SMTP setup, local and hosted configuration,
+callback URLs, templates, testing, troubleshooting, and rollback. See [AUTH.md](AUTH.md)
+for the app setup. External delivery is not configured; local confirmation remains
+disabled and recovery mail is captured in Mailpit.

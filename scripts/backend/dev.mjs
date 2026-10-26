@@ -3,6 +3,7 @@ import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { docsServer } from './docs.mjs';
+import { configureIOS } from './configure-ios.mjs';
 
 const exec = promisify(execFile);
 const root = fileURLToPath(new URL('../../', import.meta.url));
@@ -63,6 +64,7 @@ try {
   }
   console.log('Starting local Supabase…');
   await run(cli, ['--workdir', path.join(root, 'backend'), 'start']);
+  configureIOS({ onlyIfMissing: true });
   if (!await existingDocs()) {
     const {stdout} = await exec(cli, ['--workdir',path.join(root,'backend'),'status','-o','json'], {cwd:root,timeout:20_000});
     const status = JSON.parse(stdout);
@@ -80,7 +82,7 @@ try {
   }
   console.log(`Ready. Swagger UI: ${docsURL}\nStudio: http://127.0.0.1:54323\nPress Run (⌘R) in Xcode to launch the iPhone app.`);
   console.log(`Backend service logs: ${logsURL} (Studio → Logs).`);
-  console.log('The iOS app still uses offline demo data until SHO-19/20.');
+  console.log('iOS authentication connects to Supabase. Rebuild to open the sign-in screen.');
   if (server) console.log('Keep this Terminal open for Swagger UI. Ctrl-C stops the docs server only.');
 } catch (error) {
   server?.close();

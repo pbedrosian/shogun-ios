@@ -31,6 +31,17 @@ CA00000000000000000000CE = {isa = PBXBuildFile; fileRef = CA00000000000000000000
 CA00000000000000000000CF = {isa = PBXBuildFile; fileRef = CA000000000000000000006B; };
 CA00000000000000000000D0 = {isa = PBXBuildFile; fileRef = CA000000000000000000006C; };
 CB000000000000000000000B = {isa = PBXBuildFile; fileRef = CB000000000000000000000C; };
+997F2D59C48C4C118B96AE6A = {isa = PBXBuildFile; fileRef = 23E1B675F8E546F7818D7CEC; };
+B6F14BA0A28E4CCCBF2653EF = {isa = PBXBuildFile; fileRef = C37196369E2546DC8C4CE2FB; };
+A5DCE84CC3714BB8B835CCAE = {isa = PBXBuildFile; fileRef = 15CFF68E09304A54841E4A26; };
+07407333D977441BAFFAD5DE = {isa = PBXBuildFile; fileRef = FA2D8D080AF94FDF91EAEEF7; };
+BEC0B8D8C5A84E71B66AE11A = {isa = PBXBuildFile; fileRef = 1CD0380ADC854F90BB6CAD60; };
+904152C1EF4A49159E160D19 = {isa = PBXBuildFile; productRef = 3BBBA379598042F1A4DE6C3B; };
+267D1BEF8053412B838607B2 = {isa = PBXBuildFile; fileRef = D24DE0370BDB4528A71C782D; };
+E05EFC0947AD43D0B6EBAA2B = {isa = PBXBuildFile; fileRef = D0A274287F7B4EF8B25E905A; };
+28A31700A1FB4D0DADC4D8A4 = {isa = PBXBuildFile; productRef = 3BBBA379598042F1A4DE6C3B; };
+7472C718C1E144F2A1E11C79 = {isa = PBXBuildFile; fileRef = 01E41446AF0B444FB32C74D8; };
+C2FBF904A8DF4BE086B94453 = {isa = PBXBuildFile; fileRef = E595731DB5BE47B8A35A3A1F; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -64,6 +75,17 @@ CA000000000000000000006C = {isa = PBXFileReference; lastKnownFileType = sourceco
 CA0000000000000000000001 = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = ShogunTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 CB000000000000000000000C = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppFlowTests.swift; sourceTree = "<group>"; };
 CB0000000000000000000001 = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = ShogunUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+23E1B675F8E546F7818D7CEC = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shogun/Services/AuthModels.swift; sourceTree = "<group>"; };
+C37196369E2546DC8C4CE2FB = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shogun/Services/AuthStore.swift; sourceTree = "<group>"; };
+15CFF68E09304A54841E4A26 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shogun/Services/SupabaseAuthService.swift; sourceTree = "<group>"; };
+FA2D8D080AF94FDF91EAEEF7 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shogun/Services/AuthUITestService.swift; sourceTree = "<group>"; };
+1CD0380ADC854F90BB6CAD60 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shogun/Features/Auth/AuthEntryView.swift; sourceTree = "<group>"; };
+AE1E46001B964AC5BAA927D0 = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Configuration/Debug.xcconfig; sourceTree = "<group>"; };
+5DE9B0A22B2A4D16865C669A = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Configuration/Release.xcconfig; sourceTree = "<group>"; };
+D24DE0370BDB4528A71C782D = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthTests.swift; sourceTree = "<group>"; };
+D0A274287F7B4EF8B25E905A = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthSDKTests.swift; sourceTree = "<group>"; };
+01E41446AF0B444FB32C74D8 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveAuthTests.swift; sourceTree = "<group>"; };
+E595731DB5BE47B8A35A3A1F = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureAuthStorage.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -71,10 +93,11 @@ CB0000000000000000000001 = {isa = PBXFileReference; explicitFileType = wrapper.c
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+904152C1EF4A49159E160D19,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-CA0000000000000000000004 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+CA0000000000000000000004 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (28A31700A1FB4D0DADC4D8A4); runOnlyForDeploymentPostprocessing = 0; };
 CB0000000000000000000004 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXFrameworksBuildPhase section */
 
@@ -86,6 +109,7 @@ BF3000000000000000000000 = {isa = PBXGroup; path = DesignSystem; sourceTree = "<
 		000000000000000000000002 = {
 			isa = PBXGroup;
 			children = (
+DDB912C1FF724C67A4A67CEE,
 				CA0000000000000000000002 /* ShogunTests */,
                 CB0000000000000000000002 /* ShogunUITests */,
 				D6D0BB6A3081A93A00887AC8 /* AGENTS.md */,
@@ -168,6 +192,7 @@ CB0000000000000000000001 /* ShogunUITests.xctest */,
 		D6D0BB7C3081A93A00887AC8 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+E595731DB5BE47B8A35A3A1F,
 				D6D0BB7A3081A93A00887AC8 /* CatalogStore.swift */,
 				D6D0BB7B3081A93A00887AC8 /* MockCatalog.swift */,
 			);
@@ -196,8 +221,9 @@ CB0000000000000000000001 /* ShogunUITests.xctest */,
 			path = Shogun;
 			sourceTree = "<group>";
 		};
-CA0000000000000000000002 = {isa = PBXGroup; path = ShogunTests; sourceTree = "<group>"; children = (CA0000000000000000000064,CA0000000000000000000065,CA0000000000000000000066,CA0000000000000000000067,CA0000000000000000000068,CA0000000000000000000069,CA000000000000000000006A,CA000000000000000000006B,CA000000000000000000006C); };
+CA0000000000000000000002 = {isa = PBXGroup; path = ShogunTests; sourceTree = "<group>"; children = (01E41446AF0B444FB32C74D8,D0A274287F7B4EF8B25E905A,D24DE0370BDB4528A71C782D,CA0000000000000000000064,CA0000000000000000000065,CA0000000000000000000066,CA0000000000000000000067,CA0000000000000000000068,CA0000000000000000000069,CA000000000000000000006A,CA000000000000000000006B,CA000000000000000000006C); };
 CB0000000000000000000002 = {isa = PBXGroup; path = ShogunUITests; sourceTree = "<group>"; children = (CB000000000000000000000C); };
+DDB912C1FF724C67A4A67CEE = {isa = PBXGroup; name = Authentication; sourceTree = "<group>"; children = (23E1B675F8E546F7818D7CEC,C37196369E2546DC8C4CE2FB,15CFF68E09304A54841E4A26,FA2D8D080AF94FDF91EAEEF7,1CD0380ADC854F90BB6CAD60); };
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -213,7 +239,8 @@ CB0000000000000000000002 = {isa = PBXGroup; path = ShogunUITests; sourceTree = "
 			);
 			dependencies = (
 			);
-			name = Shogun;
+			packageProductDependencies = (3BBBA379598042F1A4DE6C3B);
+name = Shogun;
 			productName = Shogun;
 			productReference = 000000000000000000000004 /* Shogun.app */;
 			productType = "com.apple.product-type.application";
@@ -224,6 +251,7 @@ buildConfigurationList = CA0000000000000000000006;
 buildPhases = (CA0000000000000000000003, CA0000000000000000000004);
 buildRules = ();
 dependencies = (CA000000000000000000000A);
+packageProductDependencies = (3BBBA379598042F1A4DE6C3B);
 name = ShogunTests;
 productName = ShogunTests;
 productReference = CA0000000000000000000001;
@@ -268,7 +296,8 @@ CB000000000000000000000A = {isa = PBXTargetDependency; target = 0000000000000000
 			mainGroup = 000000000000000000000002;
 			productRefGroup = 000000000000000000000003 /* Products */;
 			projectDirPath = "";
-			projectRoot = "";
+			packageReferences = (40ACD2CE904A413CB66C784C);
+projectRoot = "";
 			targets = (
 CA0000000000000000000005 /* ShogunTests */,
 CB0000000000000000000005 /* ShogunUITests */,
@@ -293,6 +322,8 @@ CB0000000000000000000005 /* ShogunUITests */,
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+C2FBF904A8DF4BE086B94453,
+997F2D59C48C4C118B96AE6A,B6F14BA0A28E4CCCBF2653EF,A5DCE84CC3714BB8B835CCAE,07407333D977441BAFFAD5DE,BEC0B8D8C5A84E71B66AE11A,
 BF1000000000000000000000,
 BF1000000000000000000001,
 BF1000000000000000000002,
@@ -310,7 +341,7 @@ BF1000000000000000000003,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-CA0000000000000000000003 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (CA00000000000000000000C8,CA00000000000000000000C9,CA00000000000000000000CA,CA00000000000000000000CB,CA00000000000000000000CC,CA00000000000000000000CD,CA00000000000000000000CE,CA00000000000000000000CF,CA00000000000000000000D0); runOnlyForDeploymentPostprocessing = 0; };
+CA0000000000000000000003 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (7472C718C1E144F2A1E11C79,E05EFC0947AD43D0B6EBAA2B,267D1BEF8053412B838607B2,CA00000000000000000000C8,CA00000000000000000000C9,CA00000000000000000000CA,CA00000000000000000000CB,CA00000000000000000000CC,CA00000000000000000000CD,CA00000000000000000000CE,CA00000000000000000000CF,CA00000000000000000000D0); runOnlyForDeploymentPostprocessing = 0; };
 CB0000000000000000000003 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (CB000000000000000000000B); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXSourcesBuildPhase section */
 
@@ -318,7 +349,10 @@ CB0000000000000000000003 = {isa = PBXSourcesBuildPhase; buildActionMask = 214748
 		00000000000000000000000C /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(SHOGUN_TEST_CONDITIONS) $(inherited)";
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+SWIFT_TREAT_WARNINGS_AS_ERRORS = YES;
+GCC_TREAT_WARNINGS_AS_ERRORS = YES;
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
@@ -362,6 +396,8 @@ CB0000000000000000000003 = {isa = PBXSourcesBuildPhase; buildActionMask = 214748
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+SWIFT_TREAT_WARNINGS_AS_ERRORS = YES;
+GCC_TREAT_WARNINGS_AS_ERRORS = YES;
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
@@ -399,6 +435,7 @@ CB0000000000000000000003 = {isa = PBXSourcesBuildPhase; buildActionMask = 214748
 		};
 		00000000000000000000000E /* Debug */ = {
 			isa = XCBuildConfiguration;
+baseConfigurationReference = AE1E46001B964AC5BAA927D0;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_WEAK = YES;
@@ -426,6 +463,7 @@ CB0000000000000000000003 = {isa = PBXSourcesBuildPhase; buildActionMask = 214748
 		};
 		00000000000000000000000F /* Release */ = {
 			isa = XCBuildConfiguration;
+baseConfigurationReference = 5DE9B0A22B2A4D16865C669A;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_WEAK = YES;
@@ -491,6 +529,12 @@ LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@load
 }; name = Release; };
 /* End XCBuildConfiguration section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+40ACD2CE904A413CB66C784C = {isa = XCRemoteSwiftPackageReference; repositoryURL = "https://github.com/supabase/supabase-swift.git"; requirement = {kind = exactVersion; version = 2.55.4; }; };
+/* End XCRemoteSwiftPackageReference section */
+/* Begin XCSwiftPackageProductDependency section */
+3BBBA379598042F1A4DE6C3B = {isa = XCSwiftPackageProductDependency; package = 40ACD2CE904A413CB66C784C; productName = Auth; };
+/* End XCSwiftPackageProductDependency section */
 /* Begin XCConfigurationList section */
 		00000000000000000000000A /* Build configuration list for PBXProject "Shogun" */ = {
 			isa = XCConfigurationList;
