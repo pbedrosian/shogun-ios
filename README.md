@@ -47,7 +47,8 @@ npm run dev
 ```
 
 The launcher opens Docker Desktop if needed, waits for its engine, starts
-Supabase and Swagger UI, then opens Swagger UI in your browser and the project
+Supabase (including centralized logging) and Swagger UI, then opens Swagger UI,
+Studio Logs in your browser, and the project
 in Xcode. First startup downloads service images and may take several minutes.
 In Xcode, select the **Shogun** scheme and an installed iPhone simulator, then
 press **⌘R**. Simulator builds do not require your own signing team; physical
@@ -99,6 +100,7 @@ quit them separately when finished.
 | --- | --- |
 | Swagger UI / interactive database REST docs | http://127.0.0.1:54328 |
 | Supabase Studio / database and Auth administration | http://127.0.0.1:54323 |
+| Centralized backend logs | http://127.0.0.1:54323/project/default/logs/explorer |
 | Captured authentication emails (Mailpit) | http://127.0.0.1:54324 |
 | REST/Auth gateway | http://127.0.0.1:54321 |
 | PostgreSQL | 127.0.0.1:54322 |
@@ -114,6 +116,21 @@ token field. Follow the [local Swagger sign-in walkthrough](docs/BACKEND.md#auth
 for the exact command, fixture credentials, and switching between permission roles.
 
 ## Individual commands
+
+### View backend logs
+
+`npm run dev` and `npm run backend:start` automatically start Logflare and Vector
+with Supabase. Open **Studio → Logs** to view API Gateway, Postgres, PostgREST,
+and Auth logs in one place. Choose a collection and refresh it after making a
+request; adjust the time range if needed. Disabled services have no logs, and
+iPhone app/device console output remains in Xcode.
+
+Logflare uses port 54327; Vector ingestion uses 54330 to avoid Swagger's port
+54328. First startup may download two additional images. Logs are stored locally
+in PostgreSQL; no cloud logging account is needed.
+See [logging details](docs/BACKEND.md#centralized-service-logs).
+
+### Backend commands
 
 Run these from the repository root:
 

@@ -22,7 +22,8 @@ npm run dev
 ```
 
 This opens Docker Desktop if needed, waits up to two minutes for its engine,
-starts Supabase, starts or reuses Swagger UI, and opens the docs in your browser
+starts Supabase and its logging services, starts or reuses Swagger UI, and opens
+Swagger plus Studio Logs in your browser
 and the Shogun project in Xcode. Press **⌘R** in Xcode to run the iPhone app.
 The app still uses offline sample data until its integration tickets are complete.
 The launcher does not reset data or recreate fixtures.
@@ -52,6 +53,7 @@ do not use `--ignore-health-check` to make a failed stack look healthy.
 | REST/Auth API | http://127.0.0.1:54321 |
 | PostgreSQL | 127.0.0.1:54322 |
 | Studio | http://127.0.0.1:54323 |
+| Centralized logs | http://127.0.0.1:54323/project/default/logs/explorer |
 | Captured email (Mailpit) | http://127.0.0.1:54324 |
 
 `npm run backend:status` displays local endpoints and keys. Treat the admin/secret
@@ -60,6 +62,39 @@ keys as server-only; never paste full status output into tickets or logs. Copy
 The current app and scripts do not load it. Future client integration uses the
 URL and publishable/anon key, never the service-role key. Native callbacks and
 Apple/Google configuration belong to SHO-19/26; no OAuth provider is enabled here.
+
+## Centralized service logs
+
+Logging is enabled in the version-controlled `[analytics]` configuration, so every
+`npm run dev` or `npm run backend:start` starts **Logflare** and **Vector** as part
+of Supabase. The normal launcher opens Studio Logs alongside Swagger. Use
+`npm run dev -- --no-open` if you prefer to open the pages yourself.
+
+Open [Studio → Logs](http://127.0.0.1:54323/project/default/logs/explorer). The API
+Gateway collection shows HTTP request paths, status codes and methods. Postgres
+shows database messages/errors; Auth and PostgREST have their own collections.
+The Explorer can query sources across collections. Local gateway events come
+from Kong, even though the source is named `edge_logs`. Disabled Storage,
+Realtime and Edge Functions do not produce events. This collects backend service
+logs; Swift/iPhone app console logs are still viewed in Xcode.
+
+Generate requests in Swagger, then click **Refresh logs** in the relevant
+collection. Allow a few seconds for ingestion and check the time-range filter.
+This is automatic collection, not a promise that every SQL statement is logged;
+normal database logging levels are unchanged. Treat local logs as development
+data and avoid deliberately putting credentials or private payloads in log messages.
+
+Logflare listens on **54327** using the local PostgreSQL backend. Vector's syslog
+ingest port is **54330**, explicitly different from Swagger's 54328. The CLI
+configures the service connections and Studio integration; no cloud logging
+account or API key configuration is needed. First start downloads extra images
+and uses additional local memory/CPU. `backend:stop` stops logging with the stack.
+
+If logging is missing after switching from older configuration, run
+`npm run backend:stop` followed by `npm run dev` (data is preserved). Check Docker
+for healthy `supabase_analytics_shogun-local` and `supabase_vector_shogun-local`
+containers. Docker Desktop's container Logs view remains available to troubleshoot
+the collector itself. Do not reset the database merely to refresh logging.
 
 ## Interactive API documentation
 
