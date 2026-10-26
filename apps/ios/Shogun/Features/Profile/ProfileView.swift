@@ -71,6 +71,7 @@ private struct DeleteAccountView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var password = ""
     @State private var confirming = false
+    @FocusState private var passwordFocused: Bool
     var body: some View {
         NavigationStack {
             Form {
@@ -81,21 +82,23 @@ private struct DeleteAccountView: View {
                 }
                 Section("Confirm your identity") {
                     SecureField("Current password", text: $password).textContentType(.password)
+                        .focused($passwordFocused).submitLabel(.done)
+                        .onSubmit { passwordFocused = false }
                         .disabled(auth.isBusy).accessibilityIdentifier("auth.deletePassword")
                 }
                 Section {
                     if let error = auth.error { Text(error).foregroundStyle(.red).accessibilityIdentifier("auth.deleteError") }
                     if auth.isBusy { ProgressView("Deleting account…") }
-                    Button("Delete account", role: .destructive) { confirming = true }
+                    Button("Delete account", role: .destructive) { passwordFocused = false; confirming = true }
                         .disabled(password.isEmpty || auth.isBusy).accessibilityIdentifier("auth.requestDeletion")
                 }
-            }.navigationTitle("Delete account").navigationBarTitleDisplayMode(.inline)
+            }.scrollDismissesKeyboard(.interactively)
+                .navigationTitle("Delete account").navigationBarTitleDisplayMode(.inline)
                 .scrollContentBackground(.hidden).background(ShogunTheme.canvas)
                 .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { auth.clearFeedback(); dismiss() }.disabled(auth.isBusy) } }
                 .interactiveDismissDisabled(auth.isBusy)
-                .confirmationDialog("Delete your account permanently?", isPresented: $confirming, titleVisibility: .visible) {
+                .alert("Delete your account permanently?", isPresented: $confirming) {
                     Button("Delete permanently", role: .destructive) { auth.deleteAccount(password: password); password = "" }
-                        .accessibilityIdentifier("auth.confirmDeletion")
                     Button("Keep account", role: .cancel) {}
                 } message: { Text("Your account and owned libraries will be removed from Shogun.") }
                 .onDisappear { password = "" }
