@@ -5,10 +5,11 @@ enum MovieFormat: String, CaseIterable, Identifiable, Codable {
     var id: String { rawValue }
 }
 struct Movie: Identifiable, Hashable {
-    let id: String // Stable local metadata identifier; future providers map to this record.
+    let id: String // Stable backend metadata UUID; Debug fixtures also use readable string IDs.
     let title: String
-    let year: Int
+    let year: Int?
     let palette: Int
+    var releaseYearText: String { year.map(String.init) ?? "Unknown year" }
     let synopsis: String
 }
 struct MovieLibrary: Identifiable {

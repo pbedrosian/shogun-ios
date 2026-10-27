@@ -24,7 +24,8 @@ import Foundation
                 flowType: .pkce, redirectToURL: AuthConfiguration.redirect,
                 storageKey: "shogun-\(config.url.absoluteString)", localStorage: storage,
                 logger: nil,
-                fetch: { try await session.data(for: $0) }, emitLocalSessionAsInitialSession: false)
+                // Initial events never authorize routing: restore() refreshes and validates with Auth.
+                fetch: { try await session.data(for: $0) }, emitLocalSessionAsInitialSession: true)
         )
         let (stream, continuation) = AsyncStream<AuthSignal>.makeStream()
         signals = stream
@@ -122,6 +123,33 @@ import Foundation
         path: String, method: String, token: String, body: Data? = nil,
         forbiddenFailure: SignInFailure = .unavailable
     ) async throws -> T {
+        let data = try await rawRequest(
+            path: path, method: method, token: token, body: body,
+            forbiddenFailure: forbiddenFailure)
+        return try JSONDecoder().decode(T.self, from: data)
+    }
+    /// Bound collection services cannot reuse a later user's session.
+    func collectionRPC(_ name: String, body: Data, userID: UUID) async throws -> Data {
+        do {
+            let current = try await client.session
+            guard current.user.id == userID else { throw CollectionFailure.expired }
+            return try await rawRequest(
+                path: "rest/v1/rpc/\(name)", method: "POST",
+                token: current.accessToken, body: body, forbiddenFailure: .credentials)
+        } catch {
+            if error is CancellationError { throw error }
+            if let error = error as? CollectionFailure { throw error }
+            switch Self.failure(error) as? SignInFailure {
+            case .expired: throw CollectionFailure.expired
+            case .credentials: throw CollectionFailure.access
+            default: throw CollectionFailure.unavailable
+            }
+        }
+    }
+    private func rawRequest(
+        path: String, method: String, token: String, body: Data?,
+        forbiddenFailure: SignInFailure
+    ) async throws -> Data {
         guard let url = URL(string: path, relativeTo: config.url.appendingPathComponent("/")) else {
             throw SignInFailure.configuration
         }
@@ -142,7 +170,7 @@ import Foundation
             default: throw SignInFailure.unavailable
             }
         }
-        return try JSONDecoder().decode(T.self, from: data)
+        return data
     }
     static func failure(_ error: Error) -> Error {
         if error is CancellationError || (error as? URLError)?.code == .cancelled {

@@ -3,7 +3,7 @@
 The app uses the official Supabase Swift SDK's Auth product, pinned to 2.55.4.
 Email/password signup, sign-in, password recovery, persistent sessions and account
 deletion are connected. Apple/Google sign-in still require provider configuration
-and integration. Movie collection synchronization belongs to SHO-20.
+and integration. Collection synchronization is connected; see [COLLECTIONS.md](COLLECTIONS.md).
 
 For actual inbox delivery, domain/SMTP configuration, email confirmation and full
 reset acceptance checks, follow [EMAIL.md](EMAIL.md). That setup is documented but
@@ -28,8 +28,8 @@ immediately; a hosted project with confirmation enabled returns a check-email
 message until its link is followed. Forgot password opens recovery.
 
 Existing fixture identities/passwords are documented in [BACKEND.md](BACKEND.md).
-The signed-in account opens its real personal library; its collection is a shell
-until SHO-20. The sample catalog is restricted to Debug UI-test launch arguments;
+The signed-in account opens its saved default or accessible personal library and
+loads real collection data. The sample catalog is restricted to Debug UI-test launch arguments;
 there is no offline/demo entry point in the normal app.
 
 ## Local configuration and physical iPhone

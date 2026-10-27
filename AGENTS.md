@@ -8,12 +8,12 @@
 - Movies have stable metadata IDs. OwnedCopy belongs to a library and refers to a movie. Never put ownership on a user or collapse multiple copies into a single format flag.
 - PersonalMovieState is keyed by user and movie, independent of library ownership. Ratings are nil or 1–5.
 - Memberships scope accessible libraries. Mock filtering is demonstration only; future backend work must enforce permissions server-side and must not trust client-supplied user IDs.
-- SHO-19 connects real Supabase authentication and Keychain-backed sessions. The production app has no offline/demo entry point. Preserve the sample catalog only as a Debug UI-test fixture; collection synchronization belongs to SHO-20. SHO-25 authorizes local Supabase tooling/configuration beside the app; SQL schema and server-side authorization belong to SHO-18. Do not add TMDB or remote artwork as part of authentication. Never commit secrets.
+- SHO-19 connects real Supabase authentication and Keychain-backed sessions. The production app has no offline/demo entry point. Preserve the sample catalog only as a Debug UI-test fixture; SHO-20 connects collections through CollectionStore/CollectionServicing; see docs/COLLECTIONS.md. SHO-25 authorizes local Supabase tooling/configuration beside the app; SQL schema and server-side authorization belong to SHO-18. Do not add TMDB or remote artwork as part of authentication. Never commit secrets.
 - Database changes belong in versioned SQL migrations. Every exposed application table needs explicit grants and RLS. Derive identities from auth.uid(), restrict SECURITY DEFINER helpers and pin their search paths, and run backend:test:db plus backend:test:api for permission changes. See docs/DATABASE.md for the role model and recovery instructions.
 - Posters use original procedural SwiftUI artwork. Preserve light/dark support, Dynamic Type, accessible labels, and native navigation.
 - Build: xcodebuild -project apps/ios/Shogun.xcodeproj -scheme Shogun -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
 - Run model checks: swiftc apps/ios/Shogun/Models/Models.swift apps/ios/Shogun/Services/MockCatalog.swift apps/ios/Shogun/Services/CatalogStore.swift apps/ios/Checks/main.swift -o /tmp/shogun-model-checks && /tmp/shogun-model-checks
-- Validate UI on an iPhone simulator in light/dark appearance, large text, library switching, search, and cross-library rating consistency. Personal edits intentionally reset at relaunch.
+- Validate UI on an iPhone simulator in light/dark appearance, large text, library switching, search, and cross-library rating consistency. Debug fixture edits reset at relaunch; real saved edits must persist.
 
 ## Git workflow
 

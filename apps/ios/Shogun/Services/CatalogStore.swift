@@ -1,10 +1,10 @@
 import SwiftUI
 
 final class CatalogStore: ObservableObject {
-    let movies: [Movie]
+    @Published private(set) var movies: [Movie]
     private let userID: String
-    private let catalogLibraries: [MovieLibrary]
-    private let memberships: [LibraryMembership]
+    @Published private var catalogLibraries: [MovieLibrary]
+    @Published private var memberships: [LibraryMembership]
     @Published private(set) var copies: [OwnedCopy]
     @Published var libraryColumns = 3
     @Published var showingAddMovie = false
@@ -28,17 +28,28 @@ final class CatalogStore: ObservableObject {
         self.personalStates = personalStates
     }
 
+    /// Apply a confirmed snapshot without recreating navigation or losing an open form's draft.
+    func replaceContents(from other: CatalogStore) {
+        precondition(userID == other.userID)
+        movies = other.movies
+        copies = other.copies
+        catalogLibraries = other.catalogLibraries
+        memberships = other.memberships
+        personalStates = other.personalStates
+        selectedLibraryID = other.selectedLibraryID
+    }
+
     /// Library search is title-only; global search also matches release years.
     var libraryResults: [Movie] {
         movies(in: selectedLibraryID).filter { libraryQuery.isEmpty || $0.title.localizedCaseInsensitiveContains(libraryQuery) }
     }
     var searchResults: [Movie] {
-        movies.filter { searchQuery.isEmpty || $0.title.localizedCaseInsensitiveContains(searchQuery) || String($0.year).contains(searchQuery) }
+        movies.filter { searchQuery.isEmpty || $0.title.localizedCaseInsensitiveContains(searchQuery) || ($0.year.map(String.init)?.contains(searchQuery) == true) }
     }
     var libraries: [MovieLibrary] {
         catalogLibraries.filter { library in memberships.contains { $0.userID == userID && $0.libraryID == library.id } }
     }
-    var selectedLibrary: MovieLibrary { libraries.first { $0.id == selectedLibraryID } ?? libraries[0] }
+    var selectedLibrary: MovieLibrary? { libraries.first { $0.id == selectedLibraryID } ?? libraries.first }
     func copies(for movie: Movie, libraryID: String? = nil) -> [OwnedCopy] {
         let accessible = Set(libraries.map(\.id))
         return copies.filter { $0.movieID == movie.id && accessible.contains($0.libraryID) && (libraryID == nil || $0.libraryID == libraryID) }

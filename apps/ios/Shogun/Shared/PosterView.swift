@@ -34,12 +34,12 @@ struct MovieCard: View {
             if !compact {
                 Text(movie.title)
                     .movieTitleStyle()
-                Text(formats ?? String(movie.year))
+                Text(formats ?? movie.releaseYearText)
                     .movieMetadataStyle()
             }
         }
         .foregroundStyle(ShogunTheme.ink)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(movie.title), \(movie.year)\(formats.map { ", " + $0 } ?? "")")
+        .accessibilityLabel("\(movie.title), \(movie.releaseYearText)\(formats.map { ", " + $0 } ?? "")")
     }
 }

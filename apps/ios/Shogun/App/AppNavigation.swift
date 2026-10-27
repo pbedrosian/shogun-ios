@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct AuthRootView: View {
+    let collectionFactory: ((UUID) -> any CollectionServicing)?
     @EnvironmentObject private var auth: AuthStore
     var body: some View {
         Group {
@@ -23,7 +24,15 @@ struct AuthRootView: View {
         } else if auth.needsPasswordUpdate {
             PasswordUpdateView()
         } else if let account = auth.account {
-            AccountTabs(account: account).id(account.id)
+            if let service = collectionFactory?(account.id) {
+                ConnectedCollectionTabs(account: account, service: service).id(account.id)
+            } else {
+                VStack {
+                    ContentUnavailableView(
+                        "Collection connection unavailable", systemImage: "wifi.exclamationmark")
+                    Button("Sign out", action: auth.signOut)
+                }
+            }
         } else {
             AuthFormView()
         }
@@ -43,23 +52,3 @@ struct AuthRootView: View {
     }
 
 #endif
-
-private struct AccountTabs: View {
-    let account: AuthAccount
-    var body: some View {
-        TabView {
-            NavigationStack {
-                ContentUnavailableView(
-                    "Your library is ready", systemImage: "film.stack",
-                    description: Text(
-                        "Your account is connected. Movie collection syncing is coming soon.")
-                )
-                .navigationTitle(account.libraryName).navigationBarTitleDisplayMode(.inline)
-                .shogunCanvas()
-            }.tabItem { Label("Library", systemImage: "square.grid.2x2") }
-            AccountProfileView(account: account).tabItem {
-                Label("Profile", systemImage: "person.crop.circle")
-            }
-        }
-    }
-}

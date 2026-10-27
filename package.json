@@ -20,7 +20,8 @@
     "backend:test:api": "node scripts/backend/permissions.mjs",
     "ios:configure": "node scripts/backend/configure-ios.mjs",
     "backend:test:deletion": "node scripts/backend/delete-account-api.mjs",
-    "backend:demo": "node scripts/backend/demo-account.mjs"
+    "backend:demo": "node scripts/backend/demo-account.mjs",
+    "backend:test:collection": "node scripts/backend/collection-api.mjs"
   },
   "devDependencies": {
     "supabase": "2.122.0",

@@ -22,7 +22,7 @@ development Auth fixtures and backend verification.
 - Placeholder profile, tab navigation, and automatic system light/dark appearance.
 - Original poster artwork generated locally by SwiftUI shapes, gradients, text and SF Symbols. No remote images or asset downloads.
 
-The Debug catalog fixture has six personal titles and three family titles, including an overlapping movie and two VHS copies of the same movie. Changes are in memory and reset when the app restarts. Authentication is connected separately; invitations, full catalog/manual movie entry, collection persistence, and TMDB remain outside this catalog fixture. The Library redesign includes a small local sample-copy sheet behind the + button.
+The Debug catalog fixture has six personal titles and three family titles, including an overlapping movie and two VHS copies of the same movie. Changes are in memory and reset when the app restarts. Normal signed-in launches use real durable collections (see [collection synchronization](../../docs/COLLECTIONS.md)). Invitations, full catalog/manual movie entry and TMDB remain separate. The Library redesign includes a small local sample-copy sheet behind the + button.
 
 ## Architecture
 

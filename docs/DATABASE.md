@@ -162,3 +162,15 @@ JWT sessions through PostgREST, including INSERT RETURNING, denied writes and
 revocation. The separate **Backend schema and permissions** GitHub Actions job
 starts a clean local stack and runs both suites. iOS coverage thresholds remain
 scoped to the iPhone app.
+
+## Collection RPCs (SHO-20)
+
+The additive `20261027010000_collection_sync.sql` migration exposes an authenticated,
+RLS-scoped `collection_snapshot`, retry-safe `save_collection_copy`, private
+`save_movie_diary`, validated `set_default_library`, and atomic
+`create_collection_library`. No new table grants or client admin credentials are
+needed. The creation definer pins an empty search path and derives ownership from
+`auth.uid()`; the other functions execute under caller RLS. See
+[collection behavior and checks](COLLECTIONS.md). The database suite now has 112
+assertions, including 24 collection-specific checks; real-JWT collection tests also
+run in backend CI.
