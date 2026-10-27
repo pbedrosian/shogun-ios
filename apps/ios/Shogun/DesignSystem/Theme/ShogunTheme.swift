@@ -8,6 +8,15 @@ enum ShogunTheme {
     static let muted = Color("MutedInk")
     static let accent = Color("AccentColor")
 
+    static let authPrimary = Color("AuthPrimary")
+    static let onAccent = Color("OnAccent")
+
+    enum Auth {
+        static let contentWidth: CGFloat = 420
+        static let fieldHeight: CGFloat = 52
+        static let headerSpacing: CGFloat = 32
+    }
+
     enum Spacing {
         static let tight: CGFloat = 4
         static let compact: CGFloat = 6
@@ -25,6 +34,7 @@ enum ShogunTheme {
         static let control: CGFloat = 10
     }
     enum Size {
+        static let profileAvatar: CGFloat = 64
         static let touchTarget: CGFloat = 44
         static let ratingWidth: CGFloat = 36
         static let detailPosterWidth: CGFloat = 230
@@ -32,6 +42,8 @@ enum ShogunTheme {
         static let posterAspect: CGFloat = 2 / 3
     }
     enum Typography {
+        static let authBrand = Font.largeTitle.weight(.black)
+        static let authTitle = Font.title3.weight(.semibold)
         static let brand = Font.caption2.weight(.bold)
         static let title = Font.title.bold()
         static let detailTitle = Font.largeTitle.bold()

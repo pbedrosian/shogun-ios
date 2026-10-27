@@ -24,14 +24,14 @@ final class AddCopyTests: XCTestCase {
 
     func testUnknownMovieIsRejected() throws {
         let store = Fixtures.store()
-        let unknown = Movie(id: "unknown", title: "Unknown", year: 2020, symbol: "star", palette: 0, synopsis: "")
+        let unknown = Movie(id: "unknown", title: "Unknown", year: 2020, palette: 0, synopsis: "")
         XCTAssertFalse(store.addCopy(movie: unknown, format: .dvd, libraryID: "personal"))
         XCTAssertEqual(store.copies.count, Fixtures.copies.count)
     }
 
     func testAlteredMetadataWithExistingIDIsRejected() throws {
         let store = Fixtures.store()
-        let changed = Movie(id: "arrival", title: "Changed", year: 2016, symbol: "moon", palette: 0, synopsis: "First contact")
+        let changed = Movie(id: "arrival", title: "Changed", year: 2016, palette: 0, synopsis: "First contact")
         XCTAssertFalse(store.addCopy(movie: changed, format: .dvd, libraryID: "personal"))
         XCTAssertEqual(store.copies.count, Fixtures.copies.count)
     }

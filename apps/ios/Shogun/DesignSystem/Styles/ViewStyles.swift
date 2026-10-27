@@ -8,7 +8,8 @@ struct ShogunCanvasStyle: ViewModifier {
 struct ShogunSurfaceStyle: ViewModifier {
     let padding: CGFloat
     func body(content: Content) -> some View {
-        content.padding(padding).background(ShogunTheme.surface, in: RoundedRectangle(cornerRadius: ShogunTheme.Radius.control))
+        content.padding(padding).background(
+            ShogunTheme.surface, in: RoundedRectangle(cornerRadius: ShogunTheme.Radius.control))
     }
 }
 struct ShogunBrandStyle: ViewModifier {
@@ -39,8 +40,63 @@ struct ShogunRatingButtonStyle: ButtonStyle {
 }
 extension View {
     func shogunCanvas() -> some View { modifier(ShogunCanvasStyle()) }
-    func shogunSurface(padding: CGFloat = ShogunTheme.Spacing.control) -> some View { modifier(ShogunSurfaceStyle(padding: padding)) }
+    func shogunSurface(padding: CGFloat = ShogunTheme.Spacing.control) -> some View {
+        modifier(ShogunSurfaceStyle(padding: padding))
+    }
     func shogunBrand() -> some View { modifier(ShogunBrandStyle()) }
     func movieTitleStyle() -> some View { modifier(MovieTitleStyle()) }
     func movieMetadataStyle() -> some View { modifier(MovieMetadataStyle()) }
+}
+
+struct ShogunAuthFieldStyle: ViewModifier {
+    func body(content: Content) -> some View {
+        content.padding(.horizontal, ShogunTheme.Spacing.regular)
+            .padding(.vertical, ShogunTheme.Spacing.compact)
+            .frame(minHeight: ShogunTheme.Auth.fieldHeight)
+            .background(
+                ShogunTheme.surface, in: RoundedRectangle(cornerRadius: ShogunTheme.Radius.control))
+    }
+}
+struct ShogunAuthPrimaryButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var enabled
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label.font(ShogunTheme.Typography.headline)
+            .frame(maxWidth: .infinity, minHeight: ShogunTheme.Auth.fieldHeight)
+            .padding(.vertical, ShogunTheme.Spacing.tight)
+            .foregroundStyle(ShogunTheme.onAccent)
+            .background(ShogunTheme.authPrimary, in: Capsule())
+            .contentShape(Capsule())
+            .opacity(enabled ? (configuration.isPressed ? 0.85 : 1) : 0.45)
+    }
+}
+extension View {
+    func shogunAuthField() -> some View { modifier(ShogunAuthFieldStyle()) }
+}
+
+struct ShogunAuthTextButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label.font(ShogunTheme.Typography.emphasizedBody)
+            .frame(minHeight: ShogunTheme.Size.touchTarget)
+            .contentShape(Rectangle()).foregroundStyle(ShogunTheme.accent)
+            .opacity(configuration.isPressed ? 0.7 : 1)
+    }
+}
+
+/// Shared layout for sign-in, account creation, and password recovery content.
+struct ShogunAuthContentStyle: ViewModifier {
+    func body(content: Content) -> some View {
+        content.padding(ShogunTheme.Spacing.large)
+            .padding(.top, ShogunTheme.Auth.headerSpacing)
+            .frame(maxWidth: ShogunTheme.Auth.contentWidth)
+            .frame(maxWidth: .infinity)
+    }
+}
+struct ShogunListCanvasStyle: ViewModifier {
+    func body(content: Content) -> some View {
+        content.scrollContentBackground(.hidden).background(ShogunTheme.canvas)
+    }
+}
+extension View {
+    func shogunAuthContent() -> some View { modifier(ShogunAuthContentStyle()) }
+    func shogunListCanvas() -> some View { modifier(ShogunListCanvasStyle()) }
 }

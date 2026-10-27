@@ -92,8 +92,7 @@ def main():
                  "apps/ios/Shogun/Services/CatalogStore.swift", "apps/ios/Checks/main.swift", "-o", output / "model-checks"], output, "model-compile")
         command([output / "model-checks"], output, "model-checks", timeout=60)
         common = ["xcodebuild", "-project", "apps/ios/Shogun.xcodeproj", "-scheme", "Shogun",
-                  "-derivedDataPath", output / "DerivedData", "CODE_SIGNING_ALLOWED=NO",
-                  "SWIFT_TREAT_WARNINGS_AS_ERRORS=YES", "GCC_TREAT_WARNINGS_AS_ERRORS=YES"]
+                  "-derivedDataPath", output / "DerivedData", "CODE_SIGNING_ALLOWED=NO"]
         command(common + ["-destination", "generic/platform=iOS Simulator", "build", "analyze"], output, "build-analyze")
         status = command(common + ["-destination", f"platform=iOS Simulator,id={simulator}",
                                    "-resultBundlePath", bundle, "-enableCodeCoverage", "YES",

@@ -38,7 +38,7 @@ port = 54324
 enabled = true
 # Browser email testing only; native app callback is agreed/registered in SHO-19/26.
 site_url = "http://127.0.0.1:3000"
-additional_redirect_urls = []
+additional_redirect_urls = ["shogun://auth-callback"]
 jwt_expiry = 3600
 enable_refresh_token_rotation = true
 refresh_token_reuse_interval = 10
@@ -49,17 +49,19 @@ minimum_password_length = 8
 [auth.email]
 enable_signup = true
 double_confirm_changes = true
-enable_confirmations = true
+# Local development only: sign-ups receive a session immediately.
+# Keep email confirmation enabled when configuring a hosted/production project.
+enable_confirmations = false
 secure_password_change = true
 max_frequency = "1s"
 
-# Optional application services remain disabled until their integration tickets.
+# Storage and Realtime remain disabled until their integration tickets.
 [realtime]
 enabled = false
 [storage]
 enabled = false
 [edge_runtime]
-enabled = false
+enabled = true
 [analytics]
 # Start local Logflare and Vector with the backend so Studio can query service logs.
 enabled = true
@@ -67,3 +69,8 @@ backend = "postgres"
 port = 54327
 # The default 54328 is used by our Swagger viewer; 54329 is reserved for pooler.
 vector_port = 54330
+
+[functions.delete-account]
+# Auth /user validates the JWT online, including current account existence.
+# Supports local/hosted signing keys without relying on legacy gateway JWT checks.
+verify_jwt = false

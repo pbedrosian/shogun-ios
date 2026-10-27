@@ -1,0 +1,169 @@
+{
+  "description": "Snapshot of the Debug MockCatalog; no login credentials. Preserve duplicate formats and long-title/layout examples.",
+  "libraries": [
+    {
+      "id": "personal",
+      "name": "My Library",
+      "is_shared": false
+    },
+    {
+      "id": "family",
+      "name": "Family Collection",
+      "is_shared": true
+    },
+    {
+      "id": "movie-club",
+      "name": "The Incredibly Extensive Shared Movie Collection of Family, Friends, Neighbors, and the Friday Night Film Appreciation Society",
+      "is_shared": true
+    }
+  ],
+  "movies": [
+    {
+      "id": "arrival-2016",
+      "title": "Arrival",
+      "release_year": 2016,
+      "synopsis": "A linguist searches for meaning when mysterious visitors arrive on Earth."
+    },
+    {
+      "id": "grand-budapest-2014",
+      "title": "The Grand Budapest Hotel With a very long long title that could go one for some time so we'll see how long and the ui reposnds to this",
+      "release_year": 2014,
+      "synopsis": "A legendary concierge and his young colleague become entangled in an extraordinary adventure."
+    },
+    {
+      "id": "interstellar-2014",
+      "title": "Interstellar",
+      "release_year": 2014,
+      "synopsis": "A team of explorers journeys beyond the stars in search of a future for humanity."
+    },
+    {
+      "id": "spirited-away-2001",
+      "title": "Spirited Away",
+      "release_year": 2001,
+      "synopsis": "A young girl discovers a remarkable spirit world and finds the courage to save her family."
+    },
+    {
+      "id": "blade-runner-1982",
+      "title": "Blade Runner",
+      "release_year": 1982,
+      "synopsis": "A detective pursues artificial humans through a rain-soaked future city."
+    },
+    {
+      "id": "jaws-1975",
+      "title": "Jaws",
+      "release_year": 1975,
+      "synopsis": "An island community confronts a powerful threat beneath the summer waves."
+    },
+    {
+      "id": "moonrise-2012",
+      "title": "Moonrise Kingdom",
+      "release_year": 2012,
+      "synopsis": "Two young adventurers run away together, setting a small island in motion."
+    },
+    {
+      "id": "metropolis-1927",
+      "title": "Metropolis",
+      "release_year": 1927,
+      "synopsis": "In a towering future city, a divided society faces a moment of transformation."
+    }
+  ],
+  "copies": [
+    {
+      "id": "c1",
+      "library_id": "personal",
+      "movie_id": "arrival-2016",
+      "format": "4K UHD"
+    },
+    {
+      "id": "c2",
+      "library_id": "personal",
+      "movie_id": "arrival-2016",
+      "format": "Digital"
+    },
+    {
+      "id": "c12",
+      "library_id": "personal",
+      "movie_id": "arrival-2016",
+      "format": "Blu-ray"
+    },
+    {
+      "id": "c13",
+      "library_id": "personal",
+      "movie_id": "arrival-2016",
+      "format": "VHS"
+    },
+    {
+      "id": "c3",
+      "library_id": "personal",
+      "movie_id": "grand-budapest-2014",
+      "format": "Blu-ray"
+    },
+    {
+      "id": "c4",
+      "library_id": "personal",
+      "movie_id": "interstellar-2014",
+      "format": "4K UHD"
+    },
+    {
+      "id": "c5",
+      "library_id": "personal",
+      "movie_id": "spirited-away-2001",
+      "format": "DVD"
+    },
+    {
+      "id": "c6",
+      "library_id": "personal",
+      "movie_id": "blade-runner-1982",
+      "format": "Blu-ray"
+    },
+    {
+      "id": "c7",
+      "library_id": "personal",
+      "movie_id": "jaws-1975",
+      "format": "VHS"
+    },
+    {
+      "id": "c8",
+      "library_id": "family",
+      "movie_id": "arrival-2016",
+      "format": "Blu-ray"
+    },
+    {
+      "id": "c9",
+      "library_id": "family",
+      "movie_id": "spirited-away-2001",
+      "format": "Blu-ray"
+    },
+    {
+      "id": "c10",
+      "library_id": "family",
+      "movie_id": "moonrise-2012",
+      "format": "DVD"
+    },
+    {
+      "id": "c11",
+      "library_id": "personal",
+      "movie_id": "jaws-1975",
+      "format": "VHS"
+    },
+    {
+      "id": "c14",
+      "library_id": "movie-club",
+      "movie_id": "metropolis-1927",
+      "format": "Blu-ray"
+    },
+    {
+      "id": "c15",
+      "library_id": "movie-club",
+      "movie_id": "moonrise-2012",
+      "format": "DVD"
+    }
+  ],
+  "personal_state": [
+    {
+      "movie_id": "arrival-2016",
+      "watched": true,
+      "rating": 5
+    }
+  ]
+}

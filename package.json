@@ -15,9 +15,12 @@
     "backend:reset": "supabase --workdir backend db reset --local",
     "backend:fixtures": "node scripts/backend/local.mjs fixtures",
     "backend:smoke": "node scripts/backend/local.mjs smoke",
-    "backend:test": "node --test scripts/backend/local.test.mjs",
+    "backend:test": "node --test scripts/backend/*.test.mjs",
     "backend:test:db": "supabase --workdir backend test db --local",
-    "backend:test:api": "node scripts/backend/permissions.mjs"
+    "backend:test:api": "node scripts/backend/permissions.mjs",
+    "ios:configure": "node scripts/backend/configure-ios.mjs",
+    "backend:test:deletion": "node scripts/backend/delete-account-api.mjs",
+    "backend:demo": "node scripts/backend/demo-account.mjs"
   },
   "devDependencies": {
     "supabase": "2.122.0",

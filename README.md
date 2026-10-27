@@ -1,7 +1,7 @@
 # Shogun
 
 Native iPhone movie catalog with a Supabase backend, managed in one repository.
-The iOS app currently uses offline sample data; live integration follows the backend schema work.
+The iOS app connects to Supabase authentication. Real movie persistence follows in SHO-20; the sample catalog is retained only for Debug UI tests.
 
 ## Repository layout
 
@@ -14,6 +14,9 @@ ci/                   Coverage policy
 .github/workflows/    GitHub Actions
 docs/                 Setup and CI documentation
 ```
+
+For Swift structure, shared styling, and future contribution rules, see
+[code organization](docs/ARCHITECTURE.md).
 
 ## Dependencies
 
@@ -30,11 +33,15 @@ Local development is intended for macOS with:
 The app targets iOS 17+. Local validation used Xcode 27 / iOS 27 and Docker engine
 29.9.2. `npm ci` installs **Supabase CLI 2.122.0** and **Swagger UI 5.34.0** from
 `package-lock.json`; a global Supabase CLI install is unnecessary. Node packages
-are development tooling, not dependencies shipped in the iPhone app.
+are development tooling, not dependencies shipped in the iPhone app. Xcode resolves the official Supabase Swift Auth package (2.55.4) through Swift Package Manager; its first resolution requires internet access.
 
 No Supabase cloud account, TMDB key, or `.env` file is required for the current
-local setup. `.env.example` documents future client configuration; the current
-app and startup scripts do not load it. Keep local credentials out of Git.
+local setup. `.env.example` documents client reference values; the current
+app does not load it. The launcher generates an ignored iOS xcconfig using the local public client key. Keep local credentials out of Git.
+
+For real inbox delivery of verification and password-reset messages, follow the
+[SMTP and email setup runbook](docs/EMAIL.md). Local verification is currently bypassed
+and recovery mail is captured in Mailpit; the runbook does not enable external sending.
 
 ## First-time setup
 
@@ -51,7 +58,7 @@ Supabase (including centralized logging) and Swagger UI, then opens Swagger UI,
 Studio Logs in your browser, and the project
 in Xcode. First startup downloads service images and may take several minutes.
 In Xcode, select the **Shogun** scheme and an installed iPhone simulator, then
-press **⌘R**. Simulator builds do not require your own signing team; physical
+press **⌘R**. The app opens directly to **Sign in**, with links to create an account or reset a password. See [iOS authentication](docs/AUTH.md) for account creation, password recovery, phone networking, and release configuration. Simulator builds do not require your own signing team; physical
 phone setup is described in the [iOS README](apps/ios/README.md).
 
 Keep this Terminal open if the launcher started Swagger UI. In a **second
@@ -67,6 +74,34 @@ Fixtures provide separate owner/editor/viewer/outsider Auth identities. Their
 emails and local-only password are documented in [backend setup](docs/BACKEND.md).
 Membership permissions are enforced by PostgreSQL row-level security. The launcher does not
 create fixtures or reset existing data.
+
+## Local testing login
+
+This is a disposable **local Supabase testing account**, not a hosted/production login.
+
+| Email | Password |
+| --- | --- |
+| `testemail9678@gmail.com` | `Pb4229349` |
+
+It is preconfirmed and seeded with the original demo data: My Library, Family
+Collection, the long-name movie club, eight movies, fifteen copies (including
+multiple formats and duplicate VHS copies), and Arrival watched/rated 5/5.
+The profile's sample display name is Alex Morgan. The long movie-club name is shortened to fit the database's 120-character name limit. Shared-library memberships use
+the same editor permissions as the original demo, with the local owner fixture
+owning those shared libraries.
+
+To recreate it after a local database reset, start Supabase, then run:
+
+```sh
+npm run backend:fixtures
+SHOGUN_DEMO_EMAIL='testemail9678@gmail.com' SHOGUN_DEMO_PASSWORD='Pb4229349' npm run backend:demo
+```
+
+Rerunning restores these sample records without adding duplicates or deleting
+unrelated data. Treat the documented password as public and use it only for this
+local account. No confirmation email is sent. The authenticated iOS collection
+screen still needs SHO-20 to display/synchronize backend movies; seeding the
+account does not reconnect the old offline catalog UI.
 
 ## Daily startup and shutdown
 
@@ -140,8 +175,10 @@ Run these from the repository root:
 | `npm run backend:start` | Start Supabase only |
 | `npm run backend:docs` | Start Swagger UI only; Supabase must already be running |
 | `npm run backend:status` | Show local endpoints and keys; do not share its full output |
+| `npm run ios:configure` | Regenerate simulator authentication configuration; add `-- --host <Mac LAN IP>` for a physical phone |
 | `npm run backend:fixtures` | Create/refresh local test accounts without duplicating their IDs |
 | `npm run backend:test:db` | Run SQL schema, integrity, and role permission tests |
+| `npm run backend:test:deletion` | Verify authenticated account deletion, cascades, and other-user isolation with temporary local accounts |
 | `npm run backend:test:api` | Test permissions through REST with fixture user JWTs |
 | `npm run backend:smoke` | Verify API health and fixture sign-ins |
 | `npm run backend:stop` | Stop Supabase and preserve local data |
