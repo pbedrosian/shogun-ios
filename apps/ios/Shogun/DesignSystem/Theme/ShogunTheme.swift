@@ -34,6 +34,7 @@ enum ShogunTheme {
         static let control: CGFloat = 10
     }
     enum Size {
+        static let tmdbLogoWidth: CGFloat = 110
         static let profileAvatar: CGFloat = 64
         static let touchTarget: CGFloat = 44
         static let ratingWidth: CGFloat = 36

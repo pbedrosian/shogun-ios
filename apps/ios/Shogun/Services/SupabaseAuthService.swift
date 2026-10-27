@@ -5,7 +5,7 @@ import Foundation
     let signals: AsyncStream<AuthSignal>
     private let client: AuthClient
     private let config: AuthConfiguration
-    private let session: URLSession
+    private let http: BackendHTTPClient
     private let storage: any AuthLocalStorage
     private let continuation: AsyncStream<AuthSignal>.Continuation
     private var recoveryKey: String { "shogun-recovery-\(config.url.absoluteString)" }
@@ -16,7 +16,7 @@ import Foundation
         session: URLSession = .shared
     ) {
         self.config = config
-        self.session = session
+        self.http = BackendHTTPClient(config: config, session: session)
         self.storage = storage
         client = AuthClient(
             configuration: .init(
@@ -128,49 +128,29 @@ import Foundation
             forbiddenFailure: forbiddenFailure)
         return try JSONDecoder().decode(T.self, from: data)
     }
-    /// Bound collection services cannot reuse a later user's session.
-    func collectionRPC(_ name: String, body: Data, userID: UUID) async throws -> Data {
-        do {
-            let current = try await client.session
-            guard current.user.id == userID else { throw CollectionFailure.expired }
-            return try await rawRequest(
-                path: "rest/v1/rpc/\(name)", method: "POST",
-                token: current.accessToken, body: body, forbiddenFailure: .credentials)
-        } catch {
-            if error is CancellationError { throw error }
-            if let error = error as? CollectionFailure { throw error }
-            switch Self.failure(error) as? SignInFailure {
-            case .expired: throw CollectionFailure.expired
-            case .credentials: throw CollectionFailure.access
-            default: throw CollectionFailure.unavailable
-            }
-        }
+    func backendClient(for userID: UUID) -> AuthenticatedBackendClient {
+        AuthenticatedBackendClient(
+            http: http,
+            token: { [weak self] in
+                guard let self else { throw SignInFailure.expired }
+                do {
+                    let current = try await self.client.session
+                    guard current.user.id == userID else { throw SignInFailure.expired }
+                    return current.accessToken
+                } catch { throw Self.failure(error) }
+            })
     }
     private func rawRequest(
         path: String, method: String, token: String, body: Data?,
         forbiddenFailure: SignInFailure
     ) async throws -> Data {
-        guard let url = URL(string: path, relativeTo: config.url.appendingPathComponent("/")) else {
-            throw SignInFailure.configuration
+        do {
+            return try await http.send(path: path, method: method, body: body, token: token)
+        } catch let error as BackendHTTPError {
+            if error.status == 401 { throw SignInFailure.expired }
+            if error.status == 403 { throw forbiddenFailure }
+            throw SignInFailure.unavailable
         }
-        var request = URLRequest(url: url)
-        request.httpMethod = method
-        request.setValue(config.key, forHTTPHeaderField: "apikey")
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        if method == "POST" {
-            request.httpBody = body ?? Data("{}".utf8)
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        }
-        let (data, response) = try await session.data(for: request)
-        guard let response = response as? HTTPURLResponse else { throw SignInFailure.unavailable }
-        guard (200..<300).contains(response.statusCode) else {
-            switch response.statusCode {
-            case 401: throw SignInFailure.expired
-            case 403: throw forbiddenFailure
-            default: throw SignInFailure.unavailable
-            }
-        }
-        return data
     }
     static func failure(_ error: Error) -> Error {
         if error is CancellationError || (error as? URLError)?.code == .cancelled {

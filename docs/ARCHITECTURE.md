@@ -15,7 +15,10 @@ Do not add a web styling layer to style native views.
 | `Features/Profile` | Profile screen, reusable header, and separate deletion sheet. |
 | `Services/AuthStore.swift` | Main-actor UI/session state and user actions; views cannot access its private service. |
 | `Services/AuthModels.swift` | Provider-independent account, error, configuration and service contracts. |
-| `Services/SupabaseAuthService.swift` | SDK integration, account bootstrap, authenticated HTTP calls, safe error translation. |
+| `Services/SupabaseAuthService.swift` | SDK integration, account bootstrap, account-bound session access and Auth error translation. |
+| `Services/BackendHTTPClient.swift` | Shared request construction and HTTP status handling for authenticated services. |
+| `Services/MovieDiscoveryService.swift` | Catalog proxy requests, typed metadata mapping and discovery errors. |
+| `Services/CatalogSearchStore.swift` | Search/detail orchestration, debounce, cancellation, paging and retries. |
 | `Services/SecureAuthStorage.swift` | Keychain operations, without view or navigation responsibilities. |
 | `Models` | Catalog value types and relationships, independent of SwiftUI. |
 | `backend/supabase` | Server schema, RLS, and privileged functions; no admin credentials in iOS. |
@@ -84,3 +87,6 @@ save/conflict/offline behavior and test coverage.
 Keep social login and external email setup in their
 own implementation scope. See [AUTH.md](AUTH.md) and [EMAIL.md](EMAIL.md) for current
 behavior and outstanding environment setup.
+
+See [MOVIE_API.md](MOVIE_API.md) for the server-only TMDB proxy, provider/UUID identity boundary,
+shared presentation components and focused test responsibilities.

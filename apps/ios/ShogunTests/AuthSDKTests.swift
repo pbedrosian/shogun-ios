@@ -117,25 +117,25 @@ final class AuthURLProtocol: URLProtocol, @unchecked Sendable {
         XCTAssertEqual(SupabaseAuthService.failure(AuthError.sessionMissing) as? SignInFailure, .expired)
         XCTAssertEqual(SupabaseAuthService.failure(NSError(domain: "private", code: 1)) as? SignInFailure, .unavailable)
     }
-    func testCollectionTransportBindsSessionAndMapsFailures() async throws {
+    func testAuthenticatedTransportBindsSessionAndPreservesHTTPFailures() async throws {
         installHandler()
         let service = try service()
-        do { _ = try await service.collectionRPC("collection_snapshot", body: Data(), userID: UUID()); XCTFail("No session") }
-        catch { XCTAssertEqual(error as? CollectionFailure, .expired) }
+        do { _ = try await service.backendClient(for: UUID()).rpc("collection_snapshot", body: Data()); XCTFail("No session") }
+        catch { XCTAssertEqual(error as? SignInFailure, .expired) }
         _ = try await service.signIn(email: "owner@example.test", password: "password")
-        do { _ = try await service.collectionRPC("collection_snapshot", body: Data(), userID: UUID()); XCTFail("Wrong account") }
-        catch { XCTAssertEqual(error as? CollectionFailure, .expired) }
-        for (status, expected) in [(401, CollectionFailure.expired), (403, .access), (500, .unavailable)] {
+        do { _ = try await service.backendClient(for: UUID()).rpc("collection_snapshot", body: Data()); XCTFail("Wrong account") }
+        catch { XCTAssertEqual(error as? SignInFailure, .expired) }
+        for status in [401, 403, 500] {
             AuthURLProtocol.handler = { _ in (status, Data("{}".utf8)) }
-            do { _ = try await service.collectionRPC("collection_snapshot", body: Data(), userID: UUID(uuidString: userID)!); XCTFail("Expected failure") }
-            catch { XCTAssertEqual(error as? CollectionFailure, expected) }
+            do { _ = try await service.backendClient(for: UUID(uuidString: userID)!).rpc("collection_snapshot", body: Data()); XCTFail("Expected failure") }
+            catch { XCTAssertEqual((error as? BackendHTTPError)?.status, status) }
         }
         AuthURLProtocol.handler = { request in
             XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer test-access-token")
             XCTAssertEqual(request.url?.path, "/rest/v1/rpc/collection_snapshot")
             return (200, Data("{}".utf8))
         }
-        let data = try await service.collectionRPC("collection_snapshot", body: Data("{}".utf8), userID: UUID(uuidString: userID)!)
+        let data = try await service.backendClient(for: UUID(uuidString: userID)!).rpc("collection_snapshot", body: Data("{}".utf8))
         XCTAssertEqual(data, Data("{}".utf8))
     }
 

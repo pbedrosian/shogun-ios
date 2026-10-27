@@ -12,7 +12,7 @@
         private var failSave: Bool
         private let movie = Movie(
             id: "30000000-0000-0000-0000-000000000001", title: "Arrival", year: 2016, palette: 0,
-            synopsis: "First contact")
+            synopsis: "First contact", tmdbID: 329865)
         init(userID: UUID) {
             self.userID = userID.uuidString.lowercased()
             libraries =

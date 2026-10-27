@@ -54,6 +54,10 @@ final class CatalogStore: ObservableObject {
         let accessible = Set(libraries.map(\.id))
         return copies.filter { $0.movieID == movie.id && accessible.contains($0.libraryID) && (libraryID == nil || $0.libraryID == libraryID) }
     }
+    /// Provider identity is exact; a manual title with the same text is never considered a match.
+    func ownedMovie(tmdbID: Int) -> Movie? {
+        movies.first { $0.tmdbID == tmdbID && !copies(for: $0).isEmpty }
+    }
     func movies(in libraryID: String) -> [Movie] { movies.filter { !copies(for: $0, libraryID: libraryID).isEmpty } }
     func state(for movie: Movie) -> PersonalMovieState {
         personalStates.first { $0.userID == userID && $0.movieID == movie.id } ?? PersonalMovieState(userID: userID, movieID: movie.id)

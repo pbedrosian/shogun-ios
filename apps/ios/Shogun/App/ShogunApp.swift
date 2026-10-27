@@ -1,18 +1,22 @@
 import SwiftUI
 
 @main struct ShogunApp: App {
-    private let collectionFactory: ((UUID) -> any CollectionServicing)?
+    private let services: ((UUID) -> AccountServices)?
     @StateObject private var auth: AuthStore
     init() {
         ShogunSystemAppearance.configure()
         #if DEBUG
             if ProcessInfo.processInfo.arguments.contains("-shogun-demo") {
-                collectionFactory = nil
+                services = nil
                 _auth = StateObject(wrappedValue: AuthStore(service: nil, demo: true))
                 return
             }
             if ProcessInfo.processInfo.arguments.contains("-shogun-auth-ui") {
-                collectionFactory = { CollectionUITestService(userID: $0) }
+                services = {
+                    AccountServices(
+                        collection: CollectionUITestService(userID: $0),
+                        discovery: DiscoveryUITestService())
+                }
                 _auth = StateObject(wrappedValue: AuthStore(service: AuthUITestService()))
                 return
             }
@@ -24,14 +28,18 @@ import SwiftUI
             info: Bundle.main.infoDictionary ?? [:], allowLocalHTTP: allowHTTP)
         let service = config.map { SupabaseAuthService(config: $0) }
         _auth = StateObject(wrappedValue: AuthStore(service: service))
-        collectionFactory = { userID in
-            SupabaseCollectionService { name, body in
-                guard let service else { throw CollectionFailure.expired }
-                return try await service.collectionRPC(name, body: body, userID: userID)
+        services = service.map { auth in
+            { userID in
+                let backend = auth.backendClient(for: userID)
+                return AccountServices(
+                    collection: SupabaseCollectionService { try await backend.rpc($0, body: $1) },
+                    discovery: MovieDiscoveryService {
+                        try await backend.function("catalog", body: $0)
+                    })
             }
         }
     }
     var body: some Scene {
-        WindowGroup { AuthRootView(collectionFactory: collectionFactory).environmentObject(auth) }
+        WindowGroup { AuthRootView(services: services).environmentObject(auth) }
     }
 }

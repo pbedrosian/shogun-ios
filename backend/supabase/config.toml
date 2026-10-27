@@ -74,3 +74,10 @@ vector_port = 54330
 # Auth /user validates the JWT online, including current account existence.
 # Supports local/hosted signing keys without relying on legacy gateway JWT checks.
 verify_jwt = false
+
+[edge_runtime.secrets]
+TMDB_READ_ACCESS_TOKEN = "env(TMDB_READ_ACCESS_TOKEN)"
+
+[functions.catalog]
+# The handler verifies the live Auth user; never accept a caller-supplied user ID.
+verify_jwt = false

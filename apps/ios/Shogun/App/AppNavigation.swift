@@ -1,7 +1,12 @@
 import SwiftUI
 
+struct AccountServices {
+    let collection: any CollectionServicing
+    let discovery: any MovieDiscoveryServicing
+}
+
 struct AuthRootView: View {
-    let collectionFactory: ((UUID) -> any CollectionServicing)?
+    let services: ((UUID) -> AccountServices)?
     @EnvironmentObject private var auth: AuthStore
     var body: some View {
         Group {
@@ -24,8 +29,8 @@ struct AuthRootView: View {
         } else if auth.needsPasswordUpdate {
             PasswordUpdateView()
         } else if let account = auth.account {
-            if let service = collectionFactory?(account.id) {
-                ConnectedCollectionTabs(account: account, service: service).id(account.id)
+            if let service = services?(account.id) {
+                ConnectedCollectionTabs(account: account, services: service).id(account.id)
             } else {
                 VStack {
                     ContentUnavailableView(
@@ -45,7 +50,7 @@ struct AuthRootView: View {
         var body: some View {
             TabView {
                 LibraryView().tabItem { Label("Library", systemImage: "square.grid.2x2") }
-                SearchView().tabItem { Label("Search", systemImage: "magnifyingglass") }
+                FixtureSearchView().tabItem { Label("Search", systemImage: "magnifyingglass") }
                 ProfileView().tabItem { Label("Profile", systemImage: "person.crop.circle") }
             }.environmentObject(catalog)
         }
