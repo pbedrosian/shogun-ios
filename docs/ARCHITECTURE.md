@@ -75,12 +75,12 @@ assertions that merely repeat file organization or implementation details. Backe
 permission changes need SQL plus real-JWT checks; deletion has separate isolation
 and cascade tests. Run the Release build when changing Debug-only boundaries.
 
-Before SHO-20 connects collections, handle loading, errors, and truly empty library
-states explicitly. The current `CatalogStore` is a fixture store that assumes at
-least one accessible library; its selected-library fallback must not be reused as
-an unchecked assumption for remote data. Preserve backend UUIDs and ownership/RLS
-semantics rather than wiring the offline default initializer to a real account.
+SHO-20 separates asynchronous `CollectionStore` coordination and `CollectionServicing`
+from synchronous `CatalogStore` filtering. Empty libraries/selections are valid.
+Preserve UUIDs and server ownership/RLS semantics; never substitute the offline
+initializer after a failed remote load. See [COLLECTIONS.md](COLLECTIONS.md) for
+save/conflict/offline behavior and test coverage.
 
-Keep collection synchronization, social login, and external email setup in their
+Keep social login and external email setup in their
 own implementation scope. See [AUTH.md](AUTH.md) and [EMAIL.md](EMAIL.md) for current
 behavior and outstanding environment setup.

@@ -117,4 +117,26 @@ final class AuthURLProtocol: URLProtocol, @unchecked Sendable {
         XCTAssertEqual(SupabaseAuthService.failure(AuthError.sessionMissing) as? SignInFailure, .expired)
         XCTAssertEqual(SupabaseAuthService.failure(NSError(domain: "private", code: 1)) as? SignInFailure, .unavailable)
     }
+    func testCollectionTransportBindsSessionAndMapsFailures() async throws {
+        installHandler()
+        let service = try service()
+        do { _ = try await service.collectionRPC("collection_snapshot", body: Data(), userID: UUID()); XCTFail("No session") }
+        catch { XCTAssertEqual(error as? CollectionFailure, .expired) }
+        _ = try await service.signIn(email: "owner@example.test", password: "password")
+        do { _ = try await service.collectionRPC("collection_snapshot", body: Data(), userID: UUID()); XCTFail("Wrong account") }
+        catch { XCTAssertEqual(error as? CollectionFailure, .expired) }
+        for (status, expected) in [(401, CollectionFailure.expired), (403, .access), (500, .unavailable)] {
+            AuthURLProtocol.handler = { _ in (status, Data("{}".utf8)) }
+            do { _ = try await service.collectionRPC("collection_snapshot", body: Data(), userID: UUID(uuidString: userID)!); XCTFail("Expected failure") }
+            catch { XCTAssertEqual(error as? CollectionFailure, expected) }
+        }
+        AuthURLProtocol.handler = { request in
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer test-access-token")
+            XCTAssertEqual(request.url?.path, "/rest/v1/rpc/collection_snapshot")
+            return (200, Data("{}".utf8))
+        }
+        let data = try await service.collectionRPC("collection_snapshot", body: Data("{}".utf8), userID: UUID(uuidString: userID)!)
+        XCTAssertEqual(data, Data("{}".utf8))
+    }
+
 }

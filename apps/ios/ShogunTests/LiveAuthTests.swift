@@ -63,5 +63,32 @@ import Auth
         XCTAssertNotEqual(outsider.id, owner.id); XCTAssertNotEqual(outsider.libraryID, owner.libraryID)
         try await third.signOut()
     }
+    func testLocalCollectionReloadAndAccountBinding() async throws {
+        let config = try AuthConfiguration(info: Bundle.main.infoDictionary ?? [:], allowLocalHTTP: true)
+        guard config.url.absoluteString == "http://127.0.0.1:54321" else { throw SignInFailure.configuration }
+        let storage = SecureAuthStorage(service: "shogun.collection.integration.\(UUID())")
+        let first = SupabaseAuthService(config: config, storage: storage)
+        let owner = try await first.signIn(email: "owner@shogun.test", password: "Shogun-local-only-25!")
+        let collection = SupabaseCollectionService { name, body in
+            try await first.collectionRPC(name, body: body, userID: owner.id)
+        }
+        let snapshot = try await collection.load()
+        XCTAssertTrue(snapshot.libraries.contains { $0.id == owner.libraryID.uuidString.lowercased() })
+        XCTAssertTrue(snapshot.memberships.allSatisfy { $0.userID == owner.id.uuidString.lowercased() })
+        let relaunched = SupabaseAuthService(config: config, storage: storage)
+        let restored = try await relaunched.restore(); XCTAssertEqual(restored?.id, owner.id)
+        let second = SupabaseCollectionService { name, body in
+            try await relaunched.collectionRPC(name, body: body, userID: owner.id)
+        }
+        let reloaded = try await second.load()
+        XCTAssertEqual(Set(snapshot.libraries.map(\.id)), Set(reloaded.libraries.map(\.id)))
+        XCTAssertEqual(Set(snapshot.copies.map(\.id)), Set(reloaded.copies.map(\.id)))
+        _ = try await relaunched.signIn(email: "outsider@shogun.test", password: "Shogun-local-only-25!")
+        do { _ = try await second.load(); XCTFail("Old collection must reject another account's session") }
+        catch { XCTAssertEqual(error as? CollectionFailure, .expired) }
+        try await relaunched.signOut()
+        try await first.signOut()
+    }
+
 }
 #endif

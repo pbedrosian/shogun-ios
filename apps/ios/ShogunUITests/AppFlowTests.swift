@@ -141,8 +141,8 @@ final class AppFlowTests: XCTestCase {
 @MainActor final class AuthFlowTests: XCTestCase {
     private var app: XCUIApplication!
     override func setUpWithError() throws { continueAfterFailure = false; app = XCUIApplication() }
-    private func launch(dark: Bool = false, large: Bool = false) {
-        app.launchArguments = ["-shogun-auth-ui"]
+    private func launch(dark: Bool = false, large: Bool = false, extra: [String] = []) {
+        app.launchArguments = ["-shogun-auth-ui"] + extra
         if dark { app.launchArguments += ["-AppleInterfaceStyle", "Dark"] }
         if large { app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"] }
         app.launch(); XCTAssertTrue(app.textFields["auth.email"].waitForExistence(timeout: 10))
@@ -162,7 +162,7 @@ final class AppFlowTests: XCTestCase {
         fill("invalid-password"); app.buttons["auth.submit"].tap()
         XCTAssertTrue(app.staticTexts["auth.error"].waitForExistence(timeout: 5))
         let field = app.secureTextFields["auth.password"]; field.tap(); field.typeText("valid-password"); app.buttons["auth.submit"].tap()
-        XCTAssertTrue(app.staticTexts["Your library is ready"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["library.selector"].waitForExistence(timeout: 5))
         app.tabBars.buttons["Profile"].tap(); XCTAssertEqual(app.staticTexts["auth.accountEmail"].label, "owner@shogun.test")
         app.buttons["auth.signOut"].tap(); XCTAssertTrue(app.textFields["auth.email"].waitForExistence(timeout: 5))
     }
@@ -190,16 +190,16 @@ final class AppFlowTests: XCTestCase {
         app.launchArguments = []; app.launch()
         XCTAssertTrue(app.textFields["auth.email"].waitForExistence(timeout: 15))
         fill("Shogun-local-only-25!"); app.buttons["auth.submit"].tap()
-        XCTAssertTrue(app.staticTexts["Your library is ready"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["library.selector"].waitForExistence(timeout: 10))
         app.terminate(); app.launch()
-        XCTAssertTrue(app.staticTexts["Your library is ready"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["library.selector"].waitForExistence(timeout: 10))
         app.tabBars.buttons["Profile"].tap(); XCTAssertEqual(app.staticTexts["auth.accountEmail"].label, "owner@shogun.test")
         app.buttons["auth.signOut"].tap(); XCTAssertTrue(app.textFields["auth.email"].waitForExistence(timeout: 10))
     }
 #endif
     func testProfileHeaderAndAccountDeletionConfirmation() {
         launch(); fill("valid-password"); app.buttons["auth.submit"].tap()
-        XCTAssertTrue(app.staticTexts["Your library is ready"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["library.selector"].waitForExistence(timeout: 5))
         app.tabBars.buttons["Profile"].tap()
         XCTAssertTrue(app.staticTexts["Shogun account"].exists)
         XCTAssertTrue(app.staticTexts["Signed in"].exists)
@@ -222,7 +222,7 @@ final class AppFlowTests: XCTestCase {
         let password = app.secureTextFields["auth.newPassword"]
         XCTAssertTrue(password.waitForExistence(timeout: 10)); password.tap(); password.typeText("new-password")
         app.buttons["auth.updatePassword"].tap()
-        XCTAssertTrue(app.staticTexts["Your library is ready"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["library.selector"].waitForExistence(timeout: 5))
     }
     func testLargeTextAndPasswordVisibility() {
         launch(dark: true, large: true)
@@ -236,4 +236,46 @@ final class AppFlowTests: XCTestCase {
         reveal(app.secureTextFields["auth.confirmPassword"])
         XCTAssertFalse(app.buttons["auth.demo"].exists)
     }
+    func testCollectionLoadFailureRetryAndNoLibraryCreation() {
+        launch(extra: ["-collection-load-error", "-collection-no-libraries"])
+        fill("valid-password"); app.buttons["auth.submit"].tap()
+        XCTAssertTrue(app.staticTexts["collection.error"].waitForExistence(timeout: 5))
+        app.buttons["collection.refresh"].tap()
+        let create = app.buttons["Create personal library"]
+        XCTAssertTrue(create.waitForExistence(timeout: 5)); create.tap()
+        XCTAssertTrue(app.buttons["library.selector"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["No movies yet"].exists)
+    }
+    func testCollectionFailedCopySaveKeepsFormThenDiaryPersistsAcrossTabs() {
+        launch(extra: ["-collection-save-error"])
+        fill("valid-password"); app.buttons["auth.submit"].tap()
+        XCTAssertTrue(app.buttons["library.selector"].waitForExistence(timeout: 5))
+        app.buttons["Add movie"].tap()
+        app.navigationBars.buttons["Save"].tap()
+        XCTAssertTrue(app.staticTexts["collection.error"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["Add Movie"].exists)
+        app.navigationBars.buttons["Save"].tap()
+        let film = app.buttons["library.movie.30000000-0000-0000-0000-000000000001"]
+        XCTAssertTrue(film.waitForExistence(timeout: 5)); film.tap()
+        let watched = app.switches["Watched"]; reveal(watched); watched.tap()
+        let star = app.buttons["Rate 4 of 5 stars"]; reveal(star); star.tap()
+        let save = app.buttons["collection.saveDiary"]; reveal(save); save.tap()
+        XCTAssertTrue(app.staticTexts["4 of 5 stars"].waitForExistence(timeout: 5))
+        app.tabBars.buttons["Search"].tap()
+        let result = app.buttons["search.movie.30000000-0000-0000-0000-000000000001"]
+        XCTAssertTrue(result.waitForExistence(timeout: 5)); result.tap()
+        XCTAssertTrue(app.staticTexts["4 of 5 stars"].waitForExistence(timeout: 5))
+    }
+    func testCollectionDefaultAndCreateLibrary() {
+        launch(); fill("valid-password"); app.buttons["auth.submit"].tap()
+        XCTAssertTrue(app.buttons["library.selector"].waitForExistence(timeout: 5))
+        app.tabBars.buttons["Profile"].tap()
+        app.buttons["Use My Library by default"].tap()
+        XCTAssertTrue(app.staticTexts["Default library"].waitForExistence(timeout: 5))
+        let create = app.buttons["Create library"]; reveal(create); create.tap()
+        let name = app.textFields["collection.libraryName"]; name.tap(); name.typeText("Family films")
+        app.navigationBars.buttons["Create"].tap()
+        XCTAssertTrue(app.staticTexts["Family films"].waitForExistence(timeout: 5))
+    }
+
 }

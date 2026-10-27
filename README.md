@@ -1,7 +1,7 @@
 # Shogun
 
 Native iPhone movie catalog with a Supabase backend, managed in one repository.
-The iOS app connects to Supabase authentication. Real movie persistence follows in SHO-20; the sample catalog is retained only for Debug UI tests.
+The iOS app connects to Supabase authentication and durable account-scoped collections. The sample catalog is retained only for explicit Debug UI tests.
 
 ## Repository layout
 
@@ -99,9 +99,9 @@ SHOGUN_DEMO_EMAIL='testemail9678@gmail.com' SHOGUN_DEMO_PASSWORD='Pb4229349' npm
 
 Rerunning restores these sample records without adding duplicates or deleting
 unrelated data. Treat the documented password as public and use it only for this
-local account. No confirmation email is sent. The authenticated iOS collection
-screen still needs SHO-20 to display/synchronize backend movies; seeding the
-account does not reconnect the old offline catalog UI.
+local account. No confirmation email is sent. The signed-in app displays these
+real backend collections. Copies, saved diary edits, and default-library preferences
+persist across relaunch. See [collection usage and testing](docs/COLLECTIONS.md).
 
 ## Daily startup and shutdown
 
@@ -140,9 +140,11 @@ quit them separately when finished.
 | REST/Auth gateway | http://127.0.0.1:54321 |
 | PostgreSQL | 127.0.0.1:54322 |
 
-**The iOS app is not connected to Supabase yet.** It still displays sample data;
-app edits reset on relaunch. Movie/library tables and permission policies are available in the local backend. Swagger currently documents the database REST API,
-not Auth or Edge Functions. Its Try it out controls execute real local requests.
+The signed-in iOS app uses Supabase authentication and real collection data.
+Saved copies, diary edits and default-library preferences persist; explicit Debug
+UI-test fixtures remain in memory. See [collection usage and tests](docs/COLLECTIONS.md).
+Swagger documents the database REST API and RPCs, not Auth or Edge Functions.
+Its Try it out controls execute real local requests.
 
 To authenticate Swagger, use the local `ANON_KEY` from `npm run backend:status`
 to sign in through Supabase Auth, then paste the returned **user access_token**

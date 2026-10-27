@@ -2,6 +2,7 @@ import SwiftUI
 
 struct LibraryView: View {
     @EnvironmentObject private var store: CatalogStore
+    @Environment(\.collection) private var collection
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var pinchStartingColumns: Int?
@@ -15,80 +16,143 @@ struct LibraryView: View {
                     VStack(alignment: .leading, spacing: ShogunTheme.Spacing.compact) {
                         Text("SHOGUN").shogunBrand()
                         HStack(alignment: .center, spacing: ShogunTheme.Spacing.tight) {
-                            Text(store.selectedLibrary.name).font(ShogunTheme.Typography.title)
-                                .lineLimit(2).truncationMode(.tail)
-                                .frame(maxWidth: .infinity, alignment: .leading)
+                            Text((store.selectedLibrary?.name ?? "Libraries")).font(
+                                ShogunTheme.Typography.title
+                            )
+                            .lineLimit(2).truncationMode(.tail)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                             Menu {
                                 Section("View Options") {
-                                    Button { withAnimation { store.zoomIn() } } label: { Label("Zoom In", systemImage: "plus.magnifyingglass") }.disabled(store.libraryColumns <= 2 || typeSize.isAccessibilitySize)
-                                    Button { withAnimation { store.zoomOut() } } label: { Label("Zoom Out", systemImage: "minus.magnifyingglass") }.disabled(store.libraryColumns >= 5 || typeSize.isAccessibilitySize)
+                                    Button {
+                                        withAnimation { store.zoomIn() }
+                                    } label: {
+                                        Label("Zoom In", systemImage: "plus.magnifyingglass")
+                                    }.disabled(
+                                        store.libraryColumns <= 2 || typeSize.isAccessibilitySize)
+                                    Button {
+                                        withAnimation { store.zoomOut() }
+                                    } label: {
+                                        Label("Zoom Out", systemImage: "minus.magnifyingglass")
+                                    }.disabled(
+                                        store.libraryColumns >= 5 || typeSize.isAccessibilitySize)
                                 }
-                                Text(typeSize.isAccessibilitySize ? "2 columns for larger text" : "\(store.libraryColumns) posters per row")
+                                Text(
+                                    typeSize.isAccessibilitySize
+                                        ? "2 columns for larger text"
+                                        : "\(store.libraryColumns) posters per row")
                             } label: {
-                                ShogunIcon(systemName: "line.3.horizontal.decrease", font: ShogunTheme.Typography.viewIcon)
+                                ShogunIcon(
+                                    systemName: "line.3.horizontal.decrease",
+                                    font: ShogunTheme.Typography.viewIcon)
                             }.accessibilityLabel("Library view options")
-                                .accessibilityIdentifier("library.viewOptions").accessibilityValue("\(columnCount)")
-                            Button { store.showingAddMovie = true } label: {
+                                .accessibilityIdentifier("library.viewOptions").accessibilityValue(
+                                    "\(columnCount)")
+                            Button {
+                                store.showingAddMovie = true
+                            } label: {
                                 ShogunIcon(systemName: "plus")
-                            }.accessibilityLabel("Add movie").disabled(store.writableLibraries.isEmpty)
+                            }.accessibilityLabel("Add movie").disabled(
+                                store.writableLibraries.isEmpty)
                         }
                     }
                     Menu {
                         Picker("Library", selection: $store.selectedLibraryID) {
-                            ForEach(store.libraries) { Text($0.name).lineLimit(1).truncationMode(.tail).tag($0.id) }
+                            ForEach(store.libraries) {
+                                Text($0.name).lineLimit(1).truncationMode(.tail).tag($0.id)
+                            }
                         }
                     } label: {
                         HStack {
-                            Image(systemName: store.selectedLibrary.isShared ? "person.2" : "person")
-                            Text(store.selectedLibrary.name).fontWeight(.semibold)
+                            Image(
+                                systemName: (store.selectedLibrary?.isShared ?? false)
+                                    ? "person.2" : "person")
+                            Text((store.selectedLibrary?.name ?? "Libraries")).fontWeight(.semibold)
                                 .lineLimit(1).truncationMode(.tail)
                             Spacer()
-                            Image(systemName: "chevron.down").font(ShogunTheme.Typography.disclosure)
-                        }.font(ShogunTheme.Typography.body).foregroundStyle(ShogunTheme.ink).shogunSurface(padding: ShogunTheme.Spacing.selector)
-                    }.accessibilityLabel("Select library, \(store.selectedLibrary.name)").accessibilityIdentifier("library.selector")
+                            Image(systemName: "chevron.down").font(
+                                ShogunTheme.Typography.disclosure)
+                        }.font(ShogunTheme.Typography.body).foregroundStyle(ShogunTheme.ink)
+                            .shogunSurface(padding: ShogunTheme.Spacing.selector)
+                    }.accessibilityLabel(
+                        "Select library, \((store.selectedLibrary?.name ?? "Libraries"))"
+                    ).accessibilityIdentifier("library.selector")
                     HStack(spacing: ShogunTheme.Spacing.medium) {
                         Image(systemName: "magnifyingglass").foregroundStyle(ShogunTheme.muted)
-                        TextField("Search this library", text: $store.libraryQuery).font(ShogunTheme.Typography.body).autocorrectionDisabled()
+                        TextField("Search this library", text: $store.libraryQuery).font(
+                            ShogunTheme.Typography.body
+                        ).autocorrectionDisabled()
                         if !store.libraryQuery.isEmpty {
-                            Button { store.libraryQuery = "" } label: { Image(systemName: "xmark.circle.fill") }.accessibilityLabel("Clear search")
+                            Button {
+                                store.libraryQuery = ""
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                            }.accessibilityLabel("Clear search")
                         }
                     }.shogunSurface()
                     Text("\(movies.count) \(movies.count == 1 ? "movie" : "movies")")
                         .font(ShogunTheme.Typography.caption).foregroundStyle(ShogunTheme.muted)
+                    if let collection { CollectionFeedback(store: collection) }
                     if movies.isEmpty {
-                        ContentUnavailableView.search(text: store.libraryQuery)
+                        if store.libraryQuery.isEmpty {
+                            ContentUnavailableView(
+                                "No movies yet", systemImage: "film.stack",
+                                description: Text("Add a copy from your available movie catalog."))
+                        } else {
+                            ContentUnavailableView.search(text: store.libraryQuery)
+                        }
                     } else {
-                        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: ShogunTheme.Spacing.small, alignment: .top), count: columnCount), alignment: .leading, spacing: ShogunTheme.Spacing.regular) {
+                        LazyVGrid(
+                            columns: Array(
+                                repeating: GridItem(
+                                    .flexible(), spacing: ShogunTheme.Spacing.small, alignment: .top
+                                ), count: columnCount), alignment: .leading,
+                            spacing: ShogunTheme.Spacing.regular
+                        ) {
                             ForEach(movies) { movie in
                                 NavigationLink(value: movie) {
-                                    MovieCard(movie: movie, compact: columnCount >= 4, formats: MovieFormat.allCases.filter { format in store.copies(for: movie, libraryID: store.selectedLibraryID).contains { $0.format == format } }.map(\.rawValue).joined(separator: " · "))
-                                }.buttonStyle(.plain).disabled(isPinching).accessibilityIdentifier("library.movie.\(movie.id)")
+                                    MovieCard(
+                                        movie: movie, compact: columnCount >= 4,
+                                        formats: MovieFormat.allCases.filter { format in
+                                            store.copies(
+                                                for: movie, libraryID: store.selectedLibraryID
+                                            ).contains { $0.format == format }
+                                        }.map(\.rawValue).joined(separator: " · "))
+                                }.buttonStyle(.plain).disabled(isPinching).accessibilityIdentifier(
+                                    "library.movie.\(movie.id)")
                             }
                         }
 
                     }
-                }.padding(.horizontal, ShogunTheme.Spacing.screen).padding(.top, ShogunTheme.Spacing.regular).padding(.bottom, ShogunTheme.Spacing.large)
+                }.padding(.horizontal, ShogunTheme.Spacing.screen).padding(
+                    .top, ShogunTheme.Spacing.regular
+                ).padding(.bottom, ShogunTheme.Spacing.large)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .accessibilityIdentifier("library.scroll")
             .contentShape(Rectangle())
             .highPriorityGesture(
                 MagnifyGesture(minimumScaleDelta: 0.01)
-                .updating($isPinching) { _, active, _ in active = true }
-                .onChanged { value in
-                    guard !typeSize.isAccessibilitySize else { return }
-                    let startingColumns = pinchStartingColumns ?? store.libraryColumns
-                    pinchStartingColumns = startingColumns
-                    withAnimation(reduceMotion ? nil : .interactiveSpring(response: 0.2, dampingFraction: 0.9)) {
-                        store.updateLibraryPinch(magnification: Double(value.magnification), startingColumns: startingColumns)
+                    .updating($isPinching) { _, active, _ in active = true }
+                    .onChanged { value in
+                        guard !typeSize.isAccessibilitySize else { return }
+                        let startingColumns = pinchStartingColumns ?? store.libraryColumns
+                        pinchStartingColumns = startingColumns
+                        withAnimation(
+                            reduceMotion
+                                ? nil : .interactiveSpring(response: 0.2, dampingFraction: 0.9)
+                        ) {
+                            store.updateLibraryPinch(
+                                magnification: Double(value.magnification),
+                                startingColumns: startingColumns)
+                        }
                     }
-                }
-                .onEnded { _ in pinchStartingColumns = nil },
+                    .onEnded { _ in pinchStartingColumns = nil },
                 including: typeSize.isAccessibilitySize ? .subviews : .all
             )
             .onChange(of: isPinching) { _, active in
                 if !active { pinchStartingColumns = nil }
             }
+            .refreshable { await collection?.refresh() }
             .shogunCanvas()
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: Movie.self) { movie in
@@ -97,58 +161,4 @@ struct LibraryView: View {
             .sheet(isPresented: $store.showingAddMovie) { LibraryAddMovieSheet() }
         }
     }
-}
-
-/// Minimal local add destination; full catalog/manual-entry flow is a later change.
-private struct LibraryAddMovieSheet: View {
-    @EnvironmentObject private var store: CatalogStore
-    @Environment(\.dismiss) private var dismiss
-    @StateObject private var draft = AddMovieDraft()
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    Text("Choose from the local sample catalog.").foregroundStyle(ShogunTheme.muted)
-                    Picker("Library", selection: $draft.libraryID) {
-                        ForEach(store.writableLibraries) { Text($0.name).tag($0.id) }
-                    }
-                    Picker("Movie", selection: $draft.movieID) {
-                        ForEach(store.movies) { Text("\($0.title) (\($0.year))").tag($0.id) }
-                    }
-                    Picker("Format", selection: $draft.format) {
-                        ForEach(MovieFormat.allCases) { Text($0.rawValue).tag($0) }
-                    }
-                }
-                if let movie = store.movies.first(where: { $0.id == draft.movieID }), !store.copies(for: movie).isEmpty {
-                    Section {
-                        ForEach(store.libraries) { library in
-                            let copies = store.copies(for: movie, libraryID: library.id)
-                            if !copies.isEmpty { LabeledContent(library.name, value: copies.map { $0.format.rawValue }.joined(separator: ", ")) }
-                        }
-                        Text("Saving adds another copy and keeps the existing movie record.").font(ShogunTheme.Typography.footnote)
-                    } header: {
-                        Text("Already owned").accessibilityIdentifier("addMovie.alreadyOwned")
-                    }
-                }
-                Section { Text("Local demo only. Changes reset when Shogun restarts.").font(ShogunTheme.Typography.footnote).foregroundStyle(ShogunTheme.muted) }
-            }
-            .scrollContentBackground(.hidden).background(ShogunTheme.canvas)
-            .navigationTitle("Add Movie").navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        if let movie = store.movies.first(where: { $0.id == draft.movieID }), store.addCopy(movie: movie, format: draft.format, libraryID: draft.libraryID) { dismiss() }
-                    }.disabled(!store.writableLibraries.contains { $0.id == draft.libraryID })
-                }
-            }
-        }
-        .onAppear { draft.libraryID = store.writableLibraries.first(where: { $0.id == store.selectedLibraryID })?.id ?? store.writableLibraries.first?.id ?? "" }
-        .presentationDragIndicator(.visible)
-    }
-}
-private final class AddMovieDraft: ObservableObject {
-    @Published var libraryID = ""
-    @Published var movieID = MockCatalog.movies[0].id
-    @Published var format = MovieFormat.bluRay
 }

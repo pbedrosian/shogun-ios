@@ -18,6 +18,7 @@ final class LibraryAccessTests: XCTestCase {
 
     func testUserWithoutMembershipHasNoAccess() throws {
         let store = Fixtures.store(userID: "nobody")
+        XCTAssertNil(store.selectedLibrary)
         XCTAssertTrue(store.libraries.isEmpty)
         XCTAssertTrue(store.writableLibraries.isEmpty)
         XCTAssertTrue(store.copies(for: Fixtures.arrival).isEmpty)
@@ -27,13 +28,13 @@ final class LibraryAccessTests: XCTestCase {
     func testSelectedLibraryFollowsSelection() throws {
         let store = Fixtures.store()
         store.selectedLibraryID = "family"
-        XCTAssertEqual(store.selectedLibrary.id, "family")
+        XCTAssertEqual(store.selectedLibrary?.id, "family")
     }
 
     func testInvalidSelectionFallsBackToFirstAccessibleLibrary() throws {
         let store = Fixtures.store()
         store.selectedLibraryID = "hidden"
-        XCTAssertEqual(store.selectedLibrary.id, "personal")
+        XCTAssertEqual(store.selectedLibrary?.id, "personal")
     }
 
 }
