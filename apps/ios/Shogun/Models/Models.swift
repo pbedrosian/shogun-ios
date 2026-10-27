@@ -8,7 +8,6 @@ struct Movie: Identifiable, Hashable {
     let id: String // Stable local metadata identifier; future providers map to this record.
     let title: String
     let year: Int
-    let symbol: String
     let palette: Int
     let synopsis: String
 }

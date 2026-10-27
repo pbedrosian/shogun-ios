@@ -62,8 +62,8 @@ import XCTest
         store.submit(form: .signIn, email: "a@b.test", password: "password")
         XCTAssertEqual(store.error, SignInFailure.configuration.localizedDescription)
         store.handle(AuthConfiguration.redirect); XCTAssertNotNil(store.error)
-        store.enterDemo(); XCTAssertTrue(store.isDemo); store.leaveDemo(); XCTAssertFalse(store.isDemo)
         let demo = AuthStore(service: nil, demo: true); demo.start(); XCTAssertTrue(demo.isDemo); XCTAssertFalse(demo.isRestoring)
+        demo.leaveDemo(); XCTAssertFalse(demo.isDemo)
     }
     func testValidationAndCredentialFailure() async {
         let service = Service(); let store = AuthStore(service: service); store.start(); await settle(store)
@@ -103,11 +103,19 @@ import XCTest
         service.continuation.yield(.signedOut)
         for _ in 0..<20 { await Task.yield() }; XCTAssertNil(store.account)
     }
+    func testCancelledRequestCannotPublishEvenIfServiceReturnsSuccess() async {
+        let service = Service()
+        let store = AuthStore(service: service); store.start(); await settle(store)
+        store.submit(form: .signIn, email: "a@b.test", password: "password")
+        store.cancel() // The fake returns success without checking cancellation.
+        await settle(store)
+        XCTAssertNil(store.account); XCTAssertNil(store.error); XCTAssertEqual(service.signOuts, 1)
+    }
     func testCancellationAndDuplicateRequestsCannotRestoreAccount() async {
         let service = Service(); service.slow = true
         let store = AuthStore(service: service); store.start(); await settle(store)
         store.submit(form: .signIn, email: "a@b.test", password: "password")
-        store.submit(form: .signIn, email: "a@b.test", password: "password"); store.enterDemo(); XCTAssertFalse(store.isDemo)
+        store.submit(form: .signIn, email: "a@b.test", password: "password"); XCTAssertFalse(store.isDemo)
         for _ in 0..<10 { await Task.yield() }
         store.cancel(); await settle(store); XCTAssertNil(store.account); XCTAssertNil(store.error)
         XCTAssertEqual(service.calls, 1); XCTAssertEqual(service.signOuts, 1)

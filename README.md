@@ -15,6 +15,9 @@ ci/                   Coverage policy
 docs/                 Setup and CI documentation
 ```
 
+For Swift structure, shared styling, and future contribution rules, see
+[code organization](docs/ARCHITECTURE.md).
+
 ## Dependencies
 
 Local development is intended for macOS with:

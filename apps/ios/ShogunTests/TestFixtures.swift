@@ -3,9 +3,9 @@ import XCTest
 
 /// Small deterministic catalog independent of the demo's display text and counts.
 enum Fixtures {
-    static let arrival = Movie(id: "arrival", title: "Arrival", year: 2016, symbol: "moon", palette: 0, synopsis: "First contact")
-    static let jaws = Movie(id: "jaws", title: "Jaws", year: 1975, symbol: "water", palette: 1, synopsis: "Shark")
-    static let unowned = Movie(id: "unowned", title: "Unowned", year: 2016, symbol: "star", palette: 2, synopsis: "Sample")
+    static let arrival = Movie(id: "arrival", title: "Arrival", year: 2016, palette: 0, synopsis: "First contact")
+    static let jaws = Movie(id: "jaws", title: "Jaws", year: 1975, palette: 1, synopsis: "Shark")
+    static let unowned = Movie(id: "unowned", title: "Unowned", year: 2016, palette: 2, synopsis: "Sample")
     static let movies = [arrival, jaws, unowned]
     static let libraries = [
         MovieLibrary(id: "personal", name: "Personal", isShared: false),

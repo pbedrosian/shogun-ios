@@ -34,3 +34,9 @@
 - Use `.shogunCanvas()`, `.shogunSurface()`, `.shogunBrand()`, `.movieTitleStyle()` and `.movieMetadataStyle()` for their corresponding visual treatments. Header icon labels use ShogunIcon; rating buttons use ShogunRatingButtonStyle.
 - Keep structural layout, navigation, data bindings and accessibility in feature/component views. Extract a style when it describes a reusable visual role; do not create a separate modifier for every stack.
 - Preserve Dynamic Type semantic fonts, the two-line reserved movie title, top-aligned grid items and the existing Photos-style view menu.
+
+## Maintainability
+
+- Follow docs/ARCHITECTURE.md for view/store/service boundaries and styling. Keep navigation in App, screen-specific code in Features, and backend/SDK work in Services.
+- Use the repository .swift-format settings for modified Swift files; avoid unrelated formatting churn. Do not bypass compiler warnings or coverage checks to make a refactor pass.
+- Prefer Task cancellation checks to duplicate cancellation flags, and keep injected service implementations private to their coordinating store.

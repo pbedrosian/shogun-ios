@@ -27,7 +27,7 @@ final class ModelTests: XCTestCase {
     }
 
     func testMovieEqualityAndHashing() throws {
-        let same = Movie(id: "arrival", title: "Arrival", year: 2016, symbol: "moon", palette: 0, synopsis: "First contact")
+        let same = Movie(id: "arrival", title: "Arrival", year: 2016, palette: 0, synopsis: "First contact")
         XCTAssertEqual(Fixtures.arrival, same)
         XCTAssertEqual(Set([Fixtures.arrival, same, Fixtures.jaws]).count, 2)
     }
