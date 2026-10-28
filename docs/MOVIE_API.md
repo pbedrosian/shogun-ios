@@ -91,8 +91,8 @@ The Search tab requires the app's current sign-in flow; guest discovery is not a
 
 ## Attribution
 
-The app's Profile credits and catalog detail screens include the TMDB logo, link
-and required notice. The bundled SVG is unchanged approved `blue_short` artwork.
+The app's Profile credits include the TMDB logo, link and required notice.
+Movie detail screens keep the focus on movie information. The bundled SVG is unchanged approved `blue_short` artwork.
 Original asset URL:
 https://www.themoviedb.org/assets/2/v4/logos/v2/blue_short-8e7b30f73a4020692ccca9c88bafe5dcb6f8a62a4c6bc55cd9ba82bb2cd95f6c.svg
 

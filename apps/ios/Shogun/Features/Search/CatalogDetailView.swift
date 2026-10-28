@@ -42,7 +42,6 @@ struct CatalogDetailView: View {
                         MovieDetailView(movie: owned).environmentObject(catalog)
                     }.accessibilityIdentifier("discovery.owned")
                 }
-                TMDBAttributionView()
             }.padding()
         }.shogunCanvas().navigationTitle("Movie").navigationBarTitleDisplayMode(.inline)
             .accessibilityIdentifier("discovery.detail")
