@@ -41,7 +41,7 @@ enum CollectionFailure: Error, LocalizedError, Equatable {
     init(rpc: @escaping RPC) { self.rpc = rpc }
 
     func load() async throws -> CollectionSnapshot {
-        let data = try await rpc("collection_snapshot", Data("{}".utf8))
+        let data = try await perform("collection_snapshot", Data("{}".utf8))
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase
         return try decoder.decode(CollectionPayload.self, from: data).snapshot
@@ -71,7 +71,21 @@ enum CollectionFailure: Error, LocalizedError, Equatable {
     }
     func restorePersonalLibrary() async throws { _ = try await call("bootstrap_account", [:]) }
     private func call(_ name: String, _ body: [String: Any]) async throws -> Data {
-        try await rpc(name, JSONSerialization.data(withJSONObject: body))
+        try await perform(name, JSONSerialization.data(withJSONObject: body))
+    }
+    private func perform(_ name: String, _ data: Data) async throws -> Data {
+        do { return try await rpc(name, data) } catch {
+            if error is CancellationError || (error as? URLError)?.code == .cancelled {
+                throw CancellationError()
+            }
+            if let failure = error as? CollectionFailure { throw failure }
+            if (error as? SignInFailure) == .expired { throw CollectionFailure.expired }
+            if let failure = error as? BackendHTTPError {
+                if failure.status == 401 { throw CollectionFailure.expired }
+                if failure.status == 403 { throw CollectionFailure.access }
+            }
+            throw CollectionFailure.unavailable
+        }
     }
 }
 
@@ -92,6 +106,7 @@ private struct CollectionPayload: Decodable {
         let title: String
         let releaseYear: Int?
         let synopsis: String
+        let tmdbId: Int?
     }
     struct Copy: Decodable {
         let id: String
@@ -116,7 +131,8 @@ private struct CollectionPayload: Decodable {
             movies: movies.map {
                 Movie(
                     id: $0.id, title: $0.title, year: $0.releaseYear,
-                    palette: $0.id.utf8.reduce(0) { ($0 + Int($1)) % 8 }, synopsis: $0.synopsis)
+                    palette: $0.id.utf8.reduce(0) { ($0 + Int($1)) % 8 }, synopsis: $0.synopsis,
+                    tmdbID: $0.tmdbId)
             },
             libraries: libraries.map {
                 MovieLibrary(id: $0.id, name: $0.name, isShared: $0.isShared)

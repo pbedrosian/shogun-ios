@@ -70,7 +70,7 @@ import Auth
         let first = SupabaseAuthService(config: config, storage: storage)
         let owner = try await first.signIn(email: "owner@shogun.test", password: "Shogun-local-only-25!")
         let collection = SupabaseCollectionService { name, body in
-            try await first.collectionRPC(name, body: body, userID: owner.id)
+            try await first.backendClient(for: owner.id).rpc(name, body: body)
         }
         let snapshot = try await collection.load()
         XCTAssertTrue(snapshot.libraries.contains { $0.id == owner.libraryID.uuidString.lowercased() })
@@ -78,7 +78,7 @@ import Auth
         let relaunched = SupabaseAuthService(config: config, storage: storage)
         let restored = try await relaunched.restore(); XCTAssertEqual(restored?.id, owner.id)
         let second = SupabaseCollectionService { name, body in
-            try await relaunched.collectionRPC(name, body: body, userID: owner.id)
+            try await relaunched.backendClient(for: owner.id).rpc(name, body: body)
         }
         let reloaded = try await second.load()
         XCTAssertEqual(Set(snapshot.libraries.map(\.id)), Set(reloaded.libraries.map(\.id)))
@@ -88,6 +88,26 @@ import Auth
         catch { XCTAssertEqual(error as? CollectionFailure, .expired) }
         try await relaunched.signOut()
         try await first.signOut()
+    }
+
+    func testLocalTMDBSearchDetailsAndNoCollectionMutation() async throws {
+        let config = try AuthConfiguration(info: Bundle.main.infoDictionary ?? [:], allowLocalHTTP: true)
+        guard config.url.absoluteString == "http://127.0.0.1:54321" else { throw SignInFailure.configuration }
+        let auth = SupabaseAuthService(config: config, storage: SecureAuthStorage(service: "shogun.discovery.integration.\(UUID())"))
+        let account = try await auth.signIn(email: "owner@shogun.test", password: "Shogun-local-only-25!")
+        let backend = auth.backendClient(for: account.id)
+        let collections = SupabaseCollectionService { try await backend.rpc($0, body: $1) }
+        let before = try await collections.load()
+        let service = MovieDiscoveryService { try await backend.function("catalog", body: $0) }
+        let page = try await service.search(query: "Arrival", page: 1)
+        XCTAssertTrue(page.results.contains { $0.id == 329865 })
+        let movie = try await service.details(id: 329865)
+        XCTAssertEqual(movie.year, 2016); XCTAssertTrue((movie.runtimeMinutes ?? 0) > 0)
+        XCTAssertEqual(movie.posterURL?.host, "image.tmdb.org"); XCTAssertNotNil(movie.director)
+        let after = try await collections.load()
+        XCTAssertEqual(Set(before.copies.map(\.id)), Set(after.copies.map(\.id)))
+        XCTAssertEqual(Set(before.movies.map(\.id)), Set(after.movies.map(\.id)))
+        try await auth.signOut()
     }
 
 }

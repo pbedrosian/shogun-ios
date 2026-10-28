@@ -164,7 +164,7 @@ final class AppFlowTests: XCTestCase {
         let field = app.secureTextFields["auth.password"]; field.tap(); field.typeText("valid-password"); app.buttons["auth.submit"].tap()
         XCTAssertTrue(app.buttons["library.selector"].waitForExistence(timeout: 5))
         app.tabBars.buttons["Profile"].tap(); XCTAssertEqual(app.staticTexts["auth.accountEmail"].label, "owner@shogun.test")
-        app.buttons["auth.signOut"].tap(); XCTAssertTrue(app.textFields["auth.email"].waitForExistence(timeout: 5))
+        reveal(app.buttons["auth.signOut"]); app.buttons["auth.signOut"].tap(); XCTAssertTrue(app.textFields["auth.email"].waitForExistence(timeout: 5))
     }
     func testCreateAccountConfirmationAndRecovery() {
         launch(dark: true); let create = app.buttons["auth.createAccount"]; reveal(create); create.tap()
@@ -194,7 +194,7 @@ final class AppFlowTests: XCTestCase {
         app.terminate(); app.launch()
         XCTAssertTrue(app.buttons["library.selector"].waitForExistence(timeout: 10))
         app.tabBars.buttons["Profile"].tap(); XCTAssertEqual(app.staticTexts["auth.accountEmail"].label, "owner@shogun.test")
-        app.buttons["auth.signOut"].tap(); XCTAssertTrue(app.textFields["auth.email"].waitForExistence(timeout: 10))
+        reveal(app.buttons["auth.signOut"]); app.buttons["auth.signOut"].tap(); XCTAssertTrue(app.textFields["auth.email"].waitForExistence(timeout: 10))
     }
 #endif
     func testProfileHeaderAndAccountDeletionConfirmation() {
@@ -262,8 +262,10 @@ final class AppFlowTests: XCTestCase {
         let save = app.buttons["collection.saveDiary"]; reveal(save); save.tap()
         XCTAssertTrue(app.staticTexts["4 of 5 stars"].waitForExistence(timeout: 5))
         app.tabBars.buttons["Search"].tap()
-        let result = app.buttons["search.movie.30000000-0000-0000-0000-000000000001"]
+        let query = app.searchFields["Search movies"]; query.tap(); query.typeText("Arrival")
+        let result = app.buttons["discovery.movie.329865"]
         XCTAssertTrue(result.waitForExistence(timeout: 5)); result.tap()
+        let owned = app.buttons["discovery.owned"]; XCTAssertTrue(owned.waitForExistence(timeout: 5)); reveal(owned); owned.tap()
         XCTAssertTrue(app.staticTexts["4 of 5 stars"].waitForExistence(timeout: 5))
     }
     func testCollectionDefaultAndCreateLibrary() {
@@ -276,6 +278,45 @@ final class AppFlowTests: XCTestCase {
         let name = app.textFields["collection.libraryName"]; name.tap(); name.typeText("Family films")
         app.navigationBars.buttons["Create"].tap()
         XCTAssertTrue(app.staticTexts["Family films"].waitForExistence(timeout: 5))
+    }
+
+    func testLiveDiscoveryBlankSearchPaginationAndDetails() {
+        launch(dark: true, large: true); fill("valid-password"); app.buttons["auth.submit"].tap()
+        XCTAssertTrue(app.buttons["library.selector"].waitForExistence(timeout: 5))
+        app.tabBars.buttons["Search"].tap()
+        let field = app.searchFields["Search movies"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["discovery.movie.329865"].exists)
+        XCTAssertFalse(app.staticTexts["discovery.empty"].exists)
+        field.tap(); field.typeText("Arrival")
+        let arrival = app.buttons["discovery.movie.329865"]
+        XCTAssertTrue(arrival.waitForExistence(timeout: 5))
+        let more = app.buttons["discovery.more"]; reveal(more); more.tap()
+        XCTAssertTrue(app.buttons["discovery.movie.11"].waitForExistence(timeout: 5))
+        reveal(arrival); arrival.tap()
+        XCTAssertTrue(app.scrollViews["discovery.detail"].waitForExistence(timeout: 5))
+        let director = app.descendants(matching: .any)["discovery.director"].firstMatch; reveal(director)
+        XCTAssertTrue(director.exists)
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        XCTAssertTrue(arrival.waitForExistence(timeout: 5))
+        field.tap(); field.buttons["Clear text"].tap()
+        XCTAssertFalse(arrival.exists)
+        field.typeText("no matches")
+        XCTAssertTrue(app.descendants(matching: .any)["discovery.empty"].firstMatch.waitForExistence(timeout: 5))
+    }
+    func testLiveDiscoverySearchAndDetailFailuresRetry() {
+        launch(extra: ["-discovery-error", "-discovery-detail-error"])
+        fill("valid-password"); app.buttons["auth.submit"].tap()
+        XCTAssertTrue(app.buttons["library.selector"].waitForExistence(timeout: 5))
+        app.tabBars.buttons["Search"].tap()
+        let field = app.searchFields["Search movies"]; field.tap(); field.typeText("Arrival")
+        XCTAssertTrue(app.staticTexts["discovery.error"].waitForExistence(timeout: 5))
+        app.buttons["discovery.retry"].tap()
+        let movie = app.buttons["discovery.movie.329865"]; XCTAssertTrue(movie.waitForExistence(timeout: 5)); movie.tap()
+        let error = app.staticTexts["discovery.detailError"]; XCTAssertTrue(error.waitForExistence(timeout: 5)); reveal(error)
+        let retry = app.buttons["discovery.detailRetry"]; reveal(retry); retry.tap()
+        let director = app.descendants(matching: .any)["discovery.director"].firstMatch; reveal(director)
+        XCTAssertTrue(director.waitForExistence(timeout: 5))
     }
 
 }

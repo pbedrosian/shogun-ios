@@ -23,12 +23,12 @@ phone, or use `npm run ios:configure` for a simulator; see [AUTH.md](AUTH.md).
 Run the Shogun scheme in Xcode and sign in. The [README testing account](../README.md#local-testing-login)
 has seeded movies and copies. A new account starts with a real empty personal
 library. It does not receive demo movies automatically. Metadata creation/manual
-entry and external catalog ingestion are separate tickets; the + sheet currently
+entry and importing discovered titles are separate tickets; the + sheet currently
 adds a copy of an existing movie visible to your account. An empty catalog has no
 movie to select and Save is disabled.
 
 - Library shows server copies grouped by stable movie UUID. Select a library,
-  search it, or use Search across visible metadata. Repeated physical copies stay
+  search it, or use the [TMDB Search tab](MOVIE_API.md) to discover titles. Repeated physical copies stay
   separate rows and do not duplicate the movie card.
 - Use + to select existing metadata, library and format, then Save. Only owner and
   editor libraries are writable; the database rechecks permission on every save.

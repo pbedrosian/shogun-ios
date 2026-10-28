@@ -41,6 +41,8 @@ jobs:
         run: npm run backend:test:api
       - name: Collection synchronization and retry checks
         run: npm run backend:test:collection
+      - name: Catalog gateway authentication checks
+        run: npm run backend:test:catalog
       - name: Account deletion security and cascade tests
         run: npm run backend:test:deletion
       - name: Stop local backend

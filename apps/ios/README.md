@@ -22,7 +22,7 @@ development Auth fixtures and backend verification.
 - Placeholder profile, tab navigation, and automatic system light/dark appearance.
 - Original poster artwork generated locally by SwiftUI shapes, gradients, text and SF Symbols. No remote images or asset downloads.
 
-The Debug catalog fixture has six personal titles and three family titles, including an overlapping movie and two VHS copies of the same movie. Changes are in memory and reset when the app restarts. Normal signed-in launches use real durable collections (see [collection synchronization](../../docs/COLLECTIONS.md)). Invitations, full catalog/manual movie entry and TMDB remain separate. The Library redesign includes a small local sample-copy sheet behind the + button.
+The Debug catalog fixture has six personal titles and three family titles, including an overlapping movie and two VHS copies of the same movie. Changes are in memory and reset when the app restarts. Normal signed-in launches use real durable collections (see [collection synchronization](../../docs/COLLECTIONS.md)). Invitations and full catalog/manual movie entry remain separate. Live TMDB Search is connected through the server proxy. The Library redesign includes a small local sample-copy sheet behind the + button.
 
 ## Architecture
 
@@ -108,3 +108,7 @@ GitHub Actions and the optional Jenkinsfile use `python3 scripts/ci/run.py` for 
 See [CI setup and local reproduction](../../docs/CI.md) for the pinned hosted toolchain, artifacts, coverage policy, Jenkins requirements, Sonar activation, and remaining hosted acceptance checks.
 
 SHO-13.1 verification: 72 app tests (67 unit + 5 UI), zero failures/skips, and 10 CI-tool tests passed locally on iPhone 16 / iOS 27 with Xcode 27. Combined app-source line coverage was 1234/1252 (98.6%), above the enforced 85% floor; core model/store files remained at 100%. Sonar's project-level new-code threshold must also be configured to 85% in its custom quality gate; it is not controlled by scanner properties.
+
+Live signed-in Search now discovers TMDB titles and details through the server proxy.
+See [movie API setup](../../docs/MOVIE_API.md). Search/importing a provider result into
+a saved collection and manual entry remain separate scopes (SHO-3/4).

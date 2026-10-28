@@ -22,12 +22,7 @@ struct MovieDetailView: View {
             VStack(alignment: .leading, spacing: ShogunTheme.Spacing.large) {
                 PosterView(movie: movie).frame(maxWidth: ShogunTheme.Size.detailPosterWidth).frame(
                     maxWidth: .infinity)
-                VStack(alignment: .leading, spacing: ShogunTheme.Spacing.small) {
-                    Text(movie.title).font(ShogunTheme.Typography.detailTitle)
-                    Text(movie.releaseYearText).font(ShogunTheme.Typography.viewIcon).foregroundStyle(
-                        .secondary)
-                    Text(movie.synopsis).foregroundStyle(.secondary)
-                }
+                MovieOverviewView(title: movie.title, year: movie.releaseYearText, synopsis: movie.synopsis)
                 GroupBox {
                     VStack(alignment: .leading, spacing: ShogunTheme.Spacing.control) {
                         Label("Owned copies", systemImage: "opticaldisc").font(

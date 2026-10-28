@@ -19,6 +19,7 @@ struct AccountProfileView: View {
                         Label(account.libraryName, systemImage: "person").badge("Personal")
                     }
                 }
+                Section("Movie information") { TMDBAttributionView() }
                 Section("About") {
                     LabeledContent(
                         "Version",

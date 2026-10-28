@@ -1,7 +1,7 @@
 # Shogun
 
 Native iPhone movie catalog with a Supabase backend, managed in one repository.
-The iOS app connects to Supabase authentication and durable account-scoped collections. The sample catalog is retained only for explicit Debug UI tests.
+The iOS app connects to Supabase authentication and durable account-scoped collections. Search discovers movies through TMDB; the sample catalog is retained only for explicit Debug UI tests.
 
 ## Repository layout
 
@@ -74,6 +74,13 @@ Fixtures provide separate owner/editor/viewer/outsider Auth identities. Their
 emails and local-only password are documented in [backend setup](docs/BACKEND.md).
 Membership permissions are enforced by PostgreSQL row-level security. The launcher does not
 create fixtures or reset existing data.
+
+## Movie API setup
+
+Movie Search uses TMDB through the authenticated Supabase backend. Add the server's
+API Read Access Token to ignored `backend/.env`, then restart the local backend.
+See [movie API setup, testing and deployment](docs/MOVIE_API.md). The provider token
+is never included in the iOS app or needed by standard GitHub CI.
 
 ## Local testing login
 

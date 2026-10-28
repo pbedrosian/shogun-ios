@@ -13,10 +13,14 @@ extension EnvironmentValues {
 struct ConnectedCollectionTabs: View {
     let account: AuthAccount
     @StateObject private var collection: CollectionStore
-    init(account: AuthAccount, service: any CollectionServicing) {
+    @StateObject private var search: CatalogSearchStore
+    private let discovery: any MovieDiscoveryServicing
+    init(account: AuthAccount, services: AccountServices) {
         self.account = account
+        self.discovery = services.discovery
+        _search = StateObject(wrappedValue: CatalogSearchStore(service: services.discovery))
         _collection = StateObject(
-            wrappedValue: CollectionStore(userID: account.id, service: service))
+            wrappedValue: CollectionStore(userID: account.id, service: services.collection))
     }
     var body: some View {
         TabView {
@@ -42,15 +46,8 @@ struct ConnectedCollectionTabs: View {
                     }
                 }
             }.tabItem { Label("Library", systemImage: "square.grid.2x2") }
-            Group {
-                if let catalog = collection.catalog {
-                    SearchView().environmentObject(catalog)
-                } else {
-                    NavigationStack {
-                        CollectionFeedback(store: collection).navigationTitle("Search")
-                    }
-                }
-            }.tabItem { Label("Search", systemImage: "magnifyingglass") }
+            CatalogSearchView(search: search, collection: collection, service: discovery)
+                .tabItem { Label("Search", systemImage: "magnifyingglass") }
             AccountProfileView(account: account).tabItem {
                 Label("Profile", systemImage: "person.crop.circle")
             }
@@ -58,7 +55,10 @@ struct ConnectedCollectionTabs: View {
         .environment(\.collection, collection)
         .environmentObject(collection)
         .task { await collection.refresh() }
-        .onDisappear { collection.invalidate() }
+        .onDisappear {
+            collection.invalidate()
+            search.invalidate()
+        }
     }
 }
 
