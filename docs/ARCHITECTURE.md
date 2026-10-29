@@ -20,6 +20,7 @@ Do not add a web styling layer to style native views.
 | `Services/MovieDiscoveryService.swift` | Catalog proxy requests, typed metadata mapping and discovery errors. |
 | `Services/CatalogSearchStore.swift` | Search/detail orchestration, debounce, cancellation, paging and retries. |
 | `Services/SecureAuthStorage.swift` | Keychain operations, without view or navigation responsibilities. |
+| `Services/MovieAddDraft.swift` | Add form metadata, quantities, selection loading and retry identity. |
 | `Models` | Catalog value types and relationships, independent of SwiftUI. |
 | `backend/supabase` | Server schema, RLS, and privileged functions; no admin credentials in iOS. |
 

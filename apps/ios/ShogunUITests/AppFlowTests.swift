@@ -93,22 +93,6 @@ final class AppFlowTests: XCTestCase {
         XCTAssertTrue(app.staticTexts["All content is local sample data. No account is connected."].exists)
     }
 
-    func testAddCopyCanCancelThenSaveIntoSelectedLibrary() {
-        launch()
-        app.buttons["library.selector"].tap()
-        app.buttons["Family Collection"].tap()
-        app.buttons["Add movie"].tap()
-        XCTAssertTrue(app.navigationBars["Add Movie"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["addMovie.alreadyOwned"].waitForExistence(timeout: 5))
-        app.buttons["Cancel"].tap()
-        XCTAssertFalse(app.navigationBars["Add Movie"].exists)
-        app.buttons["Add movie"].tap()
-        app.buttons["Save"].tap()
-        XCTAssertFalse(app.navigationBars["Add Movie"].exists)
-        app.buttons["library.movie.arrival-2016"].tap()
-        reveal(app.staticTexts["2 copies"])
-        XCTAssertTrue(app.staticTexts["2 copies"].exists)
-    }
 
     func testDensityMenuAndPinchShareStateAndKeepNavigationUsable() {
         launch()
@@ -248,25 +232,160 @@ final class AppFlowTests: XCTestCase {
     }
     func testCollectionFailedCopySaveKeepsFormThenDiaryPersistsAcrossTabs() {
         launch(extra: ["-collection-save-error"])
-        fill("valid-password"); app.buttons["auth.submit"].tap()
+        fill("valid-password")
+        app.buttons["auth.submit"].tap()
         XCTAssertTrue(app.buttons["library.selector"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["collection.refresh"].exists)
         app.buttons["Add movie"].tap()
-        app.navigationBars.buttons["Save"].tap()
+        let queryField = app.textFields["addMovie.search"]
+        XCTAssertTrue(queryField.waitForExistence(timeout: 5))
+        queryField.tap()
+        queryField.typeText("Arrival\n")
+        let selected = app.buttons["addMovie.result.329865"]
+        XCTAssertTrue(selected.waitForExistence(timeout: 5))
+        selected.tap()
+        let quantity = app.buttons["addMovie.quantity.Blu-ray-Increment"]
+        revealForm(quantity)
+        quantity.tap()
+        let saveMovie = app.buttons["addMovie.save"]
+        XCTAssertTrue(saveMovie.waitForExistence(timeout: 5))
+        saveMovie.tap()
         XCTAssertTrue(app.staticTexts["collection.error"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.navigationBars["Add Movie"].exists)
         app.navigationBars.buttons["Save"].tap()
         let film = app.buttons["library.movie.30000000-0000-0000-0000-000000000001"]
-        XCTAssertTrue(film.waitForExistence(timeout: 5)); film.tap()
-        let watched = app.switches["Watched"]; reveal(watched); watched.tap()
-        let star = app.buttons["Rate 4 of 5 stars"]; reveal(star); star.tap()
-        let save = app.buttons["collection.saveDiary"]; reveal(save); save.tap()
+        XCTAssertTrue(film.waitForExistence(timeout: 5))
+        film.tap()
+        let watched = app.switches["Watched"]
+        reveal(watched)
+        watched.tap()
+        let star = app.buttons["Rate 4 of 5 stars"]
+        reveal(star)
+        star.tap()
+        let save = app.buttons["collection.saveDiary"]
+        reveal(save)
+        save.tap()
         XCTAssertTrue(app.staticTexts["4 of 5 stars"].waitForExistence(timeout: 5))
         app.tabBars.buttons["Search"].tap()
-        let query = app.searchFields["Search movies"]; query.tap(); query.typeText("Arrival")
+        let query = app.searchFields["Search movies"]
+        query.tap()
+        query.typeText("Arrival")
         let result = app.buttons["discovery.movie.329865"]
-        XCTAssertTrue(result.waitForExistence(timeout: 5)); result.tap()
-        let owned = app.buttons["discovery.owned"]; XCTAssertTrue(owned.waitForExistence(timeout: 5)); reveal(owned); owned.tap()
+        XCTAssertTrue(result.waitForExistence(timeout: 5))
+        result.tap()
+        let owned = app.buttons["discovery.owned"]
+        XCTAssertTrue(owned.waitForExistence(timeout: 5))
+        reveal(owned)
+        owned.tap()
         XCTAssertTrue(app.staticTexts["4 of 5 stars"].waitForExistence(timeout: 5))
+    }
+    private func revealForm(_ element: XCUIElement) {
+        for _ in 0..<18 {
+            if element.isHittable { return }
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.94, dy: 0.5))
+                .press(
+                    forDuration: 0.05,
+                    thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.94, dy: 0.2)))
+        }
+        XCTAssertTrue(element.isHittable)
+    }
+    func testManualMovieQuantityAndMetadataInDarkLargeText() {
+        launch(dark: true, large: true)
+        fill("valid-password")
+        app.buttons["auth.submit"].tap()
+        XCTAssertTrue(app.buttons["library.selector"].waitForExistence(timeout: 5))
+        app.buttons["Add movie"].tap()
+        let manual = app.buttons["addMovie.manual"]
+        XCTAssertTrue(manual.waitForExistence(timeout: 5))
+        manual.tap()
+        let title = app.textFields["addMovie.title"]
+        revealForm(title)
+        title.tap()
+        title.typeText("Festival Film")
+        app.buttons["addMovie.keyboardDone"].tap()
+        let director = app.textFields["addMovie.director"]
+        revealForm(director)
+        director.tap()
+        director.typeText("A Director")
+        app.buttons["addMovie.keyboardDone"].tap()
+        let synopsis =
+            app.textViews["addMovie.synopsis"].exists
+            ? app.textViews["addMovie.synopsis"] : app.textFields["addMovie.synopsis"]
+        revealForm(synopsis)
+        synopsis.tap()
+        synopsis.typeText("A festival story")
+        app.buttons["addMovie.keyboardDone"].tap()
+        let genres = app.textFields["addMovie.genres"]
+        revealForm(genres)
+        genres.tap()
+        genres.typeText("Drama, Mystery")
+        app.buttons["addMovie.keyboardDone"].tap()
+        let increment = app.buttons["addMovie.quantity.Blu-ray-Increment"]
+        revealForm(increment)
+        increment.tap()
+        increment.tap()
+        let attachment = XCTAttachment(screenshot: app.screenshot())
+        attachment.name = "Manual movie dark large text"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+        app.buttons["addMovie.save"].tap()
+        XCTAssertTrue(app.buttons["library.selector"].waitForExistence(timeout: 5))
+        let film = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Festival Film"))
+            .firstMatch
+        reveal(film)
+        film.tap()
+        XCTAssertTrue(app.staticTexts["Festival Film"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["A festival story"].exists)
+        let savedDirector = app.descendants(matching: .any).matching(identifier: "movie.director")
+            .firstMatch
+        XCTAssertEqual(savedDirector.value as? String, "A Director")
+        XCTAssertTrue(app.staticTexts["2 copies"].exists)
+        let edit = app.buttons["movie.editCopies.20000000-0000-0000-0000-000000000001"]
+        revealForm(edit)
+        edit.tap()
+        let decrease = app.buttons["editCopies.Blu-ray-Decrement"]
+        revealForm(decrease)
+        decrease.tap()
+        let dvd = app.buttons["editCopies.DVD-Increment"]
+        dvd.tap()
+        app.buttons["editCopies.save"].tap()
+        XCTAssertTrue(app.staticTexts["DVD · Blu-ray"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["2 copies"].exists)
+    }
+    func testAddMovieSearchAndDetailsRetryThenCancel() {
+        launch(extra: ["-discovery-error", "-discovery-detail-error"])
+        fill("valid-password")
+        app.buttons["auth.submit"].tap()
+        XCTAssertTrue(app.buttons["library.selector"].waitForExistence(timeout: 5))
+        app.buttons["Add movie"].tap()
+        let query = app.textFields["addMovie.search"]
+        XCTAssertTrue(query.waitForExistence(timeout: 5))
+        query.tap()
+        query.typeText("Arrival\n")
+        let retry = app.buttons["Retry search"]
+        XCTAssertTrue(retry.waitForExistence(timeout: 5))
+        retry.tap()
+        let result = app.buttons["addMovie.result.329865"]
+        XCTAssertTrue(result.waitForExistence(timeout: 5))
+        result.tap()
+        let detailRetry = app.buttons["Retry details"]
+        reveal(detailRetry)
+        detailRetry.tap()
+        let save = app.buttons["addMovie.save"]
+        XCTAssertTrue(save.waitForExistence(timeout: 5))
+        XCTAssertFalse(save.isEnabled)
+        let quantity = app.buttons["addMovie.quantity.Blu-ray-Increment"]
+        revealForm(quantity)
+        quantity.tap()
+        let ready = expectation(for: NSPredicate(format: "isEnabled == true"), evaluatedWith: save)
+        wait(for: [ready], timeout: 5)
+        let attachment = XCTAttachment(screenshot: app.screenshot())
+        attachment.name = "Selected provider movie"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+        app.navigationBars.buttons["Cancel"].tap()
+        XCTAssertTrue(app.staticTexts["No movies yet"].waitForExistence(timeout: 5))
+
     }
     func testCollectionDefaultAndCreateLibrary() {
         launch(); fill("valid-password"); app.buttons["auth.submit"].tap()

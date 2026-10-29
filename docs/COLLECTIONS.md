@@ -22,16 +22,15 @@ phone, or use `npm run ios:configure` for a simulator; see [AUTH.md](AUTH.md).
 
 Run the Shogun scheme in Xcode and sign in. The [README testing account](../README.md#local-testing-login)
 has seeded movies and copies. A new account starts with a real empty personal
-library. It does not receive demo movies automatically. Metadata creation/manual
-entry and importing discovered titles are separate tickets; the + sheet currently
-adds a copy of an existing movie visible to your account. An empty catalog has no
-movie to select and Save is disabled.
+library. It does not receive demo movies automatically. The + sheet searches TMDB and supports manual metadata entry, including on a new
+account with no saved movies. See [MOVIE_ADD.md](MOVIE_ADD.md) for the SHO-3 flow.
 
 - Library shows server copies grouped by stable movie UUID. Select a library,
   search it, or use the [TMDB Search tab](MOVIE_API.md) to discover titles. Repeated physical copies stay
   separate rows and do not duplicate the movie card.
-- Use + to select existing metadata, library and format, then Save. Only owner and
-  editor libraries are writable; the database rechecks permission on every save.
+- Use + to search/select a movie or enter it manually, choose a library and quantities
+  per format, then Save. Only owner and editor libraries are writable; the database
+  rechecks permission on every save.
 - In movie details, edit Watched/rating, then press **Save diary**. Unsaved edits
   remain in that screen until you save or leave it. Ratings belong to your account
   and movie, so the same diary appears through every library containing that movie.
@@ -71,13 +70,11 @@ form's input. A cold launch offline shows an error/retry state after authenticat
 restoration; it does not show sample data. Closing a form or terminating the app
 discards its unsaved draft. Refresh does not discard an open copy form.
 
-Each add-copy form keeps one UUID for its current payload. Repeated Save after a
-lost response uses that UUID; PostgreSQL returns the existing matching copy instead
-of inserting again. Changing movie/library/format creates a new intent/UUID.
-Opening a new form intentionally adds another copy. If the app is terminated after
-an uncertain response, refresh and check existing copies before intentionally
-opening another form. No automatic retry survives process termination. Shared
-library creation similarly retains a UUID across retries of the same name.
+Each add-movie form keeps one UUID for its current payload; metadata and all copies
+are committed atomically. Provider metadata is fetched server-side, and provider
+IDs map to stable movie UUIDs. Manual movies remain distinct, even if title/year
+match an existing title. See [MOVIE_ADD.md](MOVIE_ADD.md).
+
 
 Diary writes send the complete watched/rating pair: the last successfully committed
 write wins, including an explicit null to clear rating. Defaults use the same
@@ -99,6 +96,7 @@ npm run backend:test:db
 npm run backend:fixtures
 npm run backend:test:api
 npm run backend:test:collection
+npm run backend:test:movie-add
 npm run backend:test:deletion
 python3 scripts/ci/run.py --output build/sho20-ci
 ```

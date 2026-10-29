@@ -80,3 +80,45 @@ test('malformed and mismatched provider payloads cannot masquerade as successful
   const f=fake({data:{...film,id:11}});
   assert.equal((await createCatalogHandler(env,f.request)(incoming({operation:'details',movieID:329865}))).status,502);
 });
+
+test('import uses verified actor and canonical server metadata, with narrow service-role RPC',async()=>{
+  const calls=[];
+  const request=async(input,options)=>{
+    const url=new URL(input); calls.push({url,options});
+    if(url.pathname==='/auth/v1/user') return Response.json(user);
+    if(url.host==='api.themoviedb.org') return Response.json(film);
+    assert.equal(url.pathname,'/rest/v1/rpc/import_catalog_movie');
+    assert.equal(options.headers.Authorization,'Bearer admin-key');
+    const value=JSON.parse(options.body);
+    assert.equal(value.actor,user.id);
+    assert.equal(value.provider_id,329865);
+    assert.equal(value.metadata.title,'Arrival');
+    assert.deepEqual(value.copy_formats,['DVD','DVD','4K UHD']);
+    return Response.json('30000000-0000-0000-0000-000000000001');
+  };
+  const body={operation:'import',movieID:329865,requestID:'40000000-0000-0000-0000-000000000001',libraryID:'20000000-0000-0000-0000-000000000001',formats:['DVD','DVD','4K UHD']};
+  const handler=createCatalogHandler({...env,admin:'admin-key'},request);
+  for(const extra of [{actor:user.id},{metadata:{title:'Spoof'}},{formats:[]},{formats:['Tape']},{formats:Array(100).fill('DVD')},{requestID:'bad'}]) {
+    assert.equal((await handler(incoming({...body,...extra}))).status,400);
+  }
+  assert.equal(calls.length,0);
+  const response=await handler(incoming(body));
+  assert.equal(response.status,200);
+  assert.deepEqual(await response.json(),{movieID:'30000000-0000-0000-0000-000000000001'});
+  assert.equal(calls.length,3);
+  assert.equal((await createCatalogHandler(env,request)(incoming(body))).status,503);
+});
+test('import maps denial and identity conflicts without exposing database internals',async()=>{
+  const body={operation:'import',movieID:329865,requestID:'40000000-0000-0000-0000-000000000001',libraryID:'20000000-0000-0000-0000-000000000001',formats:['DVD']};
+  for(const [code,status] of [['42501',403],['22023',400],['XX000',503]]) {
+    const handler=createCatalogHandler({...env,admin:'admin-key'},async(input)=>{
+      const url=new URL(input);
+      if(url.pathname==='/auth/v1/user') return Response.json(user);
+      if(url.host==='api.themoviedb.org') return Response.json(film);
+      return Response.json({code,message:'private details'},{status:400});
+    });
+    const response=await handler(incoming(body));
+    assert.equal(response.status,status);
+    assert.deepEqual(await response.json(),{error:'import_failed'});
+  }
+});

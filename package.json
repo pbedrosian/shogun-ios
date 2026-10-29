@@ -22,6 +22,7 @@
     "backend:test:deletion": "node scripts/backend/delete-account-api.mjs",
     "backend:demo": "node scripts/backend/demo-account.mjs",
     "backend:test:collection": "node scripts/backend/collection-api.mjs",
+    "backend:test:movie-add": "node scripts/backend/movie-add-api.mjs",
     "backend:test:catalog": "node scripts/backend/catalog-api.mjs"
   },
   "devDependencies": {
