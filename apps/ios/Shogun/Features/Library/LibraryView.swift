@@ -23,32 +23,7 @@ struct LibraryView: View {
                             )
                             .lineLimit(2).truncationMode(.tail)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            Menu {
-                                Section("View Options") {
-                                    Button {
-                                        withAnimation { store.zoomIn() }
-                                    } label: {
-                                        Label("Zoom In", systemImage: "plus.magnifyingglass")
-                                    }.disabled(
-                                        store.libraryColumns <= 2 || typeSize.isAccessibilitySize)
-                                    Button {
-                                        withAnimation { store.zoomOut() }
-                                    } label: {
-                                        Label("Zoom Out", systemImage: "minus.magnifyingglass")
-                                    }.disabled(
-                                        store.libraryColumns >= 5 || typeSize.isAccessibilitySize)
-                                }
-                                Text(
-                                    typeSize.isAccessibilitySize
-                                        ? "2 columns for larger text"
-                                        : "\(store.libraryColumns) posters per row")
-                            } label: {
-                                ShogunIcon(
-                                    systemName: "line.3.horizontal.decrease",
-                                    font: ShogunTheme.Typography.viewIcon)
-                            }.accessibilityLabel("Library view options")
-                                .accessibilityIdentifier("library.viewOptions").accessibilityValue(
-                                    "\(columnCount)")
+                            viewOptions
                             if collection != nil {
                                 Button {
                                     store.showingAddMovie = true
@@ -95,11 +70,32 @@ struct LibraryView: View {
                     }.shogunSurface()
                     Text("\(movies.count) \(movies.count == 1 ? "movie" : "movies")")
                         .font(ShogunTheme.Typography.caption).foregroundStyle(ShogunTheme.muted)
+                    if !store.libraryFormats.isEmpty {
+                        HStack {
+                            Text(
+                                MovieFormat.allCases.filter { store.libraryFormats.contains($0) }
+                                    .map(\.rawValue).joined(separator: " · ")
+                            )
+                            .font(ShogunTheme.Typography.caption)
+                            .foregroundStyle(ShogunTheme.muted)
+                            Spacer()
+                            Button("Clear filters") { store.libraryFormats.removeAll() }
+                        }
+                    }
                     if let collection {
                         CollectionFeedback(store: collection, showsRefreshButton: false)
                     }
                     if movies.isEmpty {
-                        if store.libraryQuery.isEmpty {
+                        if !store.libraryFormats.isEmpty {
+                            ContentUnavailableView {
+                                Label(
+                                    "No matching movies", systemImage: "line.3.horizontal.decrease")
+                            } description: {
+                                Text("Try another format or clear filters to see more movies.")
+                            } actions: {
+                                Button("Clear filters") { store.libraryFormats.removeAll() }
+                            }
+                        } else if store.libraryQuery.isEmpty {
                             ContentUnavailableView(
                                 "No movies yet", systemImage: "film.stack",
                                 description: Text("Add a copy from your available movie catalog."))
@@ -167,4 +163,69 @@ struct LibraryView: View {
             .sheet(isPresented: $store.showingAddMovie) { LibraryAddMovieSheet() }
         }
     }
+    private var viewOptions: some View {
+        Menu {
+            Section("Sort") {
+                ForEach(LibrarySort.allCases) { sort in
+                    Button {
+                        store.librarySort = sort
+                    } label: {
+                        if store.librarySort == sort {
+                            Label(sort.rawValue, systemImage: "checkmark")
+                        } else {
+                            Text(sort.rawValue)
+                        }
+                    }.accessibilityValue(store.librarySort == sort ? "Selected" : "Not selected")
+                        .menuActionDismissBehavior(.disabled)
+                }
+            }
+            Menu("Formats", systemImage: "opticaldisc") {
+                ForEach(MovieFormat.allCases) { format in
+                    Button {
+                        if store.libraryFormats.contains(format) {
+                            store.libraryFormats.remove(format)
+                        } else {
+                            store.libraryFormats.insert(format)
+                        }
+                    } label: {
+                        if store.libraryFormats.contains(format) {
+                            Label(format.rawValue, systemImage: "checkmark")
+                        } else {
+                            Text(format.rawValue)
+                        }
+                    }.accessibilityValue(
+                        store.libraryFormats.contains(format) ? "Selected" : "Not selected"
+                    )
+                    .menuActionDismissBehavior(.disabled)
+                }
+                Button("Clear filters") { store.libraryFormats.removeAll() }
+                    .disabled(store.libraryFormats.isEmpty)
+                    .menuActionDismissBehavior(.disabled)
+            }
+            Menu("View Options", systemImage: "square.grid.2x2") {
+                Button {
+                    withAnimation(reduceMotion ? nil : .default) { store.zoomIn() }
+                } label: {
+                    Label("Zoom In", systemImage: "plus.magnifyingglass")
+                }.disabled(store.libraryColumns <= 2 || typeSize.isAccessibilitySize)
+                    .menuActionDismissBehavior(.disabled)
+                Button {
+                    withAnimation(reduceMotion ? nil : .default) { store.zoomOut() }
+                } label: {
+                    Label("Zoom Out", systemImage: "minus.magnifyingglass")
+                }.disabled(store.libraryColumns >= 5 || typeSize.isAccessibilitySize)
+                    .menuActionDismissBehavior(.disabled)
+                Text(
+                    typeSize.isAccessibilitySize
+                        ? "2 columns for larger text" : "\(store.libraryColumns) posters per row")
+            }
+        } label: {
+            ShogunIcon(
+                systemName: "line.3.horizontal.decrease",
+                font: ShogunTheme.Typography.viewIcon)
+        }.accessibilityLabel("Library view options")
+            .accessibilityIdentifier("library.viewOptions")
+            .accessibilityValue("\(columnCount)")
+    }
+
 }

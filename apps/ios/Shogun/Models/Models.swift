@@ -48,11 +48,19 @@ struct LibraryMembership {
     let libraryID: String
     let role: LibraryRole
 }
+enum LibrarySort: String, CaseIterable, Identifiable {
+    case recentlyAdded = "Recently Added"
+    case titleAscending = "Title A–Z"
+    case titleDescending = "Title Z–A"
+    var id: String { rawValue }
+}
+
 struct OwnedCopy: Identifiable {
     let id: String
     let libraryID: String
     let movieID: String
     let format: MovieFormat
+    var createdAt: Date? = nil
 }
 struct PersonalMovieState {
     let userID: String
