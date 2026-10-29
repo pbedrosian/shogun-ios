@@ -1,0 +1,305 @@
+# Local Supabase backend (SHO-25)
+
+Supabase Auth and PostgreSQL are the confirmed Phase 2 backend. Backend sources
+live in `backend/supabase/` alongside the iOS project so schema and client changes can be
+reviewed together. Node is development tooling only; the app remains Swift/SwiftUI.
+The iOS app connects to Auth; the sample catalog is available only to Debug UI tests.
+
+## Prerequisites
+
+- Node.js 22 or newer and npm. `package-lock.json` locks the development dependency
+  tree; Supabase CLI **2.122.0** is pinned exactly. Do not use an unpinned global CLI.
+- A running Docker Desktop with Linux containers (`docker info` must succeed).
+  Verified with Docker engine 29.9.2. Allow several GB for initial image downloads.
+- No Supabase account, hosted project, API credentials, or TMDB key is needed.
+
+## Start everything on macOS
+
+After the first `npm ci`, run this from the repository root:
+
+```sh
+npm run dev
+```
+
+This opens Docker Desktop if needed, waits up to two minutes for its engine,
+starts Supabase and its logging services, starts or reuses Swagger UI, and opens
+Swagger plus Studio Logs in your browser
+and the Shogun project in Xcode. Press **⌘R** in Xcode to run the iPhone app.
+The app opens its real sign-in flow; collection synchronization follows in SHO-20.
+The launcher does not reset data or recreate fixtures.
+
+Keep Terminal open if it started Swagger UI. Ctrl-C stops that docs server;
+Supabase stays running. Use `npm run backend:stop` to stop Supabase. If Swagger UI
+was already running in another Terminal, that process is reused and remains there.
+Use `npm run dev -- --no-open` to start the services without opening browser/Xcode.
+
+## Individual service commands
+
+Run all commands from the repository root:
+
+```sh
+npm ci
+npm run backend:doctor
+npm run backend:start
+npm run backend:fixtures
+npm run backend:smoke
+```
+
+The first start downloads container images. Startup must pass its health checks;
+do not use `--ignore-health-check` to make a failed stack look healthy.
+
+| Local service | Address |
+| --- | --- |
+| REST/Auth API | http://127.0.0.1:54321 |
+| PostgreSQL | 127.0.0.1:54322 |
+| Studio | http://127.0.0.1:54323 |
+| Centralized logs | http://127.0.0.1:54323/project/default/logs/explorer |
+| Captured email (Mailpit) | http://127.0.0.1:54324 |
+
+`npm run backend:status` displays local endpoints and keys. Treat the admin/secret
+keys as server-only; never paste full status output into tickets or logs. Copy
+`.env.example` to ignored `.env.local` only if you need a configuration reference.
+The iOS app uses the URL/public key in its xcconfig, never the service-role key.
+Native email callbacks are connected in SHO-19; Apple/Google remain unconfigured.
+Optional server SMTP credentials use `backend/.env` as described in [EMAIL.md](EMAIL.md).
+
+## Centralized service logs
+
+Logging is enabled in the version-controlled `[analytics]` configuration, so every
+`npm run dev` or `npm run backend:start` starts **Logflare** and **Vector** as part
+of Supabase. The normal launcher opens Studio Logs alongside Swagger. Use
+`npm run dev -- --no-open` if you prefer to open the pages yourself.
+
+Open [Studio → Logs](http://127.0.0.1:54323/project/default/logs/explorer). The API
+Gateway collection shows HTTP request paths, status codes and methods. Postgres
+shows database messages/errors; Auth and PostgREST have their own collections.
+The Explorer can query sources across collections. Local gateway events come
+from Kong, even though the source is named `edge_logs`. Disabled Storage and
+Realtime do not produce events. The Edge Functions runtime now serves account deletion. This collects backend service
+logs; Swift/iPhone app console logs are still viewed in Xcode.
+
+Generate requests in Swagger, then click **Refresh logs** in the relevant
+collection. Allow a few seconds for ingestion and check the time-range filter.
+This is automatic collection, not a promise that every SQL statement is logged;
+normal database logging levels are unchanged. Treat local logs as development
+data and avoid deliberately putting credentials or private payloads in log messages.
+
+Logflare listens on **54327** using the local PostgreSQL backend. Vector's syslog
+ingest port is **54330**, explicitly different from Swagger's 54328. The CLI
+configures the service connections and Studio integration; no cloud logging
+account or API key configuration is needed. First start downloads extra images
+and uses additional local memory/CPU. `backend:stop` stops logging with the stack.
+
+If logging is missing after switching from older configuration, run
+`npm run backend:stop` followed by `npm run dev` (data is preserved). Check Docker
+for healthy `supabase_analytics_shogun-local` and `supabase_vector_shogun-local`
+containers. Docker Desktop's container Logs view remains available to troubleshoot
+the collector itself. Do not reset the database merely to refresh logging.
+
+## Interactive API documentation
+
+With Supabase running, open another Terminal in this repository and run:
+
+```sh
+npm run backend:docs
+```
+
+Open http://127.0.0.1:54328 for Swagger UI. Keep that command running; Ctrl-C
+stops only the docs server. Assets are installed locally, with no CDN or online
+spec validator. The viewer fetches the current PostgREST OpenAPI schema on load.
+Click **Load API** to refresh it after schema changes.
+
+Leave the token field empty for anonymous access. To explore as a signed-in user,
+paste a user session's access token (without the Bearer prefix), then click
+**Load API**. The schema reflects that user's database privileges, and Try it out
+uses their session with the local anon API key. Tokens are not persisted; clear
+the field and reload to return to anonymous access. Never use a service-role key.
+
+Movie/library endpoints require a signed-in user JWT because anonymous users
+have no application table privileges. See [database permissions](DATABASE.md). This viewer covers the database REST API, not Auth or Edge Functions.
+Try it out executes real operations on the local database. The docs server binds
+only to 127.0.0.1:54328; it is development tooling and is not embedded in the iOS app.
+
+### Authenticate Swagger with local Supabase
+
+The local anon key is generated by Supabase; you do not create one manually.
+Swagger's token field expects a **user access token**, not the anon key:
+
+| Value | Where it goes |
+| --- | --- |
+| Local `ANON_KEY` | The `apikey` header of the sign-in request below |
+| Sign-in response `access_token` | Swagger's Optional user access token field |
+| `SERVICE_ROLE_KEY` / `SECRET_KEY` | Never enter these into Swagger or client configuration |
+
+1. From the repository root, start the services:
+
+   ```sh
+   npm run dev
+   ```
+
+   This already starts Swagger UI. Alternatively, run `npm run backend:start`
+   and then `npm run backend:docs` to start them separately. Keep the docs Terminal open.
+
+2. In a second Terminal at the repository root, prepare fixture users and find
+   the local key:
+
+   ```sh
+   npm run backend:fixtures
+   npm run backend:status
+   ```
+
+   Find `ANON_KEY` in the output. Copy its value without JSON quotation marks.
+   Do not copy the entire status output or the service-role/secret key.
+
+3. Replace `YOUR_LOCAL_ANON_KEY` below and sign in as the fixture owner:
+
+   ```sh
+   curl --silent --show-error --fail-with-body \
+     'http://127.0.0.1:54321/auth/v1/token?grant_type=password' \
+     -H 'apikey: YOUR_LOCAL_ANON_KEY' \
+     -H 'Content-Type: application/json' \
+     -d '{"email":"owner@shogun.test","password":"Shogun-local-only-25!"}' \
+     | python3 -c 'import json,sys; print(json.load(sys.stdin)["access_token"])'
+   ```
+
+   This prints the user's JWT. These credentials are disposable local fixtures,
+   not a hosted account. Python 3 extracts the token; no jq installation is needed.
+
+4. Open [Swagger UI](http://127.0.0.1:54328/), paste that JWT into **Optional user
+   access token**, without quotation marks or a `Bearer` prefix, and click
+   **Load API**. Library/movie endpoints and RPCs should appear. The docs server
+   supplies the local anon API key automatically for Try it out requests.
+
+To compare permissions, repeat the sign-in request with `editor@shogun.test`,
+`viewer@shogun.test`, or `outsider@shogun.test` using the same fixture password.
+Replace the Swagger token and click Load API each time. The outsider can access
+their own personal library but cannot read the family library.
+
+If sign-in fails, check Docker/Supabase are running, rerun fixtures after a database
+reset, and verify that the key came from this local stack. If a token expires,
+sign in again and reload the API. Tokens are not saved across page reloads; do not
+commit or share them. Local Studio at port 54323 requires no user sign-in and runs
+with administrative access, so use Swagger or the permission tests to check roles.
+
+## Stop and rebuild
+
+```sh
+npm run backend:stop
+npm run backend:start
+# Destructive to this local project's data only:
+npm run backend:reset
+npm run backend:fixtures
+npm run backend:smoke
+```
+
+Stop preserves local data. Reset explicitly passes `--local` and rebuilds the
+database from `backend/supabase/migrations/`. SQL permission tests live in
+`backend/supabase/tests/database/`; run them with `npm run backend:test:db`.
+Reset removes Auth fixtures too, so run fixtures again afterward. Do not add
+`--linked` or a remote database URL to local reset commands.
+
+## Development fixtures and email testing
+
+`backend:fixtures` uses the local Auth admin API to create or refresh these users:
+
+| Scenario identity | Email |
+| --- | --- |
+| Owner | owner@shogun.test |
+| Editor | editor@shogun.test |
+| Viewer | viewer@shogun.test |
+| Unrelated account | outsider@shogun.test |
+
+All use the intentionally local password `Shogun-local-only-25!`. Fixture accounts
+are preconfirmed. Running fixtures repeatedly reuses their Auth IDs and restores
+the fixture password. Generated IDs are saved in ignored
+`backend/supabase/fixtures/accounts.local.json`; no keys or tokens are written there.
+`scenarios.json` defines a local shared library with owner/editor/viewer rows
+in library_memberships; the outsider is excluded. Fixture runs restore these roles.
+Authorization uses the membership rows, never fixture account names or Auth metadata.
+Each user also receives a personal library through account bootstrap.
+
+SQL seeding is disabled. Fixture scripts take no endpoint arguments and ignore
+environment credentials: they obtain keys from this project's local CLI status,
+require exactly the loopback API on port 54321, and refuse redirects. Fixtures
+are not migrations and cannot be applied by a hosted migration push.
+
+Email confirmation is disabled for local development, so new sign-ups get a
+session immediately. To test confirmation, set `auth.email.enable_confirmations`
+to `true`, restart Supabase, and create a new account through the app or Auth API.
+Messages are captured in Mailpit. The browser redirect targets port 3000 as a
+placeholder; no web app is served there. Native confirmation/recovery routing uses
+`shogun://auth-callback` (SHO-19).
+
+## Simulator and physical iPhone
+
+The iPhone simulator can use `http://127.0.0.1:54321` once client integration exists.
+On a physical iPhone, loopback points to the phone: use your Mac's LAN IP and port
+54321 on the same trusted network. Verify container port publication and macOS
+firewall access; do not expose Studio, database, or admin keys publicly. Future
+Debug configuration may need local-network permission/usage text and an appropriate
+local HTTP transport policy. Do not weaken Release transport settings. SHO-19 owns
+these app changes; this ticket does not modify entitlements, networking, or routing.
+
+## Verification and troubleshooting
+
+```sh
+npm run backend:test
+```
+
+This verifies the local-only fixture boundary without Docker. `backend:smoke`
+requires a running stack and fixtures; it checks Auth health, the REST endpoint,
+and separate login identities for all four users without logging tokens. It does
+not prove library permissions. Run `npm run backend:test:db` and
+`npm run backend:test:api` for SQL and real-JWT REST permission checks.
+
+If Docker fails, check `docker info` and Docker Desktop before retrying. If ports
+are occupied, stop the conflicting stack; the fixture script deliberately rejects
+alternative ports. Do not reset Docker Desktop or delete its disk to fix startup.
+
+Hosted provisioning, production migrations, backup configuration, TMDB integration,
+and iOS service wiring are covered by SHO-26/27, SHO-8, and SHO-19/20.
+
+Verification: clean `npm ci`, three local-boundary tests, script syntax, ignore
+rules, and whitespace checks passed. With Docker repaired, the stack started with
+healthy services. All four Auth fixtures signed in; repeated fixture creation kept
+the same IDs. A signup confirmation was captured in local Mailpit. Local database
+reset succeeded, and recreated fixtures passed the same smoke checks.
+Stop/start restored the database from its local backup; all four fixture accounts
+signed in again without rerunning fixtures. The stack was left running for review.
+
+References: [Supabase local development](https://supabase.com/docs/guides/local-development),
+[configuration](https://supabase.com/docs/guides/local-development/cli/config), and
+[environment management](https://supabase.com/docs/guides/deployment/managing-environments).
+
+## Account deletion
+
+Local startup includes the Edge Functions runtime and `delete-account` endpoint at
+`POST /functions/v1/delete-account`. It requires the caller's session JWT and a JSON
+body containing only `password`. Auth validates the caller online, then verifies
+their current password. No caller-supplied account ID is accepted. The function
+uses its server-only service-role credential to hard-delete that verified Auth user.
+The temporary password-verification session is revoked if deletion fails.
+
+Existing foreign-key cascades remove the profile, libraries owned by the account
+(including shared libraries), their copies/memberships, personal movie state, and
+preferences. Other accounts are preserved. Shared movie metadata remains, with
+creator references cleared. Storage is disabled; a future upload feature must add
+owned-object cleanup before Auth deletion, which Supabase otherwise rejects.
+
+`npm run backend:test` checks handler authorization/error behavior without Docker.
+`npm run backend:test:deletion` runs real JWT/password/cascade checks against only
+the fixed local backend and cleans up its temporary accounts/data. Backend CI runs
+both. Never run deletion tests against real user accounts.
+
+For a hosted environment, deploy the function before enabling the iOS deletion UI:
+`npx supabase --workdir backend functions deploy delete-account --project-ref YOUR_PROJECT_REF`.
+The checked-in function configuration disables only the gateway's legacy JWT check;
+the handler always verifies the session with Auth before any privileged operation.
+Service-role credentials stay in the function environment and never enter the app.
+
+## Delivering auth mail to actual inboxes
+
+See [EMAIL.md](EMAIL.md) for verified-domain/SMTP setup, local and hosted configuration,
+callback URLs, templates, testing, troubleshooting, and rollback. See [AUTH.md](AUTH.md)
+for the app setup. External delivery is not configured; local confirmation remains
+disabled and recovery mail is captured in Mailpit.

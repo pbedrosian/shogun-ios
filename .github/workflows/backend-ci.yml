@@ -1,0 +1,51 @@
+name: Shogun backend tests
+
+on:
+  # Weekly checks only; daily development is validated locally. Times are UTC.
+  schedule:
+    - cron: '17 13 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  database:
+    name: Backend schema and permissions
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Local-only tooling checks
+        run: npm run backend:test
+      - name: Start an ephemeral local backend and apply migrations
+        # The CLI prints local keys to stdout; omit them from CI logs.
+        run: npm run backend:start > /dev/null
+      - name: SQL role and integrity tests
+        run: npm run backend:test:db
+      - name: Create local-only fixture users and memberships
+        run: npm run backend:fixtures
+      - name: Real JWT REST permission tests
+        run: npm run backend:test:api
+      - name: Collection synchronization and retry checks
+        run: npm run backend:test:collection
+      - name: Movie metadata and copy save checks
+        run: npm run backend:test:movie-add
+      - name: Catalog gateway authentication checks
+        run: npm run backend:test:catalog
+      - name: Account deletion security and cascade tests
+        run: npm run backend:test:deletion
+      - name: Stop local backend
+        if: always()
+        run: npm run backend:stop

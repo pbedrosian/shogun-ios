@@ -67,3 +67,19 @@ build/
 
 # macOS metadata
 .DS_Store
+
+# CI tooling and SonarScanner local outputs
+__pycache__/
+.scannerwork/
+
+# Local backend tooling and credentials
+node_modules/
+.env
+.env.*
+!.env.example
+backend/supabase/signing_keys.json
+backend/supabase/fixtures/accounts.local.json
+
+# Developer-specific iOS endpoint and public key (never use server credentials).
+apps/ios/Configuration/Local.xcconfig
+apps/ios/Configuration/Release.local.xcconfig
