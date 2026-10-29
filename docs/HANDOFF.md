@@ -1,41 +1,55 @@
 # Development handoff — October 28, 2026
 
-## Current work
+## Where we stopped
 
-- SHO-8 is merged into `dev`: [MR #15](https://github.com/pbedrosian/shogun-ios/pull/15), merge commit `0095625`. iOS, backend and SonarCloud passed on the final SHO-8 head; integrated local validation passed 116 tests with 97.7% coverage.
-- SHO-3 implementation is on `peterbedrosian/sho-3`, based on that merged `dev`. All SHO-3 changes are **uncommitted** for user review. No SHO-3 PR or hosted run exists yet.
-- The Notion ticket is In Development. See [MOVIE_ADD.md](MOVIE_ADD.md) for behavior, authorization and retry semantics.
+- Shogun **0.2** is on `main` and `dev`. Main promotion: [PR #19](https://github.com/pbedrosian/shogun-ios/pull/19), merge `ca28cf9`; dev head: `64cb2d1` ([PR #18](https://github.com/pbedrosian/shogun-ios/pull/18)). Their file contents match. Version bump commit: `4647f14`; Debug and Release use marketing version 0.2, build number remains 1.
+- SHO-8 merged through [PR #15](https://github.com/pbedrosian/shogun-ios/pull/15). SHO-3 merged through [PR #16](https://github.com/pbedrosian/shogun-ios/pull/16), merge `e21d3d6`. No SHO-3 feature review/commit/push/merge remains outstanding.
+- Workflow cost controls merged through [PR #17](https://github.com/pbedrosian/shogun-ios/pull/17), commit `0c8b5cd`, then reached main in PR #19. Both GitHub workflows are active on the default branch.
+- This handoff update is maintained on `peterbedrosian/sho-3` as a separate documentation commit. Application/workflow/version commits are already pushed and merged; merging this handoff into dev/main requires separate authorization.
 
-## SHO-3 implementation
+## Today's app changes
 
-- The + sheet supports title search, selection/details autofill, manual entry, writable library selection, and per-format quantities (1–99 copies total).
-- Manual metadata includes optional year, director, synopsis, runtime, comma-separated genres and HTTPS poster URL. Saved metadata and artwork/fallback display in collection details/cards.
-- Owned-copy editing is available from Library movie details for writable libraries. It changes formats/quantities only, preserves movie metadata/diary state, and rejects stale drafts; zero removes copies from that library.
-- Review update: removed the saved-movie picker/sheet and dedicated client service/store APIs/tests. New entries use search/manual entry; every format starts at zero. The Library refresh button is removed; pull-to-refresh remains.
-- TMDB import runs through the authenticated catalog Edge Function. It fetches canonical details server-side and calls a service-role-only RPC; clients cannot supply trusted metadata or actor identity.
-- Manual creation derives identity from `auth.uid()`. Metadata and all requested copies commit atomically. The private retry ledger serializes concurrent retries, compares payloads, and rechecks writable membership even after a previously successful save. Manual titles never merge by title/year; provider IDs reuse stable UUIDs.
-- Save errors/reload failures preserve open drafts and retry identity. Search and detail retries, pagination, cancellation and account binding retain the SHO-8 boundaries. Search/details browsing still makes no collection edits.
-- Keyboard completion/scroll dismissal supports manual entry. Explicit Debug UI-test appearance is applied deterministically so dark-mode tests actually render dark on iOS 27.
+- The Library + sheet supports TMDB title search, details autofill, manual entry, writable destination selection, and per-format copy quantities. All quantities start at **zero**; adding requires 1–99 copies total.
+- Manual metadata supports title, year, director, synopsis, runtime, genres and an optional HTTPS poster URL. Provider import fetches canonical metadata server-side; TMDB credentials stay out of the app.
+- Removed the saved-movie picker/sheet and dedicated client APIs/tests for that flow. New entries use search or manual entry.
+- Removed the Library refresh button; pull-to-refresh remains.
+- Library movie details support **owned-copy editing only**, for writable libraries. Users can change formats/counts; zero removes copies from that library. Movie metadata and diary state are preserved; stale drafts return HTTP 409 and retries remain safe.
+- Manual creation and provider import atomically save metadata/copies, derive the actor from validated authentication, and recheck membership. Manual movies never deduplicate solely by title/year; provider IDs preserve stable identity. Save failures retain drafts and retry IDs. See [MOVIE_ADD.md](MOVIE_ADD.md).
+- Created **SHO-28: Add Library sorting and filters** in Backlog: recently added, A–Z/Z–A, and format/type filters. [Ticket](https://app.notion.com/p/40808c1af1ec81d791d4dcd64a7fda0d).
 
-## Local environment and validation
+## Validation and CI fixes
 
-- Applied the additive `20261029010000_movie_add.sql` migration to the existing local stack. The database was not reset; user configuration and data were preserved.
-- Backend unit tests: 19 passed. SQL checks: 138 passed. Real-JWT permission, movie-add concurrency/retry, live TMDB import, collection and account-deletion regression checks passed.
-- Final Release build, Debug build/static analysis and model checks passed.
-- Final clean native validation passed **122 tests, zero failures/skips**, with **96.7% app-source line coverage**; Models and CatalogStore remain 100%. Build/static analysis and coverage policy passed. Final report: `/tmp/shogun-sho3-verified/summary.md`; result bundle: `/tmp/shogun-sho3-verified/Tests.xcresult`. Final light/provider and dark/maximum-Dynamic-Type screenshots are in `/tmp/shogun-sho3-verified/screenshots` and were visually inspected. Earlier failed development runs are superseded by this complete passing run.
-- Supabase/Docker were already running and remain running. Only task-created simulators were used for verification; all of them were deleted after validation.
+- Final SHO-3 hosted iOS, backend and SonarCloud checks passed before PR #16 merged. Earlier hosted large-text form scrolling failure was fixed in `22de816`.
+- For the main promotion, local build/static analysis, model checks, 103 unit tests and 16 of 17 UI tests passed in the full run. The remaining large-text manual-entry test exposed an iOS 27 keyboard-focus failure: a hittable synopsis field was under the navigation bar.
+- Fixed the UI test helper in `0ae3e47`: typing fields must be in the clear form area before tapping; buttons retain their original reveal behavior. All **three affected UI tests passed** afterward, including manual movie entry and owned-copy editing. No application behavior was changed for this fix. These are full-run plus focused-rerun results, not a fresh all-green full-suite report.
+- Initial full-run coverage was **90.6%** (85% required), with Models/CatalogStore at 100%. That report retains the original failed UI test and must not be described as an entirely passing run.
+- Local backend verification passed: **19 tooling tests**, **150 SQL assertions**, and real-JWT permission, collection/retry, movie-add, catalog and account-deletion suites. CI report tooling: **10 tests** passed. The integrated dev build passed after the version/test commits; main has identical file contents.
+- Built app Info.plist confirmed version **0.2**. No hosted Actions runs were requested or started during the version/main promotion.
+- Diagnostics (temporary local files): `/tmp/shogun-main-promotion-f23eb9c/summary.md`, `/tmp/shogun-main-promotion.log`, `/tmp/shogun-version02-ui-final.log`, `/tmp/shogun-version02-ui-final.xcresult`, `/tmp/shogun-version02-integrated-build.log`. Earlier focused rerun logs are superseded by `ui-final`.
 
-## Review follow-up validation
+## Cost controls — preserve these tomorrow
 
-- After the review changes, build/static analysis, 103 unit tests and three focused UI regressions passed (106 tests total). These cover zero-entry quantities, Library refresh-button removal, search/detail retries, save retries, and editing copy formats/quantities in dark/maximum Dynamic Type. Test log: `/tmp/shogun-sho3-copy-edit.log`. All selected test suites passed; Xcode then stalled exporting its result bundle, so the completed run was terminated during teardown. The xcresult bundle is incomplete. Release build passed.
-- Backend: 150 SQL checks, real-JWT copy editing/permission/conflict/retry checks and 19 tooling unit tests passed. Additive copy-edit migration applied without resetting data.
-- Sorting and format filters were recorded as SHO-28 in Backlog.
+- User explicitly wants **no development fees**. Default to local tests. Do not buy plans, credits, hosting, domains or subscriptions without explicit approval.
+- Both workflows now run **weekly Monday at 13:17 UTC** (09:17 Eastern daylight / 08:17 Eastern standard), plus manual dispatch. No push or PR triggers. Next scheduled date after this handoff: **Monday, November 2, 2026 at 08:17 EST**; GitHub may delay scheduled starts.
+- GitHub Actions account-wide saved budget for `pbedrosian` was verified in the budgets list: **$0**, **Usage blocked**, paid spending **$0.00**. The saved stop blocks paid overages after included capacity is exhausted. Scheduling reduces usage but does not itself enforce the allowance. Do not raise the budget or add payment details to unblock CI.
+- iOS artifacts now expire after **three days**. Manual runs and other repositories share account limits. Run tests locally before merges; a previous weekly result does not validate newer commits.
+- Sonar screenshot showed a Team trial scheduled to downgrade **November 5, 2026**. Leave the downgrade in place. Its destination plan and the email's additional product subscription were not independently verified; do not assume all Sonar billing is resolved. Do not cancel the downgrade or add payment details. Free-plan branch/PR limits may require later configuration; no paid upgrade is authorized.
+- Local Supabase/Docker remain the development backend; no hosted deployment was added. No OpenAI API integration was added to Shogun. Existing account subscriptions are separate from repository changes.
 
-## Next steps
+## Services at shutdown
 
-1. Rebuild the Shogun scheme in Xcode and review + search, provider save, manual save/quantities and failure/retry behavior against the running local backend.
-2. Commit/push/create a PR only when the user authorizes those actions. Do not merge into `dev` or `main` automatically.
-3. Quick Add remains SHO-4. Hosted deployment, production email and social login remain separate work.
+- Local Supabase was stopped using `npm run backend:stop`, preserving database volumes. Docker Desktop was stopped after confirming no other containers were running.
+- No dev/Swagger launcher or xcodebuild process was running at shutdown. No simulator devices were booted; all simulators created for today's checks were deleted.
+- Project service ports 54320/54321/54322/54323/54324/54327/54328/54329/54330 were checked closed. Ignored local configuration and credentials were preserved; do not reset the database tomorrow.
+- Weekly GitHub schedules are intentionally still enabled remotely. Local shutdown does not disable them or cancel the saved spending stop.
+
+## Tomorrow's starting point
+
+1. Read this handoff and [MOVIE_ADD.md](MOVIE_ADD.md). No further app/version merge is pending. The separate handoff documentation change remains on `peterbedrosian/sho-3` until its merge is authorized.
+2. Start local development from the repository root with `npm run dev`; it can start Docker Desktop and reuse preserved data/configuration. Rebuild the Shogun scheme in Xcode. For phone access, verify the current Mac LAN IP before regenerating ignored iOS configuration. Never print keys or the TMDB token.
+3. Smoke-check version 0.2, provider/manual movie addition, zero initial quantities, pull-to-refresh, and editing owned copies from Library details. Keep the loading-section polish as a later review item.
+4. Recommended next feature remains **SHO-4: Quick Add**, subject to the user's choice; SHO-28 sorting/filtering is separately in Backlog. Confirm the ticket before starting its branch from latest dev. SHO-3's Notion status was last known In Development; reconcile its status with the completed PR if requested rather than assuming it was updated.
+5. Keep hosted deployment, production email and social login separate. Use local validation for daily work; do not start hosted runs merely to recheck already-passing results. See [CI.md](CI.md), [BACKEND.md](BACKEND.md), and [EMAIL.md](EMAIL.md).
 
 ---
 
