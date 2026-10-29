@@ -279,15 +279,30 @@ final class AppFlowTests: XCTestCase {
         owned.tap()
         XCTAssertTrue(app.staticTexts["4 of 5 stars"].waitForExistence(timeout: 5))
     }
-    private func revealForm(_ element: XCUIElement) {
+    private func revealForm(_ element: XCUIElement, forTyping: Bool = false) {
+        let safeTop = app.frame.minY + app.frame.height * 0.25
+        let safeBottom = app.frame.minY + app.frame.height * 0.7
         for _ in 0..<18 {
-            if element.isHittable { return }
+            // Hittable fields can still sit under the navigation bar after keyboard dismissal.
+            // Bring the control into the form's clear area before tapping or typing.
+            if element.isHittable {
+                if !forTyping { return }
+                let center = element.frame.midY
+                if center >= safeTop && center <= safeBottom { return }
+            }
+            let isAbove = forTyping && element.exists && element.frame.midY < safeTop
+            let destination = isAbove ? 0.8 : 0.2
             app.coordinate(withNormalizedOffset: CGVector(dx: 0.94, dy: 0.5))
                 .press(
                     forDuration: 0.05,
-                    thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.94, dy: 0.2)))
+                    thenDragTo: app.coordinate(
+                        withNormalizedOffset: CGVector(dx: 0.94, dy: destination)))
         }
         XCTAssertTrue(element.isHittable)
+        if forTyping {
+            XCTAssertGreaterThanOrEqual(element.frame.midY, safeTop)
+            XCTAssertLessThanOrEqual(element.frame.midY, safeBottom)
+        }
     }
     func testManualMovieQuantityAndMetadataInDarkLargeText() {
         launch(dark: true, large: true)
@@ -299,24 +314,24 @@ final class AppFlowTests: XCTestCase {
         XCTAssertTrue(manual.waitForExistence(timeout: 5))
         manual.tap()
         let title = app.textFields["addMovie.title"]
-        revealForm(title)
+        revealForm(title, forTyping: true)
         title.tap()
         title.typeText("Festival Film")
         app.buttons["addMovie.keyboardDone"].tap()
         let director = app.textFields["addMovie.director"]
-        revealForm(director)
+        revealForm(director, forTyping: true)
         director.tap()
         director.typeText("A Director")
         app.buttons["addMovie.keyboardDone"].tap()
         let synopsis =
             app.textViews["addMovie.synopsis"].exists
             ? app.textViews["addMovie.synopsis"] : app.textFields["addMovie.synopsis"]
-        revealForm(synopsis)
+        revealForm(synopsis, forTyping: true)
         synopsis.tap()
         synopsis.typeText("A festival story")
         app.buttons["addMovie.keyboardDone"].tap()
         let genres = app.textFields["addMovie.genres"]
-        revealForm(genres)
+        revealForm(genres, forTyping: true)
         genres.tap()
         genres.typeText("Drama, Mystery")
         app.buttons["addMovie.keyboardDone"].tap()
