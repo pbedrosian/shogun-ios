@@ -1,10 +1,9 @@
 name: Shogun CI
 
 on:
-  pull_request:
-    branches: [dev, main]
-  push:
-    branches: [dev, main]
+  # Weekly checks only; daily development is validated locally. Times are UTC.
+  schedule:
+    - cron: '17 13 * * 1'
   workflow_dispatch:
 
 permissions:
@@ -45,7 +44,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: shogun-ci-${{ github.run_id }}-${{ github.run_attempt }}
-          retention-days: 14
+          retention-days: 3
           if-no-files-found: warn
           path: |
             build/ci/*.log
