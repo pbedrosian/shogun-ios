@@ -1,7 +1,10 @@
 name: Shogun backend tests
 
 on:
-  # Weekly checks only; daily development is validated locally. Times are UTC.
+  push:
+    branches: ['**']
+  pull_request:
+  # Scheduled checks use UTC and run on the default branch.
   schedule:
     - cron: '17 13 * * 1'
   workflow_dispatch:
