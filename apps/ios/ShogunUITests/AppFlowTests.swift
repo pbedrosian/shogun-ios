@@ -299,21 +299,24 @@ final class AppFlowTests: XCTestCase {
         XCTAssertTrue(manual.waitForExistence(timeout: 5))
         manual.tap()
         let title = app.textFields["addMovie.title"]
-        reveal(title)
+        revealForm(title)
         title.tap()
         title.typeText("Festival Film")
+        app.buttons["addMovie.keyboardDone"].tap()
         let director = app.textFields["addMovie.director"]
-        reveal(director)
+        revealForm(director)
         director.tap()
         director.typeText("A Director")
+        app.buttons["addMovie.keyboardDone"].tap()
         let synopsis =
             app.textViews["addMovie.synopsis"].exists
             ? app.textViews["addMovie.synopsis"] : app.textFields["addMovie.synopsis"]
-        reveal(synopsis)
+        revealForm(synopsis)
         synopsis.tap()
         synopsis.typeText("A festival story")
+        app.buttons["addMovie.keyboardDone"].tap()
         let genres = app.textFields["addMovie.genres"]
-        reveal(genres)
+        revealForm(genres)
         genres.tap()
         genres.typeText("Drama, Mystery")
         app.buttons["addMovie.keyboardDone"].tap()
