@@ -53,13 +53,12 @@ final class CatalogStore: ObservableObject {
         let copiesByMovie = Dictionary(grouping: libraryCopies, by: \.movieID)
         let newestDates = copiesByMovie.compactMapValues { $0.compactMap(\.createdAt).max() }
         return movies.filter { movie in
-            copiesByMovie[movie.id] != nil
-                && (libraryQuery.isEmpty
-                    || movie.title.localizedCaseInsensitiveContains(libraryQuery))
+            guard let movieCopies = copiesByMovie[movie.id] else { return false }
+            return
+                (libraryQuery.isEmpty
+                || movie.title.localizedCaseInsensitiveContains(libraryQuery))
                 && (libraryFormats.isEmpty
-                    || (copiesByMovie[movie.id] ?? []).contains {
-                        libraryFormats.contains($0.format)
-                    })
+                    || movieCopies.contains { libraryFormats.contains($0.format) })
         }.sorted { lhs, rhs in
             if librarySort == .recentlyAdded {
                 let left = newestDates[lhs.id]

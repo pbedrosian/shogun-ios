@@ -168,14 +168,21 @@ final class AppFlowTests: XCTestCase {
         let field = app.secureTextFields["auth.password"]; field.tap(); field.typeText(password)
     }
     func testSignInFailureSuccessAndSignOut() {
-        launch(); XCTAssertTrue(app.staticTexts["auth.brand"].exists)
+        launch(); XCTAssertTrue(app.descendants(matching: .any)["auth.brand"].firstMatch.exists)
         XCTAssertFalse(app.buttons["auth.demo"].exists)
         XCTAssertFalse(app.staticTexts["Your movies.\nYour collection."].exists)
         fill("invalid-password"); app.buttons["auth.submit"].tap()
         XCTAssertTrue(app.staticTexts["auth.error"].waitForExistence(timeout: 5))
         let field = app.secureTextFields["auth.password"]; field.tap(); field.typeText("valid-password"); app.buttons["auth.submit"].tap()
         XCTAssertTrue(app.buttons["library.selector"].waitForExistence(timeout: 5))
-        app.tabBars.buttons["Profile"].tap(); XCTAssertEqual(app.staticTexts["auth.accountEmail"].label, "owner@shogun.test")
+        let declinePasswordSave = app.buttons["Not Now"]
+        if declinePasswordSave.waitForExistence(timeout: 2) { declinePasswordSave.tap() }
+        let profile = app.tabBars.buttons["Profile"]
+        let profileReady = XCTNSPredicateExpectation(predicate: NSPredicate(format: "hittable == true"), object: profile)
+        XCTAssertEqual(XCTWaiter.wait(for: [profileReady], timeout: 5), .completed)
+        profile.tap()
+        XCTAssertTrue(app.staticTexts["auth.accountEmail"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.staticTexts["auth.accountEmail"].label, "owner@shogun.test")
         reveal(app.buttons["auth.signOut"]); app.buttons["auth.signOut"].tap(); XCTAssertTrue(app.textFields["auth.email"].waitForExistence(timeout: 5))
     }
     func testCreateAccountConfirmationAndRecovery() {

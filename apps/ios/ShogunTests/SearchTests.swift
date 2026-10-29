@@ -194,4 +194,21 @@ final class SearchTests: XCTestCase {
             "10,000-movie sort/filter/search sequence: \(Date().timeIntervalSince(start)) seconds")
     }
 
+    func testMatchingTitlesPlaceUnknownYearsAfterKnownYearsInEitherInputOrder() {
+        let known = Movie(id: "known", title: "Same", year: 2000, palette: 0, synopsis: "")
+        let unknown = Movie(id: "unknown", title: "Same", year: nil, palette: 0, synopsis: "")
+        for movies in [[known, unknown], [unknown, known]] {
+            let copies = movies.map {
+                OwnedCopy(id: $0.id, libraryID: "personal", movieID: $0.id, format: .dvd)
+            }
+            let store = CatalogStore(
+                movies: movies, copies: copies, libraries: Fixtures.libraries,
+                memberships: Fixtures.memberships, userID: "me", personalStates: [])
+            for sort in LibrarySort.allCases {
+                store.librarySort = sort
+                XCTAssertEqual(store.libraryResults.map(\.id), ["known", "unknown"])
+            }
+        }
+    }
+
 }
