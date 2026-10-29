@@ -7,8 +7,8 @@ struct MovieOverviewView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: ShogunTheme.Spacing.small) {
             Text(title).font(ShogunTheme.Typography.detailTitle)
-            Text(year).font(ShogunTheme.Typography.viewIcon).foregroundStyle(.secondary)
-            Text(synopsis).foregroundStyle(.secondary)
+            Text(year).font(ShogunTheme.Typography.viewIcon).foregroundStyle(ShogunTheme.muted)
+            Text(synopsis).foregroundStyle(ShogunTheme.muted)
         }
     }
 }
@@ -38,7 +38,7 @@ struct TMDBAttributionView: View {
             Image("TMDBLogo").resizable().scaledToFit().frame(width: ShogunTheme.Size.tmdbLogoWidth)
                 .accessibilityLabel("The Movie Database")
             Text("This product uses the TMDB API but is not endorsed or certified by TMDB.")
-                .font(ShogunTheme.Typography.footnote).foregroundStyle(.secondary)
+                .font(ShogunTheme.Typography.footnote).foregroundStyle(ShogunTheme.muted)
             Link("The Movie Database", destination: URL(string: "https://www.themoviedb.org")!)
         }
     }
@@ -54,7 +54,7 @@ struct MovieResultRow<Artwork: View>: View {
             artwork.frame(width: ShogunTheme.Size.searchPosterWidth)
             VStack(alignment: .leading, spacing: ShogunTheme.Spacing.compact) {
                 Text(title).font(ShogunTheme.Typography.headline)
-                Text(year).foregroundStyle(.secondary)
+                Text(year).foregroundStyle(ShogunTheme.muted)
                 if isOwned {
                     Label("Already owned", systemImage: "checkmark.circle.fill")
                         .font(ShogunTheme.Typography.caption).foregroundStyle(.tint)

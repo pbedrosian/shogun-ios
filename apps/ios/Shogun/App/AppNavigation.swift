@@ -1,5 +1,9 @@
 import SwiftUI
 
+enum ShogunTab: Hashable {
+    case library, search, profile
+}
+
 struct AccountServices {
     let collection: any CollectionServicing
     let discovery: any MovieDiscoveryServicing
@@ -17,6 +21,7 @@ struct AuthRootView: View {
             #endif
         }
         .tint(ShogunTheme.accent)
+        .foregroundStyle(ShogunTheme.ink)
         .task { auth.start() }
         .onOpenURL { auth.handle($0) }
     }
@@ -47,11 +52,23 @@ struct AuthRootView: View {
 #if DEBUG
     private struct DemoTabs: View {
         @StateObject private var catalog = CatalogStore()
+        @State private var selectedTab: ShogunTab = .library
+        @State private var libraryNavigationID = UUID()
         var body: some View {
-            TabView {
-                LibraryView().tabItem { Label("Library", systemImage: "square.grid.2x2") }
-                FixtureSearchView().tabItem { Label("Search", systemImage: "magnifyingglass") }
-                ProfileView().tabItem { Label("Profile", systemImage: "person.crop.circle") }
+            TabView(selection: $selectedTab) {
+                LibraryView().id(libraryNavigationID)
+                    .tabItem { Label("Library", systemImage: "square.grid.2x2") }.tag(
+                        ShogunTab.library)
+                FixtureSearchView().tabItem { Label("Search", systemImage: "magnifyingglass") }.tag(
+                    ShogunTab.search)
+                ProfileView { libraryID in
+                    guard catalog.libraries.contains(where: { $0.id == libraryID }) else { return }
+                    catalog.selectedLibraryID = libraryID
+                    catalog.libraryQuery = ""
+                    libraryNavigationID = UUID()
+                    selectedTab = .library
+                }.tabItem { Label("Profile", systemImage: "person.crop.circle") }.tag(
+                    ShogunTab.profile)
             }.environmentObject(catalog)
         }
     }

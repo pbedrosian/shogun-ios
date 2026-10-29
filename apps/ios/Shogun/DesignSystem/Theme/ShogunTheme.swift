@@ -7,11 +7,33 @@ enum ShogunTheme {
     static let ink = Color("Ink")
     static let muted = Color("MutedInk")
     static let accent = Color("AccentColor")
+    static let raised = Color("RaisedSurface")
+    static let boundary = Color("Boundary")
+    static let primaryAction = Color("PrimaryAction")
+    static let onPrimaryAction = Color("OnPrimaryAction")
+    static let success = Color("Success")
+    static let warning = Color("Warning")
+    static let error = Color("Error")
+    static let rating = Color("RatingInk")
 
     static let authPrimary = Color("AuthPrimary")
     static let onAccent = Color("OnAccent")
+    static let authOnPrimary = Color("AuthOnPrimary")
+    static let authSilverHighlight = Color("AuthSilverHighlight")
+
+    enum Brand {
+        static let compactWidth: CGFloat = 160
+        static let authWidth: CGFloat = 300
+        static let aspectRatio: CGFloat = 6
+    }
 
     enum Auth {
+        static let silver = LinearGradient(
+            colors: [
+                authSilverHighlight, Color("AuthSilverMidtone"), Color("AuthSilverSheen"),
+                authPrimary,
+            ],
+            startPoint: .topLeading, endPoint: .bottomTrailing)
         static let contentWidth: CGFloat = 420
         static let fieldHeight: CGFloat = 52
         static let headerSpacing: CGFloat = 32
@@ -43,9 +65,7 @@ enum ShogunTheme {
         static let posterAspect: CGFloat = 2 / 3
     }
     enum Typography {
-        static let authBrand = Font.largeTitle.weight(.black)
         static let authTitle = Font.title3.weight(.semibold)
-        static let brand = Font.caption2.weight(.bold)
         static let title = Font.title.bold()
         static let detailTitle = Font.largeTitle.bold()
         static let profileTitle = Font.title2.bold()
@@ -61,9 +81,11 @@ enum ShogunTheme {
         static let disclosure = Font.caption.weight(.semibold)
     }
     enum Poster {
-        static let colors = [Color(red: 0.18, green: 0.34, blue: 0.28), Color(red: 0.31, green: 0.28, blue: 0.20), Color(red: 0.18, green: 0.29, blue: 0.36), Color(red: 0.44, green: 0.23, blue: 0.23), Color(red: 0.30, green: 0.24, blue: 0.33), Color(red: 0.47, green: 0.33, blue: 0.20)]
-        static func titleFont(width: CGFloat) -> Font { .system(size: max(7, min(24, width * 0.09)), weight: .semibold) }
+        static let colors = (0..<6).map { Color("PosterTone\($0)") }
+        static func titleFont(width: CGFloat) -> Font {
+            .system(size: max(7, min(24, width * 0.09)), weight: .semibold)
+        }
         static func inset(width: CGFloat) -> CGFloat { max(5, width * 0.08) }
-        static let titleColor = Color.white.opacity(0.95)
+        static let titleColor = Color("PosterInk")
     }
 }

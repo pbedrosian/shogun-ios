@@ -31,7 +31,7 @@
 
 - Shared visual rules live in `apps/ios/Shogun/DesignSystem`: Theme contains semantic color, typography, spacing, size and radius tokens plus native appearance setup; Styles contains reusable ViewModifier and ButtonStyle definitions; Components contains reusable styled view elements.
 - Color values and light/dark variants stay in Assets.xcassets. Use ShogunTheme tokens rather than repeating literal fonts, colors, padding or radii in feature views.
-- Use `.shogunCanvas()`, `.shogunSurface()`, `.shogunBrand()`, `.movieTitleStyle()` and `.movieMetadataStyle()` for their corresponding visual treatments. Header icon labels use ShogunIcon; rating buttons use ShogunRatingButtonStyle.
+- Use `.shogunCanvas()`, `.shogunSurface()`, `ShogunWordmark`, `.movieTitleStyle()` and `.movieMetadataStyle()` for their corresponding visual treatments. Header icon labels use ShogunIcon; rating buttons use ShogunRatingButtonStyle.
 - Keep structural layout, navigation, data bindings and accessibility in feature/component views. Extract a style when it describes a reusable visual role; do not create a separate modifier for every stack.
 - Preserve Dynamic Type semantic fonts, the two-line reserved movie title, top-aligned grid items and the existing Photos-style view menu.
 

@@ -7,23 +7,27 @@ struct CatalogSearchView: View {
     var body: some View {
         NavigationStack {
             List {
-                ForEach(search.results) { movie in
-                    NavigationLink(value: movie) {
-                        MovieResultRow(
-                            title: movie.title, year: movie.releaseYearText,
-                            isOwned: collection.catalog?.ownedMovie(tmdbID: movie.id) != nil,
-                            artwork: CatalogPosterView(movie: movie))
-                    }.accessibilityIdentifier("discovery.movie.\(movie.id)")
-                }
-                if let error = search.error {
-                    Text(error).foregroundStyle(.red).accessibilityIdentifier("discovery.error")
-                    Button("Try again", action: search.retry).accessibilityIdentifier(
-                        "discovery.retry")
-                } else if search.canLoadMore {
-                    Button("Load more movies", action: search.loadMore).accessibilityIdentifier(
-                        "discovery.more")
-                }
-                if search.phase == .loadingMore { ProgressView("Loading more movies…") }
+                Group {
+                    ForEach(search.results) { movie in
+                        NavigationLink(value: movie) {
+                            MovieResultRow(
+                                title: movie.title, year: movie.releaseYearText,
+                                isOwned: collection.catalog?.ownedMovie(tmdbID: movie.id) != nil,
+                                artwork: CatalogPosterView(movie: movie))
+                        }.accessibilityIdentifier("discovery.movie.\(movie.id)")
+                    }
+                    if let error = search.error {
+                        Text(error).foregroundStyle(ShogunTheme.error).accessibilityIdentifier(
+                            "discovery.error")
+                        Button("Try again", action: search.retry).accessibilityIdentifier(
+                            "discovery.retry")
+                    } else if search.canLoadMore {
+                        Button("Load more movies", action: search.loadMore).accessibilityIdentifier(
+                            "discovery.more")
+                    }
+                    if search.phase == .loadingMore { ProgressView("Loading more movies…") }
+
+                }.listRowBackground(ShogunTheme.surface)
             }
             .overlay {
                 if search.phase == .loading {

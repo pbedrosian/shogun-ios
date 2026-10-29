@@ -36,14 +36,14 @@ struct MovieDetailView: View {
                         "movie.runtime")
                 }
                 if !movie.genres.isEmpty {
-                    Text(movie.genres.joined(separator: " · ")).foregroundStyle(.secondary)
+                    Text(movie.genres.joined(separator: " · ")).foregroundStyle(ShogunTheme.muted)
                 }
                 GroupBox {
                     VStack(alignment: .leading, spacing: ShogunTheme.Spacing.control) {
                         Label("Owned copies", systemImage: "opticaldisc").font(
                             ShogunTheme.Typography.headline)
                         if store.copies(for: movie).isEmpty {
-                            Text("Not in your libraries yet.").foregroundStyle(.secondary)
+                            Text("Not in your libraries yet.").foregroundStyle(ShogunTheme.muted)
                         }
                         ForEach(store.libraries) { library in
                             let copies = store.copies(for: movie, libraryID: library.id)
@@ -52,7 +52,7 @@ struct MovieDetailView: View {
                                     Text(library.name).font(ShogunTheme.Typography.emphasizedBody)
                                     Text(copies.map { $0.format.rawValue }.joined(separator: " · "))
                                         .font(ShogunTheme.Typography.body).foregroundStyle(
-                                            .secondary)
+                                            ShogunTheme.muted)
                                     if collection != nil,
                                         store.writableLibraries.contains(where: {
                                             $0.id == library.id
@@ -64,7 +64,7 @@ struct MovieDetailView: View {
                                     }
                                     Text("\(copies.count) \(copies.count == 1 ? "copy" : "copies")")
                                         .font(ShogunTheme.Typography.caption).foregroundStyle(
-                                            .secondary)
+                                            ShogunTheme.muted)
                                 }
                             }
                         }
@@ -93,14 +93,14 @@ struct MovieDetailView: View {
                         if let rating = diary.rating {
                             HStack {
                                 Text("\(rating) of 5 stars").font(ShogunTheme.Typography.caption)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(ShogunTheme.muted)
                                 Spacer()
                                 Button("Clear rating") { edit(clearRating: true) }.font(
                                     ShogunTheme.Typography.caption)
                             }
                         } else {
                             Text("Not rated").font(ShogunTheme.Typography.caption).foregroundStyle(
-                                .secondary)
+                                ShogunTheme.muted)
                         }
                     }
                 }
@@ -117,11 +117,11 @@ struct MovieDetailView: View {
                     }
                     CollectionFeedback(store: collection)
                     Text("Changes are saved online. Refresh to see changes from another device.")
-                        .font(ShogunTheme.Typography.footnote).foregroundStyle(.secondary)
+                        .font(ShogunTheme.Typography.footnote).foregroundStyle(ShogunTheme.muted)
                 } else {
                     Text("Demo changes stay in memory and reset when the app restarts.").font(
                         ShogunTheme.Typography.footnote
-                    ).foregroundStyle(.secondary)
+                    ).foregroundStyle(ShogunTheme.muted)
                 }
             }.padding().disabled(saving)
         }.sheet(item: $editingLibrary) { library in
@@ -150,26 +150,30 @@ private struct EditCopiesSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section {
-                    Text(movie.title)
-                    Text(library.name).foregroundStyle(.secondary)
-                }
-                Section("Copies") {
-                    ForEach(MovieFormat.allCases) { format in
-                        Stepper(
-                            "\(format.rawValue): \(quantities[format] ?? 0)",
-                            value: Binding(
-                                get: { quantities[format] ?? 0 }, set: { quantities[format] = $0 }),
-                            in: 0...max(99, copies.count)
-                        )
-                        .accessibilityIdentifier("editCopies.\(format.id)")
+                Group {
+                    Section {
+                        Text(movie.title)
+                        Text(library.name).foregroundStyle(ShogunTheme.muted)
                     }
-                    Text(
-                        "\(formats.count) copies total (maximum 99). Zero removes this movie from this library."
-                    )
-                    .font(ShogunTheme.Typography.footnote)
-                }
-                if let collection { CollectionFeedback(store: collection) }
+                    Section("Copies") {
+                        ForEach(MovieFormat.allCases) { format in
+                            Stepper(
+                                "\(format.rawValue): \(quantities[format] ?? 0)",
+                                value: Binding(
+                                    get: { quantities[format] ?? 0 },
+                                    set: { quantities[format] = $0 }),
+                                in: 0...max(99, copies.count)
+                            )
+                            .accessibilityIdentifier("editCopies.\(format.id)")
+                        }
+                        Text(
+                            "\(formats.count) copies total (maximum 99). Zero removes this movie from this library."
+                        )
+                        .font(ShogunTheme.Typography.footnote)
+                    }
+                    if let collection { CollectionFeedback(store: collection) }
+
+                }.listRowBackground(ShogunTheme.surface)
             }.shogunListCanvas().navigationTitle("Edit copies").navigationBarTitleDisplayMode(
                 .inline
             )

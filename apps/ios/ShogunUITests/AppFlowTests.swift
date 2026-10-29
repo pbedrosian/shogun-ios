@@ -406,12 +406,70 @@ final class AppFlowTests: XCTestCase {
         launch(); fill("valid-password"); app.buttons["auth.submit"].tap()
         XCTAssertTrue(app.buttons["library.selector"].waitForExistence(timeout: 5))
         app.tabBars.buttons["Profile"].tap()
-        app.buttons["Use My Library by default"].tap()
-        XCTAssertTrue(app.staticTexts["Default library"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts["Movie information"].exists)
+        let preview = XCTAttachment(screenshot: app.screenshot())
+        preview.name = "Compact profile - light"
+        preview.lifetime = .keepAlways
+        add(preview)
+        app.buttons["About & credits"].tap()
+        XCTAssertTrue(app.staticTexts["This product uses the TMDB API but is not endorsed or certified by TMDB."].waitForExistence(timeout: 5))
+        app.navigationBars.buttons["Profile"].tap()
+        app.buttons["profile.manageLibraries"].tap()
+        let personal = app.buttons["profile.defaultLibrary.20000000-0000-0000-0000-000000000001"]
+        personal.tap()
+        XCTAssertTrue(personal.waitForExistence(timeout: 5))
+        let selected = NSPredicate(format: "value == %@", "Default library")
+        expectation(for: selected, evaluatedWith: personal)
+        waitForExpectations(timeout: 5)
         let create = app.buttons["Create library"]; reveal(create); create.tap()
         let name = app.textFields["collection.libraryName"]; name.tap(); name.typeText("Family films")
         app.navigationBars.buttons["Create"].tap()
-        XCTAssertTrue(app.staticTexts["Family films"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Family films"].waitForExistence(timeout: 5))
+        app.buttons["Family films"].tap()
+        expectation(for: selected, evaluatedWith: app.buttons["Family films"])
+        waitForExpectations(timeout: 5)
+        app.navigationBars.buttons["Profile"].tap()
+        XCTAssertTrue(app.otherElements.containing(.staticText, identifier: "Family films").firstMatch.waitForExistence(timeout: 5))
+        app.buttons["profile.manageLibraries"].tap()
+        XCTAssertEqual(personal.value as? String, "Select as default")
+        XCTAssertEqual(app.buttons["Family films"].value as? String, "Default library")
+        app.navigationBars.buttons["Profile"].tap()
+        app.buttons["profile.openLibrary.20000000-0000-0000-0000-000000000001"].tap()
+        let librarySelector = app.buttons["library.selector"]
+        XCTAssertTrue(librarySelector.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.tabBars.buttons["Library"].isSelected)
+        XCTAssertTrue(librarySelector.label.contains("My Library"))
+        app.tabBars.buttons["Profile"].tap()
+        app.buttons["profile.manageLibraries"].tap()
+        XCTAssertEqual(app.buttons["Family films"].value as? String, "Default library")
+    }
+
+    func testProfileLibraryManagementInDarkLargeText() {
+        launch(dark: true, large: true)
+        fill("valid-password")
+        reveal(app.buttons["auth.submit"])
+        app.buttons["auth.submit"].tap()
+        XCTAssertTrue(app.buttons["library.selector"].waitForExistence(timeout: 5))
+        app.tabBars.buttons["Profile"].tap()
+        XCTAssertEqual(app.staticTexts["auth.accountEmail"].label, "owner@shogun.test")
+        XCTAssertFalse(app.staticTexts["Movie information"].exists)
+        let profile = XCTAttachment(screenshot: app.screenshot())
+        profile.name = "Compact profile - dark large text"
+        profile.lifetime = .keepAlways
+        add(profile)
+        let manage = app.buttons["profile.manageLibraries"]
+        reveal(manage)
+        manage.tap()
+        let personal = app.buttons["profile.defaultLibrary.20000000-0000-0000-0000-000000000001"]
+        XCTAssertTrue(personal.waitForExistence(timeout: 5))
+        reveal(personal)
+        personal.tap()
+        expectation(for: NSPredicate(format: "value == %@", "Default library"), evaluatedWith: personal)
+        waitForExpectations(timeout: 5)
+        let picker = XCTAttachment(screenshot: app.screenshot())
+        picker.name = "Default library picker - dark large text"
+        picker.lifetime = .keepAlways
+        add(picker)
     }
 
     func testLiveDiscoveryBlankSearchPaginationAndDetails() {

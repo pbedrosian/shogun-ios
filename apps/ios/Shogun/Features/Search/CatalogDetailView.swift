@@ -19,7 +19,7 @@ struct CatalogDetailView: View {
                     synopsis: detail.movie.synopsis)
                 if detail.isLoading { ProgressView("Loading movie details…") }
                 if let error = detail.error {
-                    Text(error).foregroundStyle(.red).accessibilityIdentifier(
+                    Text(error).foregroundStyle(ShogunTheme.error).accessibilityIdentifier(
                         "discovery.detailError")
                     Button("Retry details") { Task { await detail.load() } }
                         .accessibilityIdentifier("discovery.detailRetry")
@@ -33,7 +33,8 @@ struct CatalogDetailView: View {
                         "discovery.runtime")
                 }
                 if !detail.movie.genres.isEmpty {
-                    Text(detail.movie.genres.joined(separator: " · ")).foregroundStyle(.secondary)
+                    Text(detail.movie.genres.joined(separator: " · ")).foregroundStyle(
+                        ShogunTheme.muted)
                 }
                 if let owned = collection.catalog?.ownedMovie(tmdbID: detail.movie.id),
                     let catalog = collection.catalog

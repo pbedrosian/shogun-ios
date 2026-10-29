@@ -4,9 +4,11 @@ struct AuthHeader: View {
     let title: String
     var body: some View {
         VStack(spacing: ShogunTheme.Spacing.large) {
-            Text("SHOGUN").font(ShogunTheme.Typography.authBrand)
-                .tracking(2).foregroundStyle(ShogunTheme.accent)
-                .accessibilityIdentifier("auth.brand")
+            ViewThatFits(in: .horizontal) {
+                ShogunWordmark(width: ShogunTheme.Brand.authWidth)
+                ShogunWordmark()
+            }
+            .accessibilityIdentifier("auth.brand")
             Text(title).font(ShogunTheme.Typography.authTitle).multilineTextAlignment(.center)
                 .accessibilityAddTraits(.isHeader)
         }.frame(maxWidth: .infinity).padding(.bottom, ShogunTheme.Spacing.small)
@@ -61,10 +63,11 @@ struct AuthFeedback: View {
     @EnvironmentObject private var auth: AuthStore
     var body: some View {
         if let error = auth.error {
-            Text(error).foregroundStyle(.red).accessibilityIdentifier("auth.error")
+            Text(error).foregroundStyle(ShogunTheme.error).accessibilityIdentifier("auth.error")
         }
         if let message = auth.message {
-            Text(message).foregroundStyle(.secondary).accessibilityIdentifier("auth.message")
+            Text(message).foregroundStyle(ShogunTheme.success).accessibilityIdentifier(
+                "auth.message")
         }
     }
 }

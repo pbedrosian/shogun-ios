@@ -14,7 +14,9 @@ struct LibraryView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: ShogunTheme.Spacing.section) {
                     VStack(alignment: .leading, spacing: ShogunTheme.Spacing.compact) {
-                        Text("SHOGUN").shogunBrand()
+                        ShogunWordmark()
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .accessibilityIdentifier("library.brand")
                         HStack(alignment: .center, spacing: ShogunTheme.Spacing.tight) {
                             Text((store.selectedLibrary?.name ?? "Libraries")).font(
                                 ShogunTheme.Typography.title
