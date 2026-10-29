@@ -21,6 +21,8 @@ struct ConnectedCollectionTabs: View {
     let account: AuthAccount
     @StateObject private var collection: CollectionStore
     @StateObject private var search: CatalogSearchStore
+    @State private var selectedTab: ShogunTab = .library
+    @State private var libraryNavigationID = UUID()
     private let discovery: any MovieDiscoveryServicing
     init(account: AuthAccount, services: AccountServices) {
         self.account = account
@@ -30,10 +32,10 @@ struct ConnectedCollectionTabs: View {
             wrappedValue: CollectionStore(userID: account.id, service: services.collection))
     }
     var body: some View {
-        TabView {
+        TabView(selection: $selectedTab) {
             Group {
                 if let catalog = collection.catalog, !catalog.libraries.isEmpty {
-                    LibraryView().environmentObject(catalog)
+                    LibraryView().id(libraryNavigationID).environmentObject(catalog)
                 } else {
                     NavigationStack {
                         VStack(spacing: ShogunTheme.Spacing.regular) {
@@ -52,12 +54,21 @@ struct ConnectedCollectionTabs: View {
                         }.shogunCanvas().navigationTitle("Library")
                     }
                 }
-            }.tabItem { Label("Library", systemImage: "square.grid.2x2") }
+            }.tabItem { Label("Library", systemImage: "square.grid.2x2") }.tag(ShogunTab.library)
             CatalogSearchView(search: search, collection: collection, service: discovery)
-                .tabItem { Label("Search", systemImage: "magnifyingglass") }
-            AccountProfileView(account: account).tabItem {
+                .tabItem { Label("Search", systemImage: "magnifyingglass") }.tag(ShogunTab.search)
+            AccountProfileView(account: account) { libraryID in
+                guard let catalog = collection.catalog,
+                    catalog.libraries.contains(where: { $0.id == libraryID })
+                else { return }
+                catalog.selectedLibraryID = libraryID
+                catalog.libraryQuery = ""
+                catalog.showingAddMovie = false
+                libraryNavigationID = UUID()
+                selectedTab = .library
+            }.tabItem {
                 Label("Profile", systemImage: "person.crop.circle")
-            }
+            }.tag(ShogunTab.profile)
         }
         .environment(\.movieDiscovery, discovery)
         .environment(\.collection, collection)
@@ -76,7 +87,8 @@ struct CollectionFeedback: View {
     var body: some View {
         VStack(spacing: ShogunTheme.Spacing.small) {
             if let error = store.error {
-                Text(error).foregroundStyle(.red).accessibilityIdentifier("collection.error")
+                Text(error).foregroundStyle(ShogunTheme.error).accessibilityIdentifier(
+                    "collection.error")
             }
             if showsRefreshButton {
                 Button("Refresh collection") { Task { await store.refresh() } }
@@ -95,15 +107,18 @@ struct CreateLibrarySheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                TextField("Library name", text: $name).accessibilityIdentifier(
-                    "collection.libraryName"
-                )
-                .onChange(of: name) { _, _ in requestID = UUID().uuidString }
-                Text(
-                    "Creates a shared library owned by your account. Invitations are managed separately."
-                )
-                .font(ShogunTheme.Typography.footnote)
-                CollectionFeedback(store: collection)
+                Group {
+                    TextField("Library name", text: $name).accessibilityIdentifier(
+                        "collection.libraryName"
+                    )
+                    .onChange(of: name) { _, _ in requestID = UUID().uuidString }
+                    Text(
+                        "Creates a shared library owned by your account. Invitations are managed separately."
+                    )
+                    .font(ShogunTheme.Typography.footnote)
+                    CollectionFeedback(store: collection)
+
+                }.listRowBackground(ShogunTheme.surface)
             }.shogunListCanvas().navigationTitle("Create library")
                 .interactiveDismissDisabled(collection.isBusy)
                 .toolbar {

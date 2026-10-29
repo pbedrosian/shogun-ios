@@ -63,7 +63,7 @@ struct AuthFormView: View {
                     ).foregroundStyle(ShogunTheme.muted)
                 }
                 if let validation {
-                    Text(validation).foregroundStyle(.red).accessibilityIdentifier(
+                    Text(validation).foregroundStyle(ShogunTheme.error).accessibilityIdentifier(
                         "auth.validation")
                 }
                 AuthFeedback()
@@ -72,7 +72,7 @@ struct AuthFormView: View {
                 }
                 Button(action: submit) {
                     HStack(spacing: ShogunTheme.Spacing.small) {
-                        if auth.isBusy { ProgressView().tint(ShogunTheme.onAccent) }
+                        if auth.isBusy { ProgressView().tint(ShogunTheme.authOnPrimary) }
                         Text(mode == .recover ? "Send reset link" : mode.rawValue)
                     }
                 }.buttonStyle(ShogunAuthPrimaryButtonStyle())
@@ -103,6 +103,7 @@ struct AuthFormView: View {
                         auth.isBusy)
             }.shogunAuthContent()
         }.scrollDismissesKeyboard(.interactively).shogunCanvas()
+            .tint(ShogunTheme.accent)
             .onChange(of: auth.isBusy) { _, busy in
                 if !busy {
                     password = ""

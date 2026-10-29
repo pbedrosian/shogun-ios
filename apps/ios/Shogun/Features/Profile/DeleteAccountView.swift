@@ -9,35 +9,39 @@ struct DeleteAccountView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section {
-                    Text("Permanently delete your account?").font(
-                        ShogunTheme.Typography.profileTitle)
-                    Text(
-                        "This deletes your sign-in, profile, personal activity, and libraries you own—including shared libraries and their copies. It cannot be undone."
-                    )
-                    Text("Movie metadata used by other accounts remains available to them.").font(
-                        ShogunTheme.Typography.footnote
-                    ).foregroundStyle(.secondary)
-                }
-                Section("Confirm your identity") {
-                    SecureField("Current password", text: $password).textContentType(.password)
-                        .focused($passwordFocused).submitLabel(.done)
-                        .onSubmit { passwordFocused = false }
-                        .disabled(auth.isBusy).accessibilityIdentifier("auth.deletePassword")
-                }
-                Section {
-                    if let error = auth.error {
-                        Text(error).foregroundStyle(.red).accessibilityIdentifier(
-                            "auth.deleteError")
+                Group {
+                    Section {
+                        Text("Permanently delete your account?").font(
+                            ShogunTheme.Typography.profileTitle)
+                        Text(
+                            "This deletes your sign-in, profile, personal activity, and libraries you own—including shared libraries and their copies. It cannot be undone."
+                        )
+                        Text("Movie metadata used by other accounts remains available to them.")
+                            .font(
+                                ShogunTheme.Typography.footnote
+                            ).foregroundStyle(ShogunTheme.muted)
                     }
-                    if auth.isBusy { ProgressView("Deleting account…") }
-                    Button("Delete account", role: .destructive) {
-                        passwordFocused = false
-                        confirming = true
+                    Section("Confirm your identity") {
+                        SecureField("Current password", text: $password).textContentType(.password)
+                            .focused($passwordFocused).submitLabel(.done)
+                            .onSubmit { passwordFocused = false }
+                            .disabled(auth.isBusy).accessibilityIdentifier("auth.deletePassword")
                     }
-                    .disabled(password.isEmpty || auth.isBusy).accessibilityIdentifier(
-                        "auth.requestDeletion")
-                }
+                    Section {
+                        if let error = auth.error {
+                            Text(error).foregroundStyle(ShogunTheme.error).accessibilityIdentifier(
+                                "auth.deleteError")
+                        }
+                        if auth.isBusy { ProgressView("Deleting account…") }
+                        Button("Delete account", role: .destructive) {
+                            passwordFocused = false
+                            confirming = true
+                        }
+                        .disabled(password.isEmpty || auth.isBusy).accessibilityIdentifier(
+                            "auth.requestDeletion")
+                    }
+
+                }.listRowBackground(ShogunTheme.surface)
             }.scrollDismissesKeyboard(.interactively)
                 .navigationTitle("Delete account").navigationBarTitleDisplayMode(.inline)
                 .shogunListCanvas()

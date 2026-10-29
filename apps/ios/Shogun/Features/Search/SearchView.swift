@@ -9,15 +9,17 @@ import SwiftUI
         var body: some View {
             NavigationStack {
                 List {
-                    ForEach(results) { movie in
-                        NavigationLink(value: movie) {
-                            MovieResultRow(
-                                title: movie.title, year: movie.releaseYearText,
-                                isOwned: !store.copies(for: movie).isEmpty,
-                                artwork: PosterView(movie: movie))
-                        }.accessibilityIdentifier("search.movie.\(movie.id)")
-                    }
+                    Group {
+                        ForEach(results) { movie in
+                            NavigationLink(value: movie) {
+                                MovieResultRow(
+                                    title: movie.title, year: movie.releaseYearText,
+                                    isOwned: !store.copies(for: movie).isEmpty,
+                                    artwork: PosterView(movie: movie))
+                            }.accessibilityIdentifier("search.movie.\(movie.id)")
+                        }
 
+                    }.listRowBackground(ShogunTheme.surface)
                 }
                 .refreshable { await collection?.refresh() }
                 .safeAreaInset(edge: .bottom) {

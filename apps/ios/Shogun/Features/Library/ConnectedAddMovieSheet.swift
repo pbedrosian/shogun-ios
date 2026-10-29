@@ -21,100 +21,102 @@ struct ConnectedAddMovieSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Find a movie") {
-                    if draft.manual || selection != nil {
-                        Text(draft.metadata.title).font(ShogunTheme.Typography.headline)
-                        Button("Choose a different movie") {
-                            selection = nil
-                            draft.resetSelection()
-                        }
-                    } else {
-                        TextField("Search by title", text: $search.query)
-                            .accessibilityIdentifier("addMovie.search").focused($searching)
-                            .submitLabel(.search)
-                            .onSubmit {
-                                searching = false
-                                search.search(immediately: true)
+                Group {
+                    Section("Find a movie") {
+                        if draft.manual || selection != nil {
+                            Text(draft.metadata.title).font(ShogunTheme.Typography.headline)
+                            Button("Choose a different movie") {
+                                selection = nil
+                                draft.resetSelection()
                             }
-                            .onChange(of: search.query) { _, _ in search.search() }
-                        if search.phase == .loading { ProgressView("Searching movies…") }
-                        ForEach(search.results) { movie in
-                            Button {
+                        } else {
+                            TextField("Search by title", text: $search.query)
+                                .accessibilityIdentifier("addMovie.search").focused($searching)
+                                .submitLabel(.search)
+                                .onSubmit {
+                                    searching = false
+                                    search.search(immediately: true)
+                                }
+                                .onChange(of: search.query) { _, _ in search.search() }
+                            if search.phase == .loading { ProgressView("Searching movies…") }
+                            ForEach(search.results) { movie in
+                                Button {
+                                    searching = false
+                                    selection = movie
+                                } label: {
+                                    MovieResultRow(
+                                        title: movie.title, year: movie.releaseYearText,
+                                        isOwned: catalog.ownedMovie(tmdbID: movie.id) != nil,
+                                        artwork: CatalogPosterView(movie: movie))
+                                }.accessibilityIdentifier("addMovie.result.\(movie.id)")
+                            }
+                            if search.phase == .empty {
+                                Text("No movies found. You can enter one manually.")
+                            }
+                            if let error = search.error {
+                                Text(error).foregroundStyle(ShogunTheme.error)
+                                Button("Retry search", action: search.retry)
+                            }
+                            if search.canLoadMore {
+                                Button("Load more movies", action: search.loadMore)
+                            }
+                            if search.phase == .loadingMore { ProgressView("Loading more movies…") }
+                            Button("Enter manually") {
                                 searching = false
-                                selection = movie
-                            } label: {
-                                MovieResultRow(
-                                    title: movie.title, year: movie.releaseYearText,
-                                    isOwned: catalog.ownedMovie(tmdbID: movie.id) != nil,
-                                    artwork: CatalogPosterView(movie: movie))
-                            }.accessibilityIdentifier("addMovie.result.\(movie.id)")
+                                selection = nil
+                                draft.enterManually(title: search.query)
+                                year = ""
+                                runtime = ""
+                                genres = ""
+                            }.accessibilityIdentifier("addMovie.manual")
                         }
-                        if search.phase == .empty {
-                            Text("No movies found. You can enter one manually.")
-                        }
-                        if let error = search.error {
-                            Text(error).foregroundStyle(.red)
-                            Button("Retry search", action: search.retry)
-                        }
-                        if search.canLoadMore {
-                            Button("Load more movies", action: search.loadMore)
-                        }
-                        if search.phase == .loadingMore { ProgressView("Loading more movies…") }
-                        Button("Enter manually") {
-                            searching = false
-                            selection = nil
-                            draft.enterManually(title: search.query)
-                            year = ""
-                            runtime = ""
-                            genres = ""
-                        }.accessibilityIdentifier("addMovie.manual")
                     }
-                }
-                if draft.manual || draft.providerID != nil {
-                    metadataFields
-                    if draft.loading { ProgressView("Loading movie details…") }
-                    if let error = draft.error {
-                        Text(error).foregroundStyle(.red)
-                        Button("Retry details") {
-                            if let selection {
-                                Task {
-                                    await draft.select(selection)
-                                    syncNumbers()
+                    if draft.manual || draft.providerID != nil {
+                        metadataFields
+                        if draft.loading { ProgressView("Loading movie details…") }
+                        if let error = draft.error {
+                            Text(error).foregroundStyle(ShogunTheme.error)
+                            Button("Retry details") {
+                                if let selection {
+                                    Task {
+                                        await draft.select(selection)
+                                        syncNumbers()
+                                    }
                                 }
                             }
                         }
                     }
-                }
-                Section("Copies") {
-                    Picker("Library", selection: $draft.libraryID) {
-                        ForEach(catalog.writableLibraries) { Text($0.name).tag($0.id) }
-                    }.accessibilityIdentifier("addMovie.library")
-                    if catalog.writableLibraries.isEmpty {
-                        Text("You need an owner or editor library to save a movie.")
-                    }
-                    ForEach(MovieFormat.allCases) { format in
-                        Stepper(
-                            "\(format.rawValue): \(draft.quantities[format] ?? 0)",
-                            value: Binding(
-                                get: { draft.quantities[format] ?? 0 },
-                                set: { draft.quantities[format] = $0 }), in: 0...99
-                        )
-                        .accessibilityIdentifier("addMovie.quantity.\(format.id)")
-                    }
-                    Text(
-                        "\(draft.formats.count) \(draft.formats.count == 1 ? "copy" : "copies") total (maximum 99)."
-                    )
-                    .font(ShogunTheme.Typography.footnote)
-                    if let providerID = draft.providerID,
-                        let owned = catalog.ownedMovie(tmdbID: providerID)
-                    {
+                    Section("Copies") {
+                        Picker("Library", selection: $draft.libraryID) {
+                            ForEach(catalog.writableLibraries) { Text($0.name).tag($0.id) }
+                        }.accessibilityIdentifier("addMovie.library")
+                        if catalog.writableLibraries.isEmpty {
+                            Text("You need an owner or editor library to save a movie.")
+                        }
+                        ForEach(MovieFormat.allCases) { format in
+                            Stepper(
+                                "\(format.rawValue): \(draft.quantities[format] ?? 0)",
+                                value: Binding(
+                                    get: { draft.quantities[format] ?? 0 },
+                                    set: { draft.quantities[format] = $0 }), in: 0...99
+                            )
+                            .accessibilityIdentifier("addMovie.quantity.\(format.id)")
+                        }
                         Text(
-                            "Already owned: \(catalog.copies(for: owned).count) copies. Saving adds more copies."
+                            "\(draft.formats.count) \(draft.formats.count == 1 ? "copy" : "copies") total (maximum 99)."
                         )
-                        .accessibilityIdentifier("addMovie.alreadyOwned")
+                        .font(ShogunTheme.Typography.footnote)
+                        if let providerID = draft.providerID,
+                            let owned = catalog.ownedMovie(tmdbID: providerID)
+                        {
+                            Text(
+                                "Already owned: \(catalog.copies(for: owned).count) copies. Saving adds more copies."
+                            )
+                            .accessibilityIdentifier("addMovie.alreadyOwned")
+                        }
                     }
-                }
 
+                }.listRowBackground(ShogunTheme.surface)
             }.refreshable { await collection?.refresh() }.scrollDismissesKeyboard(.immediately)
                 .safeAreaInset(edge: .bottom) {
                     if let collection, collection.error != nil || collection.isBusy {
@@ -216,10 +218,11 @@ struct ConnectedAddMovieSheet: View {
                     .keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
             }.disabled(!draft.manual)
             if !validNumbers {
-                Text("Enter a valid year and positive runtime.").foregroundStyle(.red)
+                Text("Enter a valid year and positive runtime.").foregroundStyle(ShogunTheme.error)
             }
             if !draft.metadata.isValid {
-                Text("Check the movie information before saving.").foregroundStyle(.red)
+                Text("Check the movie information before saving.").foregroundStyle(
+                    ShogunTheme.error)
             }
         }
     }
