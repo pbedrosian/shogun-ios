@@ -50,17 +50,32 @@ import Foundation
         }
         if let catalog { catalog.replaceContents(from: next) } else { catalog = next }
     }
-    func saveCopy(id: String, movie: Movie, format: MovieFormat, libraryID: String) async -> Bool {
-        guard let catalog, catalog.movies.contains(where: { $0.id == movie.id }),
-            catalog.writableLibraries.contains(where: { $0.id == libraryID })
+    func editCopies(
+        libraryID: String, movieID: String, expected: [OwnedCopy], formats: [MovieFormat]
+    ) async -> Bool {
+        guard formats.count <= 99,
+            catalog?.writableLibraries.contains(where: { $0.id == libraryID }) == true,
+            expected.allSatisfy({ $0.libraryID == libraryID && $0.movieID == movieID })
         else {
             error = CollectionFailure.access.localizedDescription
             return false
         }
         return await write {
-            try await self.service.saveCopy(
-                id: id, libraryID: libraryID, movieID: movie.id, format: format)
+            try await self.service.editCopies(
+                libraryID: libraryID, movieID: movieID, expected: expected, formats: formats)
         }
+    }
+    func addMovie(_ request: MovieAddRequest) async -> Bool {
+        guard request.isValid else {
+            error = CollectionFailure.invalid.localizedDescription
+            return false
+        }
+        guard catalog?.writableLibraries.contains(where: { $0.id == request.libraryID }) == true
+        else {
+            error = CollectionFailure.access.localizedDescription
+            return false
+        }
+        return await write { try await self.service.addMovie(request) }
     }
     func saveDiary(_ state: PersonalMovieState) async -> Bool {
         guard state.userID == userID,

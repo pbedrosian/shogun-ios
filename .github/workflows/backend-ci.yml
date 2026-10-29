@@ -41,6 +41,8 @@ jobs:
         run: npm run backend:test:api
       - name: Collection synchronization and retry checks
         run: npm run backend:test:collection
+      - name: Movie metadata and copy save checks
+        run: npm run backend:test:movie-add
       - name: Catalog gateway authentication checks
         run: npm run backend:test:catalog
       - name: Account deletion security and cascade tests

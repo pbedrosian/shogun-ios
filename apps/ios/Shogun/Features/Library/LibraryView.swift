@@ -47,12 +47,14 @@ struct LibraryView: View {
                             }.accessibilityLabel("Library view options")
                                 .accessibilityIdentifier("library.viewOptions").accessibilityValue(
                                     "\(columnCount)")
-                            Button {
-                                store.showingAddMovie = true
-                            } label: {
-                                ShogunIcon(systemName: "plus")
-                            }.accessibilityLabel("Add movie").disabled(
-                                store.writableLibraries.isEmpty)
+                            if collection != nil {
+                                Button {
+                                    store.showingAddMovie = true
+                                } label: {
+                                    ShogunIcon(systemName: "plus")
+                                }.accessibilityLabel("Add movie").disabled(
+                                    store.writableLibraries.isEmpty)
+                            }
                         }
                     }
                     Menu {
@@ -91,7 +93,9 @@ struct LibraryView: View {
                     }.shogunSurface()
                     Text("\(movies.count) \(movies.count == 1 ? "movie" : "movies")")
                         .font(ShogunTheme.Typography.caption).foregroundStyle(ShogunTheme.muted)
-                    if let collection { CollectionFeedback(store: collection) }
+                    if let collection {
+                        CollectionFeedback(store: collection, showsRefreshButton: false)
+                    }
                     if movies.isEmpty {
                         if store.libraryQuery.isEmpty {
                             ContentUnavailableView(

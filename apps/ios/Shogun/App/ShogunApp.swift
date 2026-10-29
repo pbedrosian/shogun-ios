@@ -32,14 +32,30 @@ import SwiftUI
             { userID in
                 let backend = auth.backendClient(for: userID)
                 return AccountServices(
-                    collection: SupabaseCollectionService { try await backend.rpc($0, body: $1) },
+                    collection: SupabaseCollectionService(catalog: {
+                        try await backend.function("catalog", body: $0)
+                    }) { try await backend.rpc($0, body: $1) },
                     discovery: MovieDiscoveryService {
                         try await backend.function("catalog", body: $0)
                     })
             }
         }
     }
+    private var fixtureAppearance: ColorScheme? {
+        #if DEBUG
+            let args = ProcessInfo.processInfo.arguments
+            if args.contains("-shogun-auth-ui") || args.contains("-shogun-demo"),
+                let index = args.firstIndex(of: "-AppleInterfaceStyle"), index + 1 < args.count
+            {
+                return args[index + 1] == "Dark" ? .dark : .light
+            }
+        #endif
+        return nil
+    }
     var body: some Scene {
-        WindowGroup { AuthRootView(services: services).environmentObject(auth) }
+        WindowGroup {
+            AuthRootView(services: services).environmentObject(auth).preferredColorScheme(
+                fixtureAppearance)
+        }
     }
 }

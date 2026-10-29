@@ -1,3 +1,44 @@
+# Development handoff — October 28, 2026
+
+## Current work
+
+- SHO-8 is merged into `dev`: [MR #15](https://github.com/pbedrosian/shogun-ios/pull/15), merge commit `0095625`. iOS, backend and SonarCloud passed on the final SHO-8 head; integrated local validation passed 116 tests with 97.7% coverage.
+- SHO-3 implementation is on `peterbedrosian/sho-3`, based on that merged `dev`. All SHO-3 changes are **uncommitted** for user review. No SHO-3 PR or hosted run exists yet.
+- The Notion ticket is In Development. See [MOVIE_ADD.md](MOVIE_ADD.md) for behavior, authorization and retry semantics.
+
+## SHO-3 implementation
+
+- The + sheet supports title search, selection/details autofill, manual entry, writable library selection, and per-format quantities (1–99 copies total).
+- Manual metadata includes optional year, director, synopsis, runtime, comma-separated genres and HTTPS poster URL. Saved metadata and artwork/fallback display in collection details/cards.
+- Owned-copy editing is available from Library movie details for writable libraries. It changes formats/quantities only, preserves movie metadata/diary state, and rejects stale drafts; zero removes copies from that library.
+- Review update: removed the saved-movie picker/sheet and dedicated client service/store APIs/tests. New entries use search/manual entry; every format starts at zero. The Library refresh button is removed; pull-to-refresh remains.
+- TMDB import runs through the authenticated catalog Edge Function. It fetches canonical details server-side and calls a service-role-only RPC; clients cannot supply trusted metadata or actor identity.
+- Manual creation derives identity from `auth.uid()`. Metadata and all requested copies commit atomically. The private retry ledger serializes concurrent retries, compares payloads, and rechecks writable membership even after a previously successful save. Manual titles never merge by title/year; provider IDs reuse stable UUIDs.
+- Save errors/reload failures preserve open drafts and retry identity. Search and detail retries, pagination, cancellation and account binding retain the SHO-8 boundaries. Search/details browsing still makes no collection edits.
+- Keyboard completion/scroll dismissal supports manual entry. Explicit Debug UI-test appearance is applied deterministically so dark-mode tests actually render dark on iOS 27.
+
+## Local environment and validation
+
+- Applied the additive `20261029010000_movie_add.sql` migration to the existing local stack. The database was not reset; user configuration and data were preserved.
+- Backend unit tests: 19 passed. SQL checks: 138 passed. Real-JWT permission, movie-add concurrency/retry, live TMDB import, collection and account-deletion regression checks passed.
+- Final Release build, Debug build/static analysis and model checks passed.
+- Final clean native validation passed **122 tests, zero failures/skips**, with **96.7% app-source line coverage**; Models and CatalogStore remain 100%. Build/static analysis and coverage policy passed. Final report: `/tmp/shogun-sho3-verified/summary.md`; result bundle: `/tmp/shogun-sho3-verified/Tests.xcresult`. Final light/provider and dark/maximum-Dynamic-Type screenshots are in `/tmp/shogun-sho3-verified/screenshots` and were visually inspected. Earlier failed development runs are superseded by this complete passing run.
+- Supabase/Docker were already running and remain running. Only task-created simulators were used for verification; all of them were deleted after validation.
+
+## Review follow-up validation
+
+- After the review changes, build/static analysis, 103 unit tests and three focused UI regressions passed (106 tests total). These cover zero-entry quantities, Library refresh-button removal, search/detail retries, save retries, and editing copy formats/quantities in dark/maximum Dynamic Type. Test log: `/tmp/shogun-sho3-copy-edit.log`. All selected test suites passed; Xcode then stalled exporting its result bundle, so the completed run was terminated during teardown. The xcresult bundle is incomplete. Release build passed.
+- Backend: 150 SQL checks, real-JWT copy editing/permission/conflict/retry checks and 19 tooling unit tests passed. Additive copy-edit migration applied without resetting data.
+- Sorting and format filters were recorded as SHO-28 in Backlog.
+
+## Next steps
+
+1. Rebuild the Shogun scheme in Xcode and review + search, provider save, manual save/quantities and failure/retry behavior against the running local backend.
+2. Commit/push/create a PR only when the user authorizes those actions. Do not merge into `dev` or `main` automatically.
+3. Quick Add remains SHO-4. Hosted deployment, production email and social login remain separate work.
+
+---
+
 # Development handoff — October 26, 2026
 
 ## Where we stopped tonight
@@ -80,6 +121,12 @@ because their titles match provider results.
 - SHO-13.1 adds five UI tests and an 85% overall app-source coverage floor, retaining 100% requirements for Models and CatalogStore. App views remain included in coverage.
 - Last full local validation: 72 app tests passed, no failures/skips; 10 CI-tool tests passed; app-source coverage 1,243/1,261 executable lines (98.6%). Build and static analysis passed.
 - Validation used Xcode 27 / iOS 27. The original hosted failure on iOS 26.2 was a text-based header lookup; the fix uses a stable identifier. Hosted results after the final push and merge have not been verified in this chat.
+
+## Review follow-up validation
+
+- After the review changes, build/static analysis, 103 unit tests and three focused UI regressions passed (106 tests total). These cover zero-entry quantities, Library refresh-button removal, search/detail retries, save retries, and editing copy formats/quantities in dark/maximum Dynamic Type. Test log: `/tmp/shogun-sho3-copy-edit.log`. All selected test suites passed; Xcode then stalled exporting its result bundle, so the completed run was terminated during teardown. The xcresult bundle is incomplete. Release build passed.
+- Backend: 150 SQL checks, real-JWT copy editing/permission/conflict/retry checks and 19 tooling unit tests passed. Additive copy-edit migration applied without resetting data.
+- Sorting and format filters were recorded as SHO-28 in Backlog.
 
 ## Next steps
 

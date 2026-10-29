@@ -64,7 +64,7 @@ server secrets. Hosted environment/promotion work remains separate.
 | CatalogSearchStore | Debounce, cancellation/generation checks, paging, deduplication and retry state. |
 | CatalogDetailStore | Detail loading/retry without discarding the selected result on failure. |
 | Feature/shared views | Navigation, accessibility and rendering; shared movie rows/summary presentation. |
-| catalog Edge handler | Narrow authenticated search/detail contract; no caller-specified upstream URLs or user IDs. |
+| catalog Edge handler | Narrow authenticated search/detail/import contract; no caller-specified upstream URLs or user IDs. |
 | TMDB client | Provider authentication, fixed HTTPS origin, timeouts, rate-limit/error mapping, metadata and artwork normalization. |
 
 Collection RPCs and catalog requests share transport; their feature errors remain
@@ -77,10 +77,10 @@ provider-ID match and an accessible copy. Manual movies with identical titles or
 years are never silently merged. The provider's `tmdb:<id>` placeholder identity is
 for rendering only and must never be submitted as a database UUID.
 
-Browsing does not create metadata, owned copies or diary rows. The separate Add
-Movie flow still chooses existing persisted metadata; connecting discovery results
-to save/import and manual entry is **SHO-3**, and quick add is **SHO-4**. Unowned
-catalog details intentionally do not display a writable personal diary. Owned
+Browsing does not create metadata, owned copies or diary rows. The + flow now
+connects discovery results to save/import and manual entry through **SHO-3**;
+quick add remains **SHO-4**. Unowned catalog details intentionally do not display
+a writable personal diary. Owned
 matches link to the existing persisted copy/diary screen.
 
 The proxy currently uses `en-US`, excludes adult results, caps paging at TMDB's
@@ -136,3 +136,13 @@ Legacy offline catalog UI is isolated to explicit Debug test launches.
 - [Movie details](https://developer.themoviedb.org/reference/movie-details)
 - [TMDB attribution](https://developer.themoviedb.org/docs/faq)
 - [Supabase function secrets](https://supabase.com/docs/guides/functions/secrets)
+
+## Saving discovered movies (SHO-3)
+
+The + sheet now bridges discovery to collections. Its import operation accepts only
+a TMDB ID, request UUID, writable library UUID, and a bounded array of copy formats.
+The Edge Function validates live Auth identity, fetches canonical TMDB details, and
+calls a service-role-only transaction. Client-supplied metadata and actor IDs are
+rejected. Browsing Search and details still creates no collection rows.
+
+See [MOVIE_ADD.md](MOVIE_ADD.md) for manual entry, quantity and retry behavior.

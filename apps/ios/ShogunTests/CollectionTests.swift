@@ -10,30 +10,36 @@ import XCTest
         var beforeLoad: (() async -> Void)?
         var failAfterSave = false
         var afterLoad: (() -> Void)?
-        var copyIDs: [String] = []
         init(_ snapshot: CollectionSnapshot) { self.snapshot = snapshot }
+        var addRequests: [MovieAddRequest] = []
+        func editCopies(
+            libraryID: String, movieID: String, expected: [OwnedCopy], formats: [MovieFormat]
+        ) async throws {
+            if fail { throw CollectionFailure.conflict }
+        }
+        func addMovie(_ request: MovieAddRequest) async throws {
+            addRequests.append(request)
+            if fail { throw CollectionFailure.unavailable }
+            if failAfterSave { fail = true }
+            guard !snapshot.movies.contains(where: { $0.id == request.id }) else { return }
+            let film = Movie(
+                id: request.id, title: request.metadata.title, year: request.metadata.year,
+                palette: 0, synopsis: request.metadata.synopsis, tmdbID: request.providerID)
+            snapshot = CollectionSnapshot(
+                movies: snapshot.movies + [film], libraries: snapshot.libraries,
+                memberships: snapshot.memberships,
+                copies: snapshot.copies
+                    + request.formats.enumerated().map {
+                        OwnedCopy(
+                            id: request.id + "-" + String($0.offset), libraryID: request.libraryID,
+                            movieID: film.id, format: $0.element)
+                    }, states: snapshot.states, defaultLibraryID: snapshot.defaultLibraryID)
+        }
         func load() async throws -> CollectionSnapshot {
             if fail { throw CollectionFailure.unavailable }
             await beforeLoad?()
             afterLoad?()
             return snapshot
-        }
-        func saveCopy(id: String, libraryID: String, movieID: String, format: MovieFormat)
-            async throws
-        {
-            copyIDs.append(id)
-            if fail { throw CollectionFailure.access }
-            if failAfterSave { fail = true }
-            let copies =
-                snapshot.copies.contains(where: { $0.id == id })
-                ? snapshot.copies
-                : snapshot.copies + [
-                    OwnedCopy(id: id, libraryID: libraryID, movieID: movieID, format: format)
-                ]
-            snapshot = CollectionSnapshot(
-                movies: snapshot.movies, libraries: snapshot.libraries,
-                memberships: snapshot.memberships, copies: copies, states: snapshot.states,
-                defaultLibraryID: snapshot.defaultLibraryID)
         }
         func saveState(_ state: PersonalMovieState) async throws {
             if fail { throw CollectionFailure.unavailable }
@@ -100,30 +106,6 @@ import XCTest
         XCTAssertNil(relaunched.catalog?.selectedLibrary)
         XCTAssertEqual(relaunched.catalog?.selectedLibraryID, "")
     }
-    func testRetryIsIdempotentButIntentionalCopiesRemainDistinct() async throws {
-        let fake = Fake(fixture())
-        let store = CollectionStore(userID: user, service: fake)
-        await store.refresh()
-        fake.fail = true
-        let failed = await store.saveCopy(
-            id: "retry", movie: Fixtures.arrival, format: .dvd, libraryID: "personal")
-        XCTAssertFalse(failed)
-        XCTAssertNotNil(store.error)
-        fake.fail = false
-        for id in ["retry", "retry", "another"] {
-            let saved = await store.saveCopy(
-                id: id, movie: Fixtures.arrival, format: .dvd, libraryID: "personal")
-            XCTAssertTrue(saved)
-        }
-        XCTAssertEqual(store.catalog?.copies.count, Fixtures.copies.count + 2)
-        XCTAssertEqual(fake.copyIDs, ["retry", "retry", "retry", "another"])
-        let otherDevice = CollectionStore(userID: user, service: fake)
-        await otherDevice.refresh()
-        XCTAssertEqual(otherDevice.catalog?.copies.count, store.catalog?.copies.count)
-        let denied = await store.saveCopy(
-            id: "no", movie: Fixtures.arrival, format: .dvd, libraryID: "readonly")
-        XCTAssertFalse(denied)
-    }
     func testDiaryAcrossLibrariesAndUserIsolation() async throws {
         let fake = Fake(fixture())
         let store = CollectionStore(userID: user, service: fake)
@@ -156,6 +138,39 @@ import XCTest
         let failed = await store.saveDiary(state)
         XCTAssertFalse(failed)
         XCTAssertNil(store.catalog?.state(for: Fixtures.arrival).rating)
+    }
+    func testNewMovieSaveRequiresConfirmedReloadAndReusesIntentAfterLostResponse() async throws {
+        let fake = Fake(fixture())
+        let store = CollectionStore(userID: user, service: fake)
+        await store.refresh()
+        let metadata = MovieMetadata(DiscoveryUITestService.arrival)
+        let id = UUID().uuidString
+        let request = MovieAddRequest(
+            id: id, libraryID: "personal", providerID: nil, metadata: metadata,
+            formats: [.dvd, .dvd])
+        fake.failAfterSave = true
+        let uncertain = await store.addMovie(request)
+        XCTAssertFalse(uncertain)
+        XCTAssertNotNil(store.error)
+        XCTAssertFalse(store.catalog?.movies.contains { $0.id == id } == true)
+        fake.failAfterSave = false
+        fake.fail = false
+        let retried = await store.addMovie(request)
+        XCTAssertTrue(retried)
+        XCTAssertEqual(store.catalog?.copies.filter { $0.movieID == id }.count, 2)
+        XCTAssertEqual(fake.addRequests.map(\.id), [id, id])
+        let readOnly = MovieAddRequest(
+            id: UUID().uuidString, libraryID: "readonly", providerID: nil, metadata: metadata,
+            formats: [.dvd])
+        let denied = await store.addMovie(readOnly)
+        XCTAssertFalse(denied)
+        let invalid = MovieAddRequest(
+            id: "bad", libraryID: "personal", providerID: nil, metadata: metadata, formats: [])
+        let rejected = await store.addMovie(invalid)
+        XCTAssertFalse(rejected)
+        store.invalidate()
+        let signedOut = await store.addMovie(request)
+        XCTAssertFalse(signedOut)
     }
     func testDefaultSaveCreationRecoveryErrorsAndInvalidation() async throws {
         let fake = Fake(fixture(defaultID: "missing"))
@@ -202,27 +217,6 @@ import XCTest
         XCTAssertNil(store.catalog)
         XCTAssertNil(store.error)
         XCTAssertFalse(store.isBusy)
-    }
-    func testLostSaveResponseAndRefreshFailureDoNotDuplicateCopy() async throws {
-        let fake = Fake(fixture())
-        let store = CollectionStore(userID: user, service: fake)
-        await store.refresh()
-        fake.failAfterSave = true
-        let failed = await store.saveCopy(
-            id: "stable", movie: Fixtures.arrival, format: .dvd, libraryID: "personal")
-        XCTAssertFalse(failed)
-        XCTAssertEqual(store.catalog?.copies.count, Fixtures.copies.count)
-        fake.fail = false
-        fake.failAfterSave = false
-        let retry = await store.saveCopy(
-            id: "stable", movie: Fixtures.arrival, format: .dvd, libraryID: "personal")
-        XCTAssertTrue(retry)
-        XCTAssertEqual(store.catalog?.copies.count, Fixtures.copies.count + 1)
-        let original = try XCTUnwrap(store.catalog)
-        original.showingAddMovie = true
-        await store.refresh()
-        XCTAssertTrue(store.catalog === original)
-        XCTAssertTrue(original.showingAddMovie)
     }
     func testBusyAndCancelledLoadsCannotPublish() async {
         let fake = Fake(fixture())

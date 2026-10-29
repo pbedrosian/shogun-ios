@@ -15,15 +15,26 @@ struct Movie: Identifiable, Hashable {
     let palette: Int
     var releaseYearText: String { year.map(String.init) ?? "Unknown year" }
     let synopsis: String
+    let director: String?
+    let runtimeMinutes: Int?
+    let genres: [String]
+    let posterURL: URL?
     let tmdbID: Int?
-    init(id: String, title: String, year: Int?, palette: Int, synopsis: String, tmdbID: Int? = nil)
-    {
+    init(
+        id: String, title: String, year: Int?, palette: Int, synopsis: String, tmdbID: Int? = nil,
+        director: String? = nil, runtimeMinutes: Int? = nil, genres: [String] = [],
+        posterURL: URL? = nil
+    ) {
         self.id = id
         self.title = title
         self.year = year
         self.palette = palette
         self.synopsis = synopsis
         self.tmdbID = tmdbID
+        self.director = director
+        self.runtimeMinutes = runtimeMinutes
+        self.genres = genres
+        self.posterURL = posterURL
     }
 }
 struct MovieLibrary: Identifiable {

@@ -3,7 +3,14 @@ import SwiftUI
 private struct CollectionEnvironmentKey: EnvironmentKey {
     static let defaultValue: CollectionStore? = nil
 }
+private struct MovieDiscoveryEnvironmentKey: EnvironmentKey {
+    static let defaultValue: (any MovieDiscoveryServicing)? = nil
+}
 extension EnvironmentValues {
+    var movieDiscovery: (any MovieDiscoveryServicing)? {
+        get { self[MovieDiscoveryEnvironmentKey.self] }
+        set { self[MovieDiscoveryEnvironmentKey.self] = newValue }
+    }
     var collection: CollectionStore? {
         get { self[CollectionEnvironmentKey.self] }
         set { self[CollectionEnvironmentKey.self] = newValue }
@@ -52,6 +59,7 @@ struct ConnectedCollectionTabs: View {
                 Label("Profile", systemImage: "person.crop.circle")
             }
         }
+        .environment(\.movieDiscovery, discovery)
         .environment(\.collection, collection)
         .environmentObject(collection)
         .task { await collection.refresh() }
@@ -64,13 +72,16 @@ struct ConnectedCollectionTabs: View {
 
 struct CollectionFeedback: View {
     @ObservedObject var store: CollectionStore
+    var showsRefreshButton = true
     var body: some View {
         VStack(spacing: ShogunTheme.Spacing.small) {
             if let error = store.error {
                 Text(error).foregroundStyle(.red).accessibilityIdentifier("collection.error")
             }
-            Button("Refresh collection") { Task { await store.refresh() } }
-                .disabled(store.isBusy).accessibilityIdentifier("collection.refresh")
+            if showsRefreshButton {
+                Button("Refresh collection") { Task { await store.refresh() } }
+                    .disabled(store.isBusy).accessibilityIdentifier("collection.refresh")
+            }
             if store.isBusy { ProgressView().accessibilityLabel("Updating collection") }
         }
     }

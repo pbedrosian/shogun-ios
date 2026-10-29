@@ -5,6 +5,7 @@ struct MovieDetailView: View {
     @Environment(\.collection) private var collection
     @State private var draft: PersonalMovieState?
     @State private var saving = false
+    @State private var editingLibrary: MovieLibrary?
     let movie: Movie
     private var diary: PersonalMovieState { draft ?? store.state(for: movie) }
     private func edit(watched: Bool? = nil, rating: Int? = nil, clearRating: Bool = false) {
@@ -22,7 +23,21 @@ struct MovieDetailView: View {
             VStack(alignment: .leading, spacing: ShogunTheme.Spacing.large) {
                 PosterView(movie: movie).frame(maxWidth: ShogunTheme.Size.detailPosterWidth).frame(
                     maxWidth: .infinity)
-                MovieOverviewView(title: movie.title, year: movie.releaseYearText, synopsis: movie.synopsis)
+                MovieOverviewView(
+                    title: movie.title, year: movie.releaseYearText, synopsis: movie.synopsis)
+                if let director = movie.director, !director.isEmpty {
+                    LabeledContent("Director", value: director).accessibilityIdentifier(
+                        "movie.director"
+                    )
+                    .accessibilityValue(director)
+                }
+                if let runtime = movie.runtimeMinutes {
+                    LabeledContent("Runtime", value: "\(runtime) min").accessibilityIdentifier(
+                        "movie.runtime")
+                }
+                if !movie.genres.isEmpty {
+                    Text(movie.genres.joined(separator: " · ")).foregroundStyle(.secondary)
+                }
                 GroupBox {
                     VStack(alignment: .leading, spacing: ShogunTheme.Spacing.control) {
                         Label("Owned copies", systemImage: "opticaldisc").font(
@@ -38,6 +53,15 @@ struct MovieDetailView: View {
                                     Text(copies.map { $0.format.rawValue }.joined(separator: " · "))
                                         .font(ShogunTheme.Typography.body).foregroundStyle(
                                             .secondary)
+                                    if collection != nil,
+                                        store.writableLibraries.contains(where: {
+                                            $0.id == library.id
+                                        })
+                                    {
+                                        Button("Edit copies") { editingLibrary = library }
+                                            .accessibilityIdentifier(
+                                                "movie.editCopies.\(library.id)")
+                                    }
                                     Text("\(copies.count) \(copies.count == 1 ? "copy" : "copies")")
                                         .font(ShogunTheme.Typography.caption).foregroundStyle(
                                             .secondary)
@@ -100,7 +124,79 @@ struct MovieDetailView: View {
                     ).foregroundStyle(.secondary)
                 }
             }.padding().disabled(saving)
+        }.sheet(item: $editingLibrary) { library in
+            EditCopiesSheet(
+                movie: movie, library: library,
+                copies: store.copies(for: movie, libraryID: library.id))
         }.accessibilityIdentifier("movie.detail").shogunCanvas().navigationTitle("Movie")
             .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+private struct EditCopiesSheet: View {
+    let movie: Movie
+    let library: MovieLibrary
+    let copies: [OwnedCopy]
+    @Environment(\.collection) private var collection
+    @Environment(\.dismiss) private var dismiss
+    @State private var expected: [OwnedCopy] = []
+    @State private var quantities: [MovieFormat: Int] = [:]
+    @State private var saving = false
+    private var formats: [MovieFormat] {
+        MovieFormat.allCases.flatMap {
+            Array(repeating: $0, count: max(0, quantities[$0] ?? 0))
+        }
+    }
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    Text(movie.title)
+                    Text(library.name).foregroundStyle(.secondary)
+                }
+                Section("Copies") {
+                    ForEach(MovieFormat.allCases) { format in
+                        Stepper(
+                            "\(format.rawValue): \(quantities[format] ?? 0)",
+                            value: Binding(
+                                get: { quantities[format] ?? 0 }, set: { quantities[format] = $0 }),
+                            in: 0...max(99, copies.count)
+                        )
+                        .accessibilityIdentifier("editCopies.\(format.id)")
+                    }
+                    Text(
+                        "\(formats.count) copies total (maximum 99). Zero removes this movie from this library."
+                    )
+                    .font(ShogunTheme.Typography.footnote)
+                }
+                if let collection { CollectionFeedback(store: collection) }
+            }.shogunListCanvas().navigationTitle("Edit copies").navigationBarTitleDisplayMode(
+                .inline
+            )
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }.disabled(saving)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        saving = true
+                        Task {
+                            if await collection?.editCopies(
+                                libraryID: library.id, movieID: movie.id, expected: expected,
+                                formats: formats) == true
+                            {
+                                dismiss()
+                            }
+                            saving = false
+                        }
+                    }.disabled(saving || formats.count > 99).accessibilityIdentifier(
+                        "editCopies.save")
+                }
+            }
+        }.disabled(saving).interactiveDismissDisabled(saving)
+            .onAppear {
+                expected = copies
+                quantities = Dictionary(grouping: copies, by: \.format).mapValues(\.count)
+            }
     }
 }

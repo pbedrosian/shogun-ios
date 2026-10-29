@@ -7,6 +7,26 @@ struct PosterView: View {
         ShogunTheme.Poster.colors[movie.palette % ShogunTheme.Poster.colors.count]
     }
     var body: some View {
+        if let url = movie.posterURL {
+            GeometryReader { geometry in
+                AsyncImage(url: url) { phase in
+                    if case .success(let image) = phase {
+                        image.resizable().scaledToFill().frame(
+                            width: geometry.size.width,
+                            height: geometry.size.height
+                        ).clipped()
+                    } else {
+                        placeholder
+                    }
+                }
+            }.aspectRatio(ShogunTheme.Size.posterAspect, contentMode: .fit)
+                .clipShape(RoundedRectangle(cornerRadius: ShogunTheme.Radius.poster))
+                .accessibilityLabel("Poster for \(movie.title)")
+        } else {
+            placeholder
+        }
+    }
+    private var placeholder: some View {
         GeometryReader { proxy in
             VStack(alignment: .leading) {
                 Spacer(minLength: 0)
@@ -40,6 +60,7 @@ struct MovieCard: View {
         }
         .foregroundStyle(ShogunTheme.ink)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(movie.title), \(movie.releaseYearText)\(formats.map { ", " + $0 } ?? "")")
+        .accessibilityLabel(
+            "\(movie.title), \(movie.releaseYearText)\(formats.map { ", " + $0 } ?? "")")
     }
 }
