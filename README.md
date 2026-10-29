@@ -222,8 +222,9 @@ python3 scripts/ci/run.py
 The CI runner needs full Xcode, Python 3, and an installed iOS simulator runtime.
 It writes reports under `build/ci`; use a fresh output directory on subsequent
 runs, such as `python3 scripts/ci/run.py --output /tmp/shogun-ci-next`.
-GitHub Actions and Jenkins use the same root-level runner. Local validation is the
-default; hosted workflows run weekly or manually, not on pushes or pull requests.
+GitHub Actions and Jenkins use the same root-level runner. Hosted iOS and backend
+workflows run on pushes to every branch and pull request creation/updates, as well
+as weekly or manually. Local validation remains available.
 See [CI usage controls](docs/CI.md) for activation and billing limits.
 
 ## Troubleshooting
