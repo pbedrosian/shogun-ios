@@ -127,3 +127,19 @@ suite uses explicit service/storage doubles and requires no running backend.
 The Auth SDK opts into local initial-session events; routing still calls the SDK's
 refreshing session API and validates the user with Auth before showing collections.
 The initial event alone never authorizes the UI.
+
+## Library viewing preferences
+
+The connected app remembers Library sort order, selected formats and poster grid
+density on this device, separately for each account. Preferences apply across that
+account's accessible libraries and survive relaunch/sign-out/sign-in and collection
+refresh. Clearing filters persists an empty format selection. Larger accessibility
+text still renders two columns without replacing the saved grid density.
+
+Title search remains temporary. Startup library selection continues to use the
+server-saved default library and accessible fallback rules. Viewing preferences do
+not change ownership, copy counts or diary state and do not sync between devices.
+Debug demo catalogs and ordinary unit-test stores use no persistent defaults unless
+storage is explicitly injected. Unknown saved sort/format values and invalid grid
+densities fall back safely. The app privacy manifest declares its own UserDefaults
+preference access with reason CA92.1.

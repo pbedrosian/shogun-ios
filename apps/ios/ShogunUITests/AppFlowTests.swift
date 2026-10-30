@@ -165,8 +165,14 @@ final class AppFlowTests: XCTestCase {
 
 @MainActor final class AuthFlowTests: XCTestCase {
     private var app: XCUIApplication!
-    override func setUpWithError() throws { continueAfterFailure = false; app = XCUIApplication() }
+    private var preferencesSuite = ""
+    override func setUpWithError() throws {
+        continueAfterFailure = false
+        app = XCUIApplication()
+        preferencesSuite = "shogun-ui-\(UUID().uuidString)"
+    }
     private func launch(dark: Bool = false, large: Bool = false, extra: [String] = []) {
+        app.launchEnvironment["SHOGUN_UI_PREFERENCES_SUITE"] = preferencesSuite
         app.launchArguments = ["-shogun-auth-ui"] + extra
         if dark { app.launchArguments += ["-AppleInterfaceStyle", "Dark"] }
         if large { app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"] }
@@ -180,6 +186,43 @@ final class AppFlowTests: XCTestCase {
         let email = app.textFields["auth.email"]; email.tap(); email.typeText("owner@shogun.test")
         let field = app.secureTextFields["auth.password"]; field.tap(); field.typeText(password)
     }
+    func testLibraryPreferencesSurviveAppRelaunch() {
+        launch()
+        fill("valid-password")
+        app.buttons["auth.submit"].tap()
+        let menu = app.buttons["library.viewOptions"]
+        XCTAssertTrue(menu.waitForExistence(timeout: 5))
+        XCTAssertEqual(menu.value as? String, "3")
+        app.scrollViews["library.scroll"].pinch(withScale: 2, velocity: 1)
+        let savedDensity = menu.value as? String
+        XCTAssertNotNil(savedDensity)
+        XCTAssertNotEqual(savedDensity, "3")
+        menu.tap()
+        app.buttons["Title Z–A"].tap()
+        app.buttons["Formats"].tap()
+        app.buttons["DVD"].tap()
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.55)).tap()
+        let query = app.textFields["Search this library"]
+        query.tap()
+        query.typeText("temporary search")
+
+        app.terminate()
+        launch()
+        fill("valid-password")
+        app.buttons["auth.submit"].tap()
+        XCTAssertTrue(menu.waitForExistence(timeout: 5))
+        XCTAssertEqual(menu.value as? String, savedDensity)
+        XCTAssertEqual(query.value as? String, "Search this library")
+        XCTAssertTrue(app.buttons["Clear filters"].exists)
+        XCTAssertTrue(app.staticTexts["DVD"].exists)
+        menu.tap()
+        let restoredSort = XCTAttachment(screenshot: app.screenshot())
+        restoredSort.name = "Restored Library sort after relaunch"
+        restoredSort.lifetime = .keepAlways
+        add(restoredSort)
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.55)).tap()
+    }
+
     func testSignInFailureSuccessAndSignOut() {
         launch(); XCTAssertTrue(app.descendants(matching: .any)["auth.brand"].firstMatch.exists)
         XCTAssertFalse(app.buttons["auth.demo"].exists)
