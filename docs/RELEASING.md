@@ -9,7 +9,7 @@ scope, build number and target environment. The prepared first candidate is `rel
 
 | Stage | Git branch / tag | App display label | Numeric iOS version |
 | --- | --- | --- | --- |
-| Upcoming development | `dev` and feature branches | `1.0.0-SNAPSHOT` | `1.0.0` |
+| Upcoming development | `dev` and feature branches | `1.1.0-SNAPSHOT` | `1.1.0` |
 | Candidate stabilization | `release/1.0.0-rc.1` | `1.0.0-rc.1` | `1.0.0` |
 | Promoted release | `main`, immutable tag `1.0.0` | `1.0.0` | `1.0.0` |
 | Next development cycle | `dev` | Next agreed version plus `-SNAPSHOT` | That version's numeric base |
@@ -176,3 +176,27 @@ RC1 remains unchanged. Numeric version is `1.0.0`, display label `1.0.0-rc.2`,
 and numeric build is `3`. The local Release override selects the same hosted alpha
 backend. TestFlight remains deferred; this candidate is for direct iPhone testing.
 No changes are merged into dev while the RC is under test.
+
+## 1.0.0 main-promotion preparation
+
+Peter accepted RC2 and requested preparing it for main while preserving dev at
+`1.1.0-SNAPSHOT`, both frozen RC branches, and the prohibition on a final tag or
+deployment. The isolated promotion branch is `release/1.0.0`, based on accepted
+RC2 `a5ce4d86f8769a4ed078f7995f40d3b658b514ed`. Final numeric/display versions
+are both `1.0.0`, with build `4` (verify availability before any future upload).
+
+Only the previously validated UI-test preference isolation, relaunch-test fix and
+partial-preferences coverage changes from dev are included beyond RC2; no 1.1.0
+feature work is imported. Production preferences still use app-owned defaults.
+
+Production backend configuration is deliberately absent from this worktree. The
+ignored alpha Release override is not copied. Source/build validation does not
+establish production runtime readiness: select the intended production endpoint
+and public client key, then verify a new archive against that environment before
+any distribution. TestFlight remains deferred.
+
+Review, commit, push and the main PR/merge are separate from this preparation.
+No final tag, upload or deployment is performed here. Main remains at released
+0.2 until promotion is explicitly authorized. Dev remains unchanged at
+`0cdab458641bd1058b7ad4f81314ec7c6cf52a12`; RC1 is `704ccdb` and RC2 is
+`a5ce4d8`. The installed iPhone RC2 is unchanged.

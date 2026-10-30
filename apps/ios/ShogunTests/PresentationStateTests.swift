@@ -25,6 +25,19 @@ final class PresentationStateTests: XCTestCase {
         XCTAssertEqual(store.libraryColumns, 3)
     }
 
+    func testPartialSavedLibraryPreferencesUseDefaults() throws {
+        let suite = "shogun-preferences-\(UUID().uuidString)"
+        let preferences = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { preferences.removePersistentDomain(forName: suite) }
+        preferences.set(
+            ["sort": LibrarySort.titleAscending.rawValue],
+            forKey: "library.preferences.v1.\(MockCatalog.userID)")
+        let store = CatalogStore(preferences: preferences)
+        XCTAssertEqual(store.librarySort, .titleAscending)
+        XCTAssertEqual(store.libraryFormats, [])
+        XCTAssertEqual(store.libraryColumns, 3)
+    }
+
     func testZoomMovesOneColumnAtATime() throws {
         let store = Fixtures.store()
         store.zoomIn()
