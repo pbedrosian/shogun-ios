@@ -118,21 +118,34 @@ final class AppFlowTests: XCTestCase {
     func testViewOptionsStayOpenForSortFormatClearAndRepeatedZoom() {
         launch()
         let menu = app.buttons["library.viewOptions"]
+        // Native menus may return to their parent after updating a submenu item.
+        // Require that parent to remain presented before navigating back in;
+        // never reopen the top-level menu to conceal an unintended dismissal.
+        func submenuItem(_ title: String, in submenu: String) -> XCUIElement {
+            let item = app.buttons[title]
+            if !item.waitForExistence(timeout: 2) {
+                let parent = app.buttons[submenu]
+                XCTAssertTrue(parent.isHittable, "The menu must stay open after an adjustment")
+                parent.tap()
+            }
+            XCTAssertTrue(item.waitForExistence(timeout: 3))
+            XCTAssertTrue(item.isHittable)
+            return item
+        }
         menu.tap()
         app.buttons["Title Z–A"].tap()
         XCTAssertTrue(app.buttons["Title A–Z"].isHittable)
         app.buttons["Formats"].tap()
         app.buttons["DVD"].tap()
-        XCTAssertTrue(app.buttons["VHS"].isHittable)
-        app.buttons["VHS"].tap()
-        app.buttons["Clear filters"].firstMatch.tap()
-        XCTAssertTrue(app.buttons["DVD"].isHittable)
+        submenuItem("VHS", in: "Formats").tap()
+        submenuItem("Clear filters", in: "Formats").tap()
+        _ = submenuItem("DVD", in: "Formats")
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.55)).tap()
         menu.tap()
         app.buttons["View Options"].tap()
         app.buttons["Zoom Out"].tap()
-        XCTAssertTrue(app.buttons["Zoom In"].isHittable)
-        app.buttons["Zoom Out"].tap()
+        _ = submenuItem("Zoom In", in: "View Options")
+        submenuItem("Zoom Out", in: "View Options").tap()
         XCTAssertEqual(menu.value as? String, "5")
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.55)).tap()
         XCTAssertTrue(menu.isHittable)
