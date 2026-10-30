@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+FC2800000000000000000001 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = FC2800000000000000000002; };
 BF1000000000000000000000 = {isa = PBXBuildFile; fileRef = BF0000000000000000000000; };
 BF1000000000000000000001 = {isa = PBXBuildFile; fileRef = BF0000000000000000000001; };
 BF1000000000000000000002 = {isa = PBXBuildFile; fileRef = BF0000000000000000000002; };
@@ -70,6 +71,7 @@ A6A16BBD44BB4CBBB47EA918 = {isa = PBXBuildFile; fileRef = 586BDE4EFD934B2F92EBA2
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+FC2800000000000000000002 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 BF0000000000000000000000 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShogunTheme.swift; sourceTree = "<group>"; };
 BF0000000000000000000001 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemAppearance.swift; sourceTree = "<group>"; };
 BF0000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewStyles.swift; sourceTree = "<group>"; };
@@ -268,6 +270,7 @@ E595731DB5BE47B8A35A3A1F,
 		D6D0BB7F3081A93A00887AC8 /* Shogun */ = {
 			isa = PBXGroup;
 			children = (
+FC2800000000000000000002 /* PrivacyInfo.xcprivacy */,
 				BF3000000000000000000000 /* DesignSystem */,
 				AF1000000000000000000002 /* Assets.xcassets */,
 				D6D0BB6F3081A93A00887AC8 /* App */,
@@ -369,6 +372,7 @@ CB0000000000000000000005 /* ShogunUITests */,
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+FC2800000000000000000001 /* PrivacyInfo.xcprivacy in Resources */,
 				AF1000000000000000000001,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -505,7 +509,7 @@ baseConfigurationReference = AE1E46001B964AC5BAA927D0;
 				CLANG_ENABLE_OBJC_WEAK = YES;
 				CODE_SIGN_STYLE = Automatic;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 3;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 8PT3TWUJ25;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -533,7 +537,7 @@ baseConfigurationReference = 5DE9B0A22B2A4D16865C669A;
 				CLANG_ENABLE_OBJC_WEAK = YES;
 				CODE_SIGN_STYLE = Automatic;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = 8PT3TWUJ25;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.entertainment";

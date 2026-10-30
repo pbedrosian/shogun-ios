@@ -180,6 +180,56 @@ final class AppFlowTests: XCTestCase {
         let email = app.textFields["auth.email"]; email.tap(); email.typeText("owner@shogun.test")
         let field = app.secureTextFields["auth.password"]; field.tap(); field.typeText(password)
     }
+    func testLibraryPreferencesSurviveAppRelaunch() {
+        launch()
+        fill("valid-password")
+        app.buttons["auth.submit"].tap()
+        let menu = app.buttons["library.viewOptions"]
+        XCTAssertTrue(menu.waitForExistence(timeout: 5))
+        menu.tap()
+        app.buttons["Title Z–A"].tap()
+        app.buttons["Formats"].tap()
+        let clear = app.buttons["Clear filters"].firstMatch
+        if clear.isEnabled { clear.tap() }
+        app.buttons["DVD"].tap()
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.55)).tap()
+        menu.tap()
+        app.buttons["View Options"].tap()
+        for _ in 0..<4 {
+            if app.buttons["Zoom In"].isEnabled { app.buttons["Zoom In"].tap() }
+        }
+        app.buttons["Zoom Out"].tap()
+        app.buttons["Zoom Out"].tap()
+        XCTAssertEqual(menu.value as? String, "4")
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.55)).tap()
+        let query = app.textFields["Search this library"]
+        query.tap()
+        query.typeText("temporary search")
+
+        app.terminate()
+        launch()
+        fill("valid-password")
+        app.buttons["auth.submit"].tap()
+        XCTAssertTrue(menu.waitForExistence(timeout: 5))
+        XCTAssertEqual(menu.value as? String, "4")
+        XCTAssertEqual(query.value as? String, "Search this library")
+        XCTAssertTrue(app.buttons["Clear filters"].exists)
+        XCTAssertTrue(app.staticTexts["DVD"].exists)
+        menu.tap()
+        let restoredSort = XCTAttachment(screenshot: app.screenshot())
+        restoredSort.name = "Restored Library sort after relaunch"
+        restoredSort.lifetime = .keepAlways
+        add(restoredSort)
+        app.buttons["Formats"].tap()
+        app.buttons["Clear filters"].firstMatch.tap()
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.55)).tap()
+        menu.tap()
+        app.buttons["Recently Added"].tap()
+        app.buttons["View Options"].tap()
+        app.buttons["Zoom In"].tap()
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.55)).tap()
+    }
+
     func testSignInFailureSuccessAndSignOut() {
         launch(); XCTAssertTrue(app.descendants(matching: .any)["auth.brand"].firstMatch.exists)
         XCTAssertFalse(app.buttons["auth.demo"].exists)

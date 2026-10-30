@@ -29,7 +29,8 @@ struct ConnectedCollectionTabs: View {
         self.discovery = services.discovery
         _search = StateObject(wrappedValue: CatalogSearchStore(service: services.discovery))
         _collection = StateObject(
-            wrappedValue: CollectionStore(userID: account.id, service: services.collection))
+            wrappedValue: CollectionStore(
+                userID: account.id, service: services.collection, preferences: .standard))
     }
     var body: some View {
         TabView(selection: $selectedTab) {

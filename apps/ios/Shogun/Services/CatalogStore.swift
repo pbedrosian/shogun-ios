@@ -6,11 +6,20 @@ final class CatalogStore: ObservableObject {
     @Published private var catalogLibraries: [MovieLibrary]
     @Published private var memberships: [LibraryMembership]
     @Published private(set) var copies: [OwnedCopy]
-    @Published var libraryColumns = 3
+    // Optional storage keeps fixtures/tests isolated; connected accounts inject app defaults.
+    private let preferences: UserDefaults?
+    private var preferencesKey: String { "library.preferences.v1.\(userID)" }
+    @Published var libraryColumns = 3 {
+        didSet { saveLibraryPreferences() }
+    }
     @Published var showingAddMovie = false
     @Published var libraryQuery = ""
-    @Published var librarySort: LibrarySort = .recentlyAdded
-    @Published var libraryFormats: Set<MovieFormat> = []
+    @Published var librarySort: LibrarySort = .recentlyAdded {
+        didSet { saveLibraryPreferences() }
+    }
+    @Published var libraryFormats: Set<MovieFormat> = [] {
+        didSet { saveLibraryPreferences() }
+    }
     @Published var searchQuery = ""
     @Published var selectedLibraryID = "personal"
     @Published private var personalStates: [PersonalMovieState]
@@ -25,7 +34,8 @@ final class CatalogStore: ObservableObject {
         personalStates: [PersonalMovieState] = [
             PersonalMovieState(
                 userID: MockCatalog.userID, movieID: "arrival-2016", watched: true, rating: 5)
-        ]
+        ],
+        preferences: UserDefaults? = nil
     ) {
         self.movies = movies
         self.copies = copies
@@ -33,6 +43,27 @@ final class CatalogStore: ObservableObject {
         self.memberships = memberships
         self.userID = userID
         self.personalStates = personalStates
+        self.preferences = preferences
+        if let saved = preferences?.dictionary(forKey: preferencesKey) {
+            librarySort =
+                (saved["sort"] as? String).flatMap(LibrarySort.init(rawValue:))
+                ?? .recentlyAdded
+            libraryFormats = Set(
+                (saved["formats"] as? [String] ?? []).compactMap(MovieFormat.init(rawValue:)))
+            if let columns = saved["columns"] as? Int, (2...5).contains(columns) {
+                libraryColumns = columns
+            }
+        }
+    }
+
+    private func saveLibraryPreferences() {
+        preferences?.set(
+            [
+                "sort": librarySort.rawValue,
+                "formats": MovieFormat.allCases.filter { libraryFormats.contains($0) }.map(
+                    \.rawValue),
+                "columns": libraryColumns,
+            ], forKey: preferencesKey)
     }
 
     /// Apply a confirmed snapshot without recreating navigation or losing an open form's draft.

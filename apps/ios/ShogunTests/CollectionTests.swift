@@ -76,6 +76,60 @@ import XCTest
                 }, copies: Fixtures.copies,
             states: [], defaultLibraryID: defaultID)
     }
+    func testLibraryPreferencesSurviveRefreshAndAccountRelaunch() async throws {
+        let suite = "shogun-preferences-\(UUID().uuidString)"
+        let preferences = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { preferences.removePersistentDomain(forName: suite) }
+        let fake = Fake(fixture())
+        let store = CollectionStore(userID: user, service: fake, preferences: preferences)
+        await store.refresh()
+        let catalog = try XCTUnwrap(store.catalog)
+        catalog.librarySort = .titleDescending
+        catalog.libraryFormats = [.dvd, .uhd]
+        catalog.zoomOut()
+        catalog.libraryQuery = "temporary search"
+        await store.refresh()
+        XCTAssertTrue(store.catalog === catalog)
+        XCTAssertEqual(catalog.librarySort, .titleDescending)
+        XCTAssertEqual(catalog.libraryFormats, [.dvd, .uhd])
+        store.invalidate()
+
+        let relaunched = CollectionStore(
+            userID: user, service: fake,
+            preferences: try XCTUnwrap(UserDefaults(suiteName: suite)))
+        await relaunched.refresh()
+        let restored = try XCTUnwrap(relaunched.catalog)
+        XCTAssertEqual(restored.librarySort, .titleDescending)
+        XCTAssertEqual(restored.libraryFormats, [.dvd, .uhd])
+        XCTAssertEqual(restored.libraryColumns, 4)
+        XCTAssertEqual(restored.libraryQuery, "")
+        XCTAssertEqual(restored.selectedLibraryID, "family")
+
+        restored.libraryFormats.removeAll()
+        restored.librarySort = .recentlyAdded
+        let cleared = CollectionStore(userID: user, service: fake, preferences: preferences)
+        await cleared.refresh()
+        XCTAssertEqual(cleared.catalog?.libraryFormats, [])
+        XCTAssertEqual(cleared.catalog?.librarySort, .recentlyAdded)
+    }
+
+    func testLibraryPreferencesAreIsolatedByAccount() async throws {
+        let suite = "shogun-preferences-\(UUID().uuidString)"
+        let preferences = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { preferences.removePersistentDomain(forName: suite) }
+        let first = CollectionStore(
+            userID: user, service: Fake(fixture()), preferences: preferences)
+        await first.refresh()
+        first.catalog?.libraryFormats = [.digital]
+        first.catalog?.librarySort = .titleAscending
+        let other = CollectionStore(
+            userID: UUID(), service: Fake(fixture()), preferences: preferences)
+        await other.refresh()
+        XCTAssertEqual(other.catalog?.libraryFormats, [])
+        XCTAssertEqual(other.catalog?.librarySort, .recentlyAdded)
+        XCTAssertEqual(other.catalog?.libraryColumns, 3)
+    }
+
     func testReloadRelaunchDefaultsSelectionAndRevokedAccess() async throws {
         let fake = Fake(fixture())
         let store = CollectionStore(userID: user, service: fake)
