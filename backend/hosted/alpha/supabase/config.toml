@@ -1,0 +1,13 @@
+# Hosted Auth settings only. Never push the local development config to alpha.
+# Run config diff/push with --workdir backend/hosted/alpha and the explicit project ref.
+project_id = "shogun-alpha"
+
+[auth]
+site_url = "shogun://auth-callback"
+additional_redirect_urls = ["shogun://auth-callback"]
+
+[auth.email]
+enable_confirmations = true
+double_confirm_changes = true
+secure_password_change = true
+max_frequency = "60s"

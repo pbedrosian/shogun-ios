@@ -6,8 +6,8 @@ deletion are connected. Apple/Google sign-in still require provider configuratio
 and integration. Collection synchronization is connected; see [COLLECTIONS.md](COLLECTIONS.md).
 
 For actual inbox delivery, domain/SMTP configuration, email confirmation and full
-reset acceptance checks, follow [EMAIL.md](EMAIL.md). That setup is documented but
-not activated. Local confirmation remains disabled and recovery mail uses Mailpit.
+reset acceptance checks, follow [EMAIL.md](EMAIL.md). Hosted alpha has custom SMTP and confirmed device acceptance; see the validation
+record below. Local confirmation remains disabled and recovery mail uses Mailpit.
 
 ## Simulator startup
 
@@ -75,6 +75,72 @@ and rejects secret/service-role keys. Apply migrations and deploy the delete-acc
 function before shipping. Allow `shogun://auth-callback` in the project's Auth redirect
 settings. No hosted project or provider credential is provisioned by this guide.
 Server SMTP credentials belong in the backend/provider settings, never these files.
+
+### Validated hosted configuration helper (SHO-26)
+
+Alpha uses email/password. Apple and Google sign-in exploration is tracked in SHO-32.
+Configure a verified sending domain and custom SMTP before external signup/recovery
+acceptance. Keep provider credentials in hosted Auth settings, never in iOS config.
+
+Supply `SHOGUN_HOSTED_SUPABASE_URL` and `SHOGUN_HOSTED_PUBLISHABLE_KEY` in your
+terminal environment using the selected project's HTTPS URL and **public** client
+key, then run:
+
+```sh
+npm run ios:configure:hosted -- --configuration debug
+# Only when intentionally replacing the existing Debug endpoint:
+npm run ios:configure:hosted -- --configuration debug --replace
+# Prepare Release separately, when its environment is ready:
+npm run ios:configure:hosted -- --configuration release
+```
+
+The helper accepts standard `https://PROJECT_REF.supabase.co` URLs, rejects server
+keys and malformed/injected settings, and checks project identity on legacy anon
+keys. Modern publishable keys are opaque; connectivity still needs verification
+against the selected project. It writes only the selected ignored xcconfig, with
+owner-only permissions, and refuses overwrite without `--replace`. It prints no
+key or URL. No project is created, database migrated, or app rebuilt by this command.
+Custom Supabase domains require a separately reviewed configuration path.
+
+Before applying hosted changes, record project ownership, region, service tier,
+existing data/migration state, and backup/recovery arrangements. Authenticate the
+Supabase CLI locally with `npx supabase login`; do not paste its access token into
+chat or put it in iOS configuration. Inspect hosted migration history before
+planning a push, and deploy the catalog and delete-account functions with their
+required server secrets. Keep the existing local collection intact.
+
+### Hosted alpha validation — October 29, 2026
+
+The hosted backend has the application migrations and `catalog` / `delete-account`
+functions deployed. The narrowly scoped config in
+`backend/hosted/alpha/supabase/config.toml` was applied using an explicit project
+reference. It enables confirmations, allows `shogun://auth-callback`, replaces the
+localhost site URL with that callback, and enables secure password changes.
+A subsequent config diff reported zero declared updates; undeclared remote
+settings were preserved. Never push the local development config to hosted alpha.
+
+Disposable-account hosted API checks passed:
+
+- Unconfirmed password login rejected; signup confirmation token accepted.
+- Native callback retained in generated links; password sign-in and refresh work.
+- Personal library provisioning and cross-account library isolation work.
+- Recovery token permits a password change; old password and token replay fail.
+- Anonymous private-table access and invalid-session function requests rejected.
+- Authenticated catalog search works; deletion requires the correct password and
+  deleted accounts cannot sign in. Disposable test accounts were removed.
+- RLS enabled on all seven public application tables; 22 policies present.
+
+API recovery/confirmation tests used administrative generated links without
+sending mail. Separately, custom Resend SMTP was configured with a verified sending
+domain. A signed Debug build targeting hosted alpha was installed on a physical
+iPhone; signup confirmation email delivery, account confirmation, and password
+reset were confirmed on that device.
+
+Debug was deliberately switched to hosted alpha after backing up the local
+configuration. Release settings were left unchanged. The local collection was
+backed up and migrated separately, with movie/copy fields and account-scoped reads
+verified; private backups and account data are not part of this repository.
+All 23 backend tooling tests passed. No release candidate or final tag was cut.
 
 ## Sessions and recovery
 
