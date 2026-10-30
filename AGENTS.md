@@ -21,7 +21,7 @@
 - Feature/fix work starts from latest `dev` and merges back through an MR. Work branches use `<devName>/sho-<ticket-number>` with lowercase `sho` and the matching Notion ticket number.
 - Urgent hotfix ticket branches may start from the current release tag only with explicit approval when dev contains unrelated work; return the fix to dev. See docs/RELEASING.md.
 - Release-candidate branches are the explicit exception: cut `release/<version>-rc.<n>` from an approved dev commit, stabilize and validate that frozen candidate, then promote it to main through an MR. Return candidate fixes to dev while retaining dev's next SNAPSHOT label. See docs/RELEASING.md.
-- Only an approved immutable final version tag on main (for example `1.0.0`) is a deployment source. Cutting a tag and deploying require explicit user authorization; neither feature merges nor RC creation deploy automatically.
+- Approved frozen release candidates may be distributed to TestFlight alpha against the alpha backend. Production deployments use only an approved immutable final version tag on main (for example `1.0.0`). Uploading/distributing a candidate, cutting a final tag, and deploying production each require explicit user authorization; branch creation does not publish anything.
 - Use `peterbedrosian` as the developer name for this user; for example, ticket SHO-2 uses branch `peterbedrosian/sho-2`. Do not use `feature/`, `fix/`, or `docs/` branch names for new work.
 - Confirm the developer name and ticket number from the task context before creating a branch; ask for any missing value rather than inventing one.
 - Make changes and run appropriate checks, then leave all work uncommitted for the user to review.
