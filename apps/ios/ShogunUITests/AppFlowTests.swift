@@ -118,21 +118,34 @@ final class AppFlowTests: XCTestCase {
     func testViewOptionsStayOpenForSortFormatClearAndRepeatedZoom() {
         launch()
         let menu = app.buttons["library.viewOptions"]
+        // Native menus may return to their parent after updating a submenu item.
+        // Require that parent to remain presented before navigating back in;
+        // never reopen the top-level menu to conceal an unintended dismissal.
+        func submenuItem(_ title: String, in submenu: String) -> XCUIElement {
+            let item = app.buttons[title].firstMatch
+            if !item.waitForExistence(timeout: 2) || !item.isHittable {
+                let parent = app.buttons[submenu]
+                XCTAssertTrue(parent.isHittable, "The menu must stay open after an adjustment")
+                parent.tap()
+            }
+            XCTAssertTrue(item.waitForExistence(timeout: 3))
+            XCTAssertTrue(item.isHittable)
+            return item
+        }
         menu.tap()
         app.buttons["Title Z–A"].tap()
         XCTAssertTrue(app.buttons["Title A–Z"].isHittable)
         app.buttons["Formats"].tap()
         app.buttons["DVD"].tap()
-        XCTAssertTrue(app.buttons["VHS"].isHittable)
-        app.buttons["VHS"].tap()
-        app.buttons["Clear filters"].firstMatch.tap()
-        XCTAssertTrue(app.buttons["DVD"].isHittable)
+        submenuItem("VHS", in: "Formats").tap()
+        submenuItem("Clear filters", in: "Formats").tap()
+        _ = submenuItem("DVD", in: "Formats")
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.55)).tap()
         menu.tap()
         app.buttons["View Options"].tap()
         app.buttons["Zoom Out"].tap()
-        XCTAssertTrue(app.buttons["Zoom In"].isHittable)
-        app.buttons["Zoom Out"].tap()
+        _ = submenuItem("Zoom In", in: "View Options")
+        submenuItem("Zoom Out", in: "View Options").tap()
         XCTAssertEqual(menu.value as? String, "5")
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.55)).tap()
         XCTAssertTrue(menu.isHittable)
@@ -325,8 +338,11 @@ final class AppFlowTests: XCTestCase {
                 let center = element.frame.midY
                 if center >= safeTop && center <= safeBottom { return }
             }
-            let isAbove = forTyping && element.exists && element.frame.midY < safeTop
-            let destination = isAbove ? 0.8 : 0.2
+            // Shorten the drag near the typing area to avoid overshooting on small screens.
+            let target = (safeTop + safeBottom) / 2
+            let distance = element.exists ? (element.frame.midY - target) / app.frame.height : 0.3
+            let step = max(-0.3, min(0.3, distance))
+            let destination = 0.5 - step
             app.coordinate(withNormalizedOffset: CGVector(dx: 0.94, dy: 0.5))
                 .press(
                     forDuration: 0.05,
@@ -482,8 +498,8 @@ final class AppFlowTests: XCTestCase {
     func testProfileLibraryManagementInDarkLargeText() {
         launch(dark: true, large: true)
         fill("valid-password")
-        reveal(app.buttons["auth.submit"])
-        app.buttons["auth.submit"].tap()
+        // Submit with the password keyboard instead of scrolling beneath it.
+        app.keyboards.buttons["Go"].tap()
         XCTAssertTrue(app.buttons["library.selector"].waitForExistence(timeout: 5))
         app.tabBars.buttons["Profile"].tap()
         XCTAssertEqual(app.staticTexts["auth.accountEmail"].label, "owner@shogun.test")

@@ -77,7 +77,8 @@ def main():
         version = version_output.splitlines()[0].split()[1]
         if tuple(int(part) for part in version.split(".")) < (16, 4):
             raise ValueError("CI report export requires Xcode 16.4 or later.")
-        runtimes_output = command(["xcrun", "simctl", "list", "runtimes", "-j"], output, "runtimes", timeout=30, capture=True)
+        # Cold GitHub macOS runners can spend over 30 seconds mounting runtimes.
+        runtimes_output = command(["xcrun", "simctl", "list", "runtimes", "-j"], output, "runtimes", timeout=120, capture=True)
         runtime, device = simulator_configuration(json.loads(runtimes_output), args.runtime)
         created = command(["xcrun", "simctl", "create", "Shogun CI", device["identifier"], runtime["identifier"]], output, "simulator-create", timeout=60, capture=True)
         simulator = simulator_id(created)
