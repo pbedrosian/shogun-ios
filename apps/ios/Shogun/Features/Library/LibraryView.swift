@@ -181,19 +181,19 @@ struct LibraryView: View {
             }
             Menu("Formats", systemImage: "opticaldisc") {
                 ForEach(MovieFormat.allCases) { format in
-                    Button {
-                        if store.libraryFormats.contains(format) {
-                            store.libraryFormats.remove(format)
-                        } else {
-                            store.libraryFormats.insert(format)
-                        }
-                    } label: {
-                        if store.libraryFormats.contains(format) {
-                            Label(format.rawValue, systemImage: "checkmark")
-                        } else {
-                            Text(format.rawValue)
-                        }
-                    }.accessibilityValue(
+                    Toggle(
+                        format.rawValue,
+                        isOn: Binding(
+                            get: { store.libraryFormats.contains(format) },
+                            set: { selected in
+                                if selected {
+                                    store.libraryFormats.insert(format)
+                                } else {
+                                    store.libraryFormats.remove(format)
+                                }
+                            })
+                    )
+                    .accessibilityValue(
                         store.libraryFormats.contains(format) ? "Selected" : "Not selected"
                     )
                     .menuActionDismissBehavior(.disabled)
@@ -223,7 +223,8 @@ struct LibraryView: View {
             ShogunIcon(
                 systemName: "line.3.horizontal.decrease",
                 font: ShogunTheme.Typography.viewIcon)
-        }.accessibilityLabel("Library view options")
+        }.menuActionDismissBehavior(.disabled)
+            .accessibilityLabel("Library view options")
             .accessibilityIdentifier("library.viewOptions")
             .accessibilityValue("\(columnCount)")
     }

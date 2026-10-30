@@ -325,8 +325,11 @@ final class AppFlowTests: XCTestCase {
                 let center = element.frame.midY
                 if center >= safeTop && center <= safeBottom { return }
             }
-            let isAbove = forTyping && element.exists && element.frame.midY < safeTop
-            let destination = isAbove ? 0.8 : 0.2
+            // Shorten the drag near the typing area to avoid overshooting on small screens.
+            let target = (safeTop + safeBottom) / 2
+            let distance = element.exists ? (element.frame.midY - target) / app.frame.height : 0.3
+            let step = max(-0.3, min(0.3, distance))
+            let destination = 0.5 - step
             app.coordinate(withNormalizedOffset: CGVector(dx: 0.94, dy: 0.5))
                 .press(
                     forDuration: 0.05,
@@ -482,8 +485,8 @@ final class AppFlowTests: XCTestCase {
     func testProfileLibraryManagementInDarkLargeText() {
         launch(dark: true, large: true)
         fill("valid-password")
-        reveal(app.buttons["auth.submit"])
-        app.buttons["auth.submit"].tap()
+        // Submit with the password keyboard instead of scrolling beneath it.
+        app.keyboards.buttons["Go"].tap()
         XCTAssertTrue(app.buttons["library.selector"].waitForExistence(timeout: 5))
         app.tabBars.buttons["Profile"].tap()
         XCTAssertEqual(app.staticTexts["auth.accountEmail"].label, "owner@shogun.test")
