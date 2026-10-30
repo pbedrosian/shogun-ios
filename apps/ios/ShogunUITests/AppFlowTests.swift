@@ -186,40 +186,21 @@ final class AppFlowTests: XCTestCase {
         let email = app.textFields["auth.email"]; email.tap(); email.typeText("owner@shogun.test")
         let field = app.secureTextFields["auth.password"]; field.tap(); field.typeText(password)
     }
-    private func openLibraryOptions() {
-        app.buttons["library.viewOptions"].tap()
-        // Native menus can reopen inside the last submenu; its title is then a back button.
-        if !app.buttons["Recently Added"].exists {
-            if app.buttons["Formats"].exists {
-                app.buttons["Formats"].tap()
-            } else if app.buttons["View Options"].exists {
-                app.buttons["View Options"].tap()
-            }
-        }
-        XCTAssertTrue(app.buttons["Recently Added"].waitForExistence(timeout: 5))
-    }
-
     func testLibraryPreferencesSurviveAppRelaunch() {
         launch()
         fill("valid-password")
         app.buttons["auth.submit"].tap()
         let menu = app.buttons["library.viewOptions"]
         XCTAssertTrue(menu.waitForExistence(timeout: 5))
-        openLibraryOptions()
+        XCTAssertEqual(menu.value as? String, "3")
+        app.scrollViews["library.scroll"].pinch(withScale: 2, velocity: 1)
+        let savedDensity = menu.value as? String
+        XCTAssertNotNil(savedDensity)
+        XCTAssertNotEqual(savedDensity, "3")
+        menu.tap()
         app.buttons["Title Z–A"].tap()
         app.buttons["Formats"].tap()
-        let clear = app.buttons["Clear filters"].firstMatch
-        if clear.isEnabled { clear.tap() }
         app.buttons["DVD"].tap()
-        app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.55)).tap()
-        openLibraryOptions()
-        app.buttons["View Options"].tap()
-        for _ in 0..<4 {
-            if app.buttons["Zoom In"].isEnabled { app.buttons["Zoom In"].tap() }
-        }
-        app.buttons["Zoom Out"].tap()
-        app.buttons["Zoom Out"].tap()
-        XCTAssertEqual(menu.value as? String, "4")
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.55)).tap()
         let query = app.textFields["Search this library"]
         query.tap()
@@ -230,22 +211,15 @@ final class AppFlowTests: XCTestCase {
         fill("valid-password")
         app.buttons["auth.submit"].tap()
         XCTAssertTrue(menu.waitForExistence(timeout: 5))
-        XCTAssertEqual(menu.value as? String, "4")
+        XCTAssertEqual(menu.value as? String, savedDensity)
         XCTAssertEqual(query.value as? String, "Search this library")
         XCTAssertTrue(app.buttons["Clear filters"].exists)
         XCTAssertTrue(app.staticTexts["DVD"].exists)
-        openLibraryOptions()
+        menu.tap()
         let restoredSort = XCTAttachment(screenshot: app.screenshot())
         restoredSort.name = "Restored Library sort after relaunch"
         restoredSort.lifetime = .keepAlways
         add(restoredSort)
-        app.buttons["Formats"].tap()
-        app.buttons["Clear filters"].firstMatch.tap()
-        app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.55)).tap()
-        openLibraryOptions()
-        app.buttons["Recently Added"].tap()
-        app.buttons["View Options"].tap()
-        app.buttons["Zoom In"].tap()
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.55)).tap()
     }
 
