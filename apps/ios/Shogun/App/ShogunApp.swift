@@ -12,10 +12,13 @@ import SwiftUI
                 return
             }
             if ProcessInfo.processInfo.arguments.contains("-shogun-auth-ui") {
+                let preferences = UserDefaults(
+                    suiteName: ProcessInfo.processInfo.environment["SHOGUN_UI_PREFERENCES_SUITE"]
+                        ?? "shogun-ui-preferences")
                 services = {
                     AccountServices(
                         collection: CollectionUITestService(userID: $0),
-                        discovery: DiscoveryUITestService())
+                        discovery: DiscoveryUITestService(), libraryPreferences: preferences)
                 }
                 _auth = StateObject(wrappedValue: AuthStore(service: AuthUITestService()))
                 return

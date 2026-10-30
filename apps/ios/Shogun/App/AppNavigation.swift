@@ -7,6 +7,7 @@ enum ShogunTab: Hashable {
 struct AccountServices {
     let collection: any CollectionServicing
     let discovery: any MovieDiscoveryServicing
+    var libraryPreferences: UserDefaults? = .standard
 }
 
 struct AuthRootView: View {

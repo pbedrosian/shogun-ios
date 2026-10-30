@@ -165,8 +165,14 @@ final class AppFlowTests: XCTestCase {
 
 @MainActor final class AuthFlowTests: XCTestCase {
     private var app: XCUIApplication!
-    override func setUpWithError() throws { continueAfterFailure = false; app = XCUIApplication() }
+    private var preferencesSuite = ""
+    override func setUpWithError() throws {
+        continueAfterFailure = false
+        app = XCUIApplication()
+        preferencesSuite = "shogun-ui-\(UUID().uuidString)"
+    }
     private func launch(dark: Bool = false, large: Bool = false, extra: [String] = []) {
+        app.launchEnvironment["SHOGUN_UI_PREFERENCES_SUITE"] = preferencesSuite
         app.launchArguments = ["-shogun-auth-ui"] + extra
         if dark { app.launchArguments += ["-AppleInterfaceStyle", "Dark"] }
         if large { app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"] }
@@ -180,20 +186,33 @@ final class AppFlowTests: XCTestCase {
         let email = app.textFields["auth.email"]; email.tap(); email.typeText("owner@shogun.test")
         let field = app.secureTextFields["auth.password"]; field.tap(); field.typeText(password)
     }
+    private func openLibraryOptions() {
+        app.buttons["library.viewOptions"].tap()
+        // Native menus can reopen inside the last submenu; its title is then a back button.
+        if !app.buttons["Recently Added"].exists {
+            if app.buttons["Formats"].exists {
+                app.buttons["Formats"].tap()
+            } else if app.buttons["View Options"].exists {
+                app.buttons["View Options"].tap()
+            }
+        }
+        XCTAssertTrue(app.buttons["Recently Added"].waitForExistence(timeout: 5))
+    }
+
     func testLibraryPreferencesSurviveAppRelaunch() {
         launch()
         fill("valid-password")
         app.buttons["auth.submit"].tap()
         let menu = app.buttons["library.viewOptions"]
         XCTAssertTrue(menu.waitForExistence(timeout: 5))
-        menu.tap()
+        openLibraryOptions()
         app.buttons["Title Z–A"].tap()
         app.buttons["Formats"].tap()
         let clear = app.buttons["Clear filters"].firstMatch
         if clear.isEnabled { clear.tap() }
         app.buttons["DVD"].tap()
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.55)).tap()
-        menu.tap()
+        openLibraryOptions()
         app.buttons["View Options"].tap()
         for _ in 0..<4 {
             if app.buttons["Zoom In"].isEnabled { app.buttons["Zoom In"].tap() }
@@ -215,7 +234,7 @@ final class AppFlowTests: XCTestCase {
         XCTAssertEqual(query.value as? String, "Search this library")
         XCTAssertTrue(app.buttons["Clear filters"].exists)
         XCTAssertTrue(app.staticTexts["DVD"].exists)
-        menu.tap()
+        openLibraryOptions()
         let restoredSort = XCTAttachment(screenshot: app.screenshot())
         restoredSort.name = "Restored Library sort after relaunch"
         restoredSort.lifetime = .keepAlways
@@ -223,7 +242,7 @@ final class AppFlowTests: XCTestCase {
         app.buttons["Formats"].tap()
         app.buttons["Clear filters"].firstMatch.tap()
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.55)).tap()
-        menu.tap()
+        openLibraryOptions()
         app.buttons["Recently Added"].tap()
         app.buttons["View Options"].tap()
         app.buttons["Zoom In"].tap()
