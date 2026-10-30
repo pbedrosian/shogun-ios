@@ -199,7 +199,10 @@ private struct ShogunAboutView: View {
                     LabeledContent(
                         "Version",
                         value: Bundle.main.object(
-                            forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—")
+                            forInfoDictionaryKey: "ShogunDisplayVersion") as? String
+                            ?? Bundle.main.object(
+                                forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+                            ?? "—")
                 }
                 Section("Movie information") { TMDBAttributionView() }
             }.listRowBackground(ShogunTheme.surface)

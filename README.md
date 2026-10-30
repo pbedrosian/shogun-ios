@@ -227,6 +227,12 @@ workflows run on pushes to every branch and pull request creation/updates, as we
 as weekly or manually. Local validation remains available.
 See [CI usage controls](docs/CI.md) for activation and billing limits.
 
+## Releases
+
+Branch roles, SNAPSHOT/RC labels, promotion and final-tag deployment are documented
+in [Releasing](docs/RELEASING.md). The upcoming dev version is `1.0.0-SNAPSHOT`;
+main remains `0.2` until the approved candidate is promoted.
+
 ## Troubleshooting
 
 - **Docker unavailable:** open Docker Desktop, wait until its engine is running,
