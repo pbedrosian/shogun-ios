@@ -167,3 +167,12 @@ TestFlight is deferred at Peter's request; Apple Developer Program enrollment an
 App Store Connect setup have not been completed. Continue direct Xcode device
 testing for now. No enrollment purchase, TestFlight upload, main promotion or
 final release tag is part of this preparation.
+
+## 1.0.0-rc.2 device candidate
+
+RC2 starts from frozen RC1 `704ccdbc27e1dba45c46fd8b9437c8990599aaeb` and
+includes the reviewed SHO-28 account-scoped Library preference persistence change.
+RC1 remains unchanged. Numeric version is `1.0.0`, display label `1.0.0-rc.2`,
+and numeric build is `3`. The local Release override selects the same hosted alpha
+backend. TestFlight remains deferred; this candidate is for direct iPhone testing.
+No changes are merged into dev while the RC is under test.
