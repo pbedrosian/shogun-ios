@@ -30,9 +30,11 @@ build machine happens to have checked out, or put `SNAPSHOT`/`rc` into Apple's
    required functions. Review what will ship; unfinished local work is excluded.
 3. Freeze an approved dev SHA into `release/1.0.0-rc.1`. Set the display label to
    `1.0.0-rc.1` and record its build number, commit, environment and test evidence.
-4. Keep release fixes on ticket branches based on dev, as with other work. Merge
-   fixes into dev and apply the same fix to the RC branch, without carrying other
-   unfinished features into the frozen release. Validate the resulting candidate.
+4. While a release candidate is under test, hold new merges into dev. Prepare
+   changes on ticket branches for review. For the next candidate, cut from the
+   existing RC line (for example rc.2 from rc.1) and apply only the approved changes.
+   Keep prior candidates frozen; validate the resulting candidate. Return accepted
+   release changes to dev after the RC is finished.
 5. Subsequent candidates use `release/1.0.0-rc.2`, etc., from the stabilized release
    line. Do not recut from moving dev and unintentionally expand release scope.
 6. Advance dev to the next agreed SNAPSHOT when its work starts targeting the next
@@ -90,7 +92,7 @@ and [create an app record](https://developer.apple.com/help/app-store-connect/cr
    Tags are immutable: never move or reuse a published final version tag.
 4. Deploy from that exact tag/SHA. Record the resolved commit and actual deployed
    artifacts/migration versions. Tag creation alone does not deploy anything.
-5. Merge the release changes/fixes back into dev as needed, preserving dev's next
+5. After the RC is finished, merge the accepted release changes/fixes back into dev, preserving dev's next
    SNAPSHOT label. Future feature branches continue to start from dev.
 
 The current Actions workflows validate branch pushes and MRs. There is no tag
