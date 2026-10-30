@@ -123,7 +123,7 @@ final class AppFlowTests: XCTestCase {
         // never reopen the top-level menu to conceal an unintended dismissal.
         func submenuItem(_ title: String, in submenu: String) -> XCUIElement {
             let item = app.buttons[title].firstMatch
-            if !item.waitForExistence(timeout: 2) {
+            if !item.waitForExistence(timeout: 2) || !item.isHittable {
                 let parent = app.buttons[submenu]
                 XCTAssertTrue(parent.isHittable, "The menu must stay open after an adjustment")
                 parent.tap()
