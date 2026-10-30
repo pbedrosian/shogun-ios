@@ -122,7 +122,7 @@ final class AppFlowTests: XCTestCase {
         // Require that parent to remain presented before navigating back in;
         // never reopen the top-level menu to conceal an unintended dismissal.
         func submenuItem(_ title: String, in submenu: String) -> XCUIElement {
-            let item = app.buttons[title]
+            let item = app.buttons[title].firstMatch
             if !item.waitForExistence(timeout: 2) {
                 let parent = app.buttons[submenu]
                 XCTAssertTrue(parent.isHittable, "The menu must stay open after an adjustment")
