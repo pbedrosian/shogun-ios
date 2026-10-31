@@ -9,3 +9,19 @@ struct ShogunIcon: View {
             .frame(width: ShogunTheme.Size.touchTarget, height: ShogunTheme.Size.touchTarget)
     }
 }
+
+/// Displays the approved artwork without recreating its lettering in a font.
+struct ShogunWordmark: View {
+    var width: CGFloat = ShogunTheme.Brand.compactWidth
+
+    var body: some View {
+        Image("ShogunWordmark")
+            .resizable()
+            .scaledToFill()
+            .frame(width: width, height: width / ShogunTheme.Brand.aspectRatio)
+            .clipped()
+            .clipShape(RoundedRectangle(cornerRadius: ShogunTheme.Radius.poster))
+            .accessibilityLabel("Shogun")
+            .accessibilityAddTraits(.isImage)
+    }
+}

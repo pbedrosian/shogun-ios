@@ -29,7 +29,9 @@ final class AppFlowTests: XCTestCase {
 
     private func zoom(_ action: String) {
         app.buttons["library.viewOptions"].tap()
+        app.buttons["View Options"].tap()
         app.buttons[action].tap()
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.55)).tap()
     }
 
     func testLibrarySearchAndViewingDiaryPersistAcrossTabs() {
@@ -112,20 +114,65 @@ final class AppFlowTests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Movie"].waitForExistence(timeout: 5))
     }
 
+
+    func testViewOptionsStayOpenForSortFormatClearAndRepeatedZoom() {
+        launch()
+        let menu = app.buttons["library.viewOptions"]
+        // Native menus may return to their parent after updating a submenu item.
+        // Require that parent to remain presented before navigating back in;
+        // never reopen the top-level menu to conceal an unintended dismissal.
+        func submenuItem(_ title: String, in submenu: String) -> XCUIElement {
+            let item = app.buttons[title].firstMatch
+            if !item.waitForExistence(timeout: 2) || !item.isHittable {
+                let parent = app.buttons[submenu]
+                XCTAssertTrue(parent.isHittable, "The menu must stay open after an adjustment")
+                parent.tap()
+            }
+            XCTAssertTrue(item.waitForExistence(timeout: 3))
+            XCTAssertTrue(item.isHittable)
+            return item
+        }
+        menu.tap()
+        app.buttons["Title Z–A"].tap()
+        XCTAssertTrue(app.buttons["Title A–Z"].isHittable)
+        app.buttons["Formats"].tap()
+        app.buttons["DVD"].tap()
+        submenuItem("VHS", in: "Formats").tap()
+        submenuItem("Clear filters", in: "Formats").tap()
+        _ = submenuItem("DVD", in: "Formats")
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.55)).tap()
+        menu.tap()
+        app.buttons["View Options"].tap()
+        app.buttons["Zoom Out"].tap()
+        _ = submenuItem("Zoom In", in: "View Options")
+        submenuItem("Zoom Out", in: "View Options").tap()
+        XCTAssertEqual(menu.value as? String, "5")
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.55)).tap()
+        XCTAssertTrue(menu.isHittable)
+    }
+
     func testAccessibilityTextKeepsTwoColumns() {
         launch(dark: true, accessibilityText: true)
         let menu = app.buttons["library.viewOptions"]
         XCTAssertEqual(menu.value as? String, "2")
         menu.tap()
+        app.buttons["View Options"].tap()
         XCTAssertFalse(app.buttons["Zoom In"].isEnabled)
         XCTAssertFalse(app.buttons["Zoom Out"].isEnabled)
     }
+
 }
 
 @MainActor final class AuthFlowTests: XCTestCase {
     private var app: XCUIApplication!
-    override func setUpWithError() throws { continueAfterFailure = false; app = XCUIApplication() }
+    private var preferencesSuite = ""
+    override func setUpWithError() throws {
+        continueAfterFailure = false
+        app = XCUIApplication()
+        preferencesSuite = "shogun-ui-\(UUID().uuidString)"
+    }
     private func launch(dark: Bool = false, large: Bool = false, extra: [String] = []) {
+        app.launchEnvironment["SHOGUN_UI_PREFERENCES_SUITE"] = preferencesSuite
         app.launchArguments = ["-shogun-auth-ui"] + extra
         if dark { app.launchArguments += ["-AppleInterfaceStyle", "Dark"] }
         if large { app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"] }
@@ -139,15 +186,59 @@ final class AppFlowTests: XCTestCase {
         let email = app.textFields["auth.email"]; email.tap(); email.typeText("owner@shogun.test")
         let field = app.secureTextFields["auth.password"]; field.tap(); field.typeText(password)
     }
+    func testLibraryPreferencesSurviveAppRelaunch() {
+        launch()
+        fill("valid-password")
+        app.buttons["auth.submit"].tap()
+        let menu = app.buttons["library.viewOptions"]
+        XCTAssertTrue(menu.waitForExistence(timeout: 5))
+        XCTAssertEqual(menu.value as? String, "3")
+        app.scrollViews["library.scroll"].pinch(withScale: 2, velocity: 1)
+        let savedDensity = menu.value as? String
+        XCTAssertNotNil(savedDensity)
+        XCTAssertNotEqual(savedDensity, "3")
+        menu.tap()
+        app.buttons["Title Z–A"].tap()
+        app.buttons["Formats"].tap()
+        app.buttons["DVD"].tap()
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.55)).tap()
+        let query = app.textFields["Search this library"]
+        query.tap()
+        query.typeText("temporary search")
+
+        app.terminate()
+        launch()
+        fill("valid-password")
+        app.buttons["auth.submit"].tap()
+        XCTAssertTrue(menu.waitForExistence(timeout: 5))
+        XCTAssertEqual(menu.value as? String, savedDensity)
+        XCTAssertEqual(query.value as? String, "Search this library")
+        XCTAssertTrue(app.buttons["Clear filters"].exists)
+        XCTAssertTrue(app.staticTexts["DVD"].exists)
+        menu.tap()
+        let restoredSort = XCTAttachment(screenshot: app.screenshot())
+        restoredSort.name = "Restored Library sort after relaunch"
+        restoredSort.lifetime = .keepAlways
+        add(restoredSort)
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.55)).tap()
+    }
+
     func testSignInFailureSuccessAndSignOut() {
-        launch(); XCTAssertTrue(app.staticTexts["auth.brand"].exists)
+        launch(); XCTAssertTrue(app.descendants(matching: .any)["auth.brand"].firstMatch.exists)
         XCTAssertFalse(app.buttons["auth.demo"].exists)
         XCTAssertFalse(app.staticTexts["Your movies.\nYour collection."].exists)
         fill("invalid-password"); app.buttons["auth.submit"].tap()
         XCTAssertTrue(app.staticTexts["auth.error"].waitForExistence(timeout: 5))
         let field = app.secureTextFields["auth.password"]; field.tap(); field.typeText("valid-password"); app.buttons["auth.submit"].tap()
         XCTAssertTrue(app.buttons["library.selector"].waitForExistence(timeout: 5))
-        app.tabBars.buttons["Profile"].tap(); XCTAssertEqual(app.staticTexts["auth.accountEmail"].label, "owner@shogun.test")
+        let declinePasswordSave = app.buttons["Not Now"]
+        if declinePasswordSave.waitForExistence(timeout: 2) { declinePasswordSave.tap() }
+        let profile = app.tabBars.buttons["Profile"]
+        let profileReady = XCTNSPredicateExpectation(predicate: NSPredicate(format: "hittable == true"), object: profile)
+        XCTAssertEqual(XCTWaiter.wait(for: [profileReady], timeout: 5), .completed)
+        profile.tap()
+        XCTAssertTrue(app.staticTexts["auth.accountEmail"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.staticTexts["auth.accountEmail"].label, "owner@shogun.test")
         reveal(app.buttons["auth.signOut"]); app.buttons["auth.signOut"].tap(); XCTAssertTrue(app.textFields["auth.email"].waitForExistence(timeout: 5))
     }
     func testCreateAccountConfirmationAndRecovery() {
@@ -290,8 +381,11 @@ final class AppFlowTests: XCTestCase {
                 let center = element.frame.midY
                 if center >= safeTop && center <= safeBottom { return }
             }
-            let isAbove = forTyping && element.exists && element.frame.midY < safeTop
-            let destination = isAbove ? 0.8 : 0.2
+            // Shorten the drag near the typing area to avoid overshooting on small screens.
+            let target = (safeTop + safeBottom) / 2
+            let distance = element.exists ? (element.frame.midY - target) / app.frame.height : 0.3
+            let step = max(-0.3, min(0.3, distance))
+            let destination = 0.5 - step
             app.coordinate(withNormalizedOffset: CGVector(dx: 0.94, dy: 0.5))
                 .press(
                     forDuration: 0.05,
@@ -406,12 +500,70 @@ final class AppFlowTests: XCTestCase {
         launch(); fill("valid-password"); app.buttons["auth.submit"].tap()
         XCTAssertTrue(app.buttons["library.selector"].waitForExistence(timeout: 5))
         app.tabBars.buttons["Profile"].tap()
-        app.buttons["Use My Library by default"].tap()
-        XCTAssertTrue(app.staticTexts["Default library"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts["Movie information"].exists)
+        let preview = XCTAttachment(screenshot: app.screenshot())
+        preview.name = "Compact profile - light"
+        preview.lifetime = .keepAlways
+        add(preview)
+        app.buttons["About & credits"].tap()
+        XCTAssertTrue(app.staticTexts["This product uses the TMDB API but is not endorsed or certified by TMDB."].waitForExistence(timeout: 5))
+        app.navigationBars.buttons["Profile"].tap()
+        app.buttons["profile.manageLibraries"].tap()
+        let personal = app.buttons["profile.defaultLibrary.20000000-0000-0000-0000-000000000001"]
+        personal.tap()
+        XCTAssertTrue(personal.waitForExistence(timeout: 5))
+        let selected = NSPredicate(format: "value == %@", "Default library")
+        expectation(for: selected, evaluatedWith: personal)
+        waitForExpectations(timeout: 5)
         let create = app.buttons["Create library"]; reveal(create); create.tap()
         let name = app.textFields["collection.libraryName"]; name.tap(); name.typeText("Family films")
         app.navigationBars.buttons["Create"].tap()
-        XCTAssertTrue(app.staticTexts["Family films"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Family films"].waitForExistence(timeout: 5))
+        app.buttons["Family films"].tap()
+        expectation(for: selected, evaluatedWith: app.buttons["Family films"])
+        waitForExpectations(timeout: 5)
+        app.navigationBars.buttons["Profile"].tap()
+        XCTAssertTrue(app.otherElements.containing(.staticText, identifier: "Family films").firstMatch.waitForExistence(timeout: 5))
+        app.buttons["profile.manageLibraries"].tap()
+        XCTAssertEqual(personal.value as? String, "Select as default")
+        XCTAssertEqual(app.buttons["Family films"].value as? String, "Default library")
+        app.navigationBars.buttons["Profile"].tap()
+        app.buttons["profile.openLibrary.20000000-0000-0000-0000-000000000001"].tap()
+        let librarySelector = app.buttons["library.selector"]
+        XCTAssertTrue(librarySelector.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.tabBars.buttons["Library"].isSelected)
+        XCTAssertTrue(librarySelector.label.contains("My Library"))
+        app.tabBars.buttons["Profile"].tap()
+        app.buttons["profile.manageLibraries"].tap()
+        XCTAssertEqual(app.buttons["Family films"].value as? String, "Default library")
+    }
+
+    func testProfileLibraryManagementInDarkLargeText() {
+        launch(dark: true, large: true)
+        fill("valid-password")
+        // Submit with the password keyboard instead of scrolling beneath it.
+        app.keyboards.buttons["Go"].tap()
+        XCTAssertTrue(app.buttons["library.selector"].waitForExistence(timeout: 5))
+        app.tabBars.buttons["Profile"].tap()
+        XCTAssertEqual(app.staticTexts["auth.accountEmail"].label, "owner@shogun.test")
+        XCTAssertFalse(app.staticTexts["Movie information"].exists)
+        let profile = XCTAttachment(screenshot: app.screenshot())
+        profile.name = "Compact profile - dark large text"
+        profile.lifetime = .keepAlways
+        add(profile)
+        let manage = app.buttons["profile.manageLibraries"]
+        reveal(manage)
+        manage.tap()
+        let personal = app.buttons["profile.defaultLibrary.20000000-0000-0000-0000-000000000001"]
+        XCTAssertTrue(personal.waitForExistence(timeout: 5))
+        reveal(personal)
+        personal.tap()
+        expectation(for: NSPredicate(format: "value == %@", "Default library"), evaluatedWith: personal)
+        waitForExpectations(timeout: 5)
+        let picker = XCTAttachment(screenshot: app.screenshot())
+        picker.name = "Default library picker - dark large text"
+        picker.lifetime = .keepAlways
+        add(picker)
     }
 
     func testLiveDiscoveryBlankSearchPaginationAndDetails() {

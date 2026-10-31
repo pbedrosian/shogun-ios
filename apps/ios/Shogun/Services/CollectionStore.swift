@@ -9,10 +9,12 @@ import Foundation
     @Published private(set) var defaultLibraryID: String?
     private let service: any CollectionServicing
     private let userID: String
+    private let preferences: UserDefaults?
     private var active = true
-    init(userID: UUID, service: any CollectionServicing) {
+    init(userID: UUID, service: any CollectionServicing, preferences: UserDefaults? = nil) {
         self.userID = userID.uuidString.lowercased()
         self.service = service
+        self.preferences = preferences
     }
     func invalidate() {
         active = false
@@ -35,7 +37,8 @@ import Foundation
         let next = CatalogStore(
             movies: snapshot.movies, copies: snapshot.copies,
             libraries: snapshot.libraries, memberships: snapshot.memberships,
-            userID: userID, personalStates: snapshot.states.filter { $0.userID == userID })
+            userID: userID, personalStates: snapshot.states.filter { $0.userID == userID },
+            preferences: preferences)
         let writable = Set(next.writableLibraries.map(\.id))
         defaultLibraryID = snapshot.defaultLibraryID.flatMap { writable.contains($0) ? $0 : nil }
         let previous = catalog?.selectedLibraryID

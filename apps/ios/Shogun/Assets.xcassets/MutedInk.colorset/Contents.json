@@ -5,30 +5,30 @@
       "color": {
         "color-space": "srgb",
         "components": {
-          "red": "0.4",
-          "green": "0.4196078431372549",
-          "blue": "0.43137254901960786",
+          "red": "0.321569",
+          "green": "0.380392",
+          "blue": "0.439216",
           "alpha": "1.000"
         }
       }
     },
     {
       "idiom": "universal",
+      "color": {
+        "color-space": "srgb",
+        "components": {
+          "red": "0.701961",
+          "green": "0.741176",
+          "blue": "0.784314",
+          "alpha": "1.000"
+        }
+      },
       "appearances": [
         {
           "appearance": "luminosity",
           "value": "dark"
         }
-      ],
-      "color": {
-        "color-space": "srgb",
-        "components": {
-          "red": "0.6274509803921569",
-          "green": "0.6509803921568628",
-          "blue": "0.6588235294117647",
-          "alpha": "1.000"
-        }
-      }
+      ]
     }
   ],
   "info": {

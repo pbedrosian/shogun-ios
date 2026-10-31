@@ -18,7 +18,7 @@ import XCTest
                         {"library_id":"view","user_id":"user","role":"viewer"}],
                      "movies":[{"id":"\(id)","title":"Arrival","release_year":2016,"synopsis":"First contact"},
                         {"id":"unknown","title":"Undated","release_year":null,"synopsis":""}],
-                     "copies":[{"id":"copy","library_id":"library","movie_id":"\(id)","format":"Blu-ray"}],
+                     "copies":[{"id":"copy","library_id":"library","movie_id":"\(id)","format":"Blu-ray","created_at":"2026-10-29T12:00:00.123456+00:00"}],
                      "states":[{"user_id":"user","movie_id":"\(id)","watched":true,"rating":5}],
                      "default_library_id":"library"}
                     """.utf8)
@@ -32,6 +32,9 @@ import XCTest
         XCTAssertEqual(value.movies.first?.releaseYearText, "2016")
         XCTAssertEqual(value.libraries.first?.name, "Home")
         XCTAssertEqual(value.copies.first?.format, .bluRay)
+        XCTAssertEqual(
+            try XCTUnwrap(value.copies.first?.createdAt).timeIntervalSince1970,
+            1793275200.123456, accuracy: 0.001)
         XCTAssertEqual(value.states.first?.rating, 5)
         XCTAssertEqual(value.memberships.map(\.role), [.owner, .editor, .viewer])
         XCTAssertEqual(value.defaultLibraryID, "library")

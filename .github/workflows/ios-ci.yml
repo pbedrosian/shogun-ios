@@ -1,7 +1,10 @@
 name: Shogun CI
 
 on:
-  # Weekly checks only; daily development is validated locally. Times are UTC.
+  push:
+    branches: ['**']
+  pull_request:
+  # Scheduled checks use UTC and run on the default branch.
   schedule:
     - cron: '17 13 * * 1'
   workflow_dispatch:
@@ -22,7 +25,7 @@ jobs:
       DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
     steps:
       - name: Check out source and full history
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -41,7 +44,7 @@ jobs:
 
       - name: Retain diagnostic artifacts
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: shogun-ci-${{ github.run_id }}-${{ github.run_attempt }}
           retention-days: 3
@@ -66,7 +69,7 @@ jobs:
 
       - name: SonarQube Cloud analysis and quality gate
         if: success() && vars.SONAR_ENABLED == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
-        uses: SonarSource/sonarqube-scan-action@c7ee0f9df90b7aa20e8dcf9695dcfe2e7da5b4f2 # v7
+        uses: SonarSource/sonarqube-scan-action@d209202bc7d53ff1cc128f7f907dac145c9d6ae9 # v8.3.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io

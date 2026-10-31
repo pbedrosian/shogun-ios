@@ -22,6 +22,7 @@ struct PasswordUpdateView: View {
                 ).disabled(auth.isBusy)
             }.shogunAuthContent()
         }.scrollDismissesKeyboard(.interactively).shogunCanvas()
+            .tint(ShogunTheme.accent)
     }
     private func update() {
         focused = false

@@ -12,11 +12,6 @@ struct ShogunSurfaceStyle: ViewModifier {
             ShogunTheme.surface, in: RoundedRectangle(cornerRadius: ShogunTheme.Radius.control))
     }
 }
-struct ShogunBrandStyle: ViewModifier {
-    func body(content: Content) -> some View {
-        content.font(ShogunTheme.Typography.brand).tracking(2).foregroundStyle(ShogunTheme.accent)
-    }
-}
 struct MovieTitleStyle: ViewModifier {
     func body(content: Content) -> some View {
         content.font(ShogunTheme.Typography.cardTitle)
@@ -34,7 +29,7 @@ struct ShogunRatingButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label.font(ShogunTheme.Typography.actionIcon)
             .frame(minWidth: ShogunTheme.Size.ratingWidth, minHeight: ShogunTheme.Size.touchTarget)
-            .foregroundStyle(.orange)
+            .foregroundStyle(ShogunTheme.rating)
             .opacity(configuration.isPressed ? 0.8 : 1)
     }
 }
@@ -43,7 +38,6 @@ extension View {
     func shogunSurface(padding: CGFloat = ShogunTheme.Spacing.control) -> some View {
         modifier(ShogunSurfaceStyle(padding: padding))
     }
-    func shogunBrand() -> some View { modifier(ShogunBrandStyle()) }
     func movieTitleStyle() -> some View { modifier(MovieTitleStyle()) }
     func movieMetadataStyle() -> some View { modifier(MovieMetadataStyle()) }
 }
@@ -54,7 +48,7 @@ struct ShogunAuthFieldStyle: ViewModifier {
             .padding(.vertical, ShogunTheme.Spacing.compact)
             .frame(minHeight: ShogunTheme.Auth.fieldHeight)
             .background(
-                ShogunTheme.surface, in: RoundedRectangle(cornerRadius: ShogunTheme.Radius.control))
+                ShogunTheme.raised, in: RoundedRectangle(cornerRadius: ShogunTheme.Radius.control))
     }
 }
 struct ShogunAuthPrimaryButtonStyle: ButtonStyle {
@@ -63,8 +57,8 @@ struct ShogunAuthPrimaryButtonStyle: ButtonStyle {
         configuration.label.font(ShogunTheme.Typography.headline)
             .frame(maxWidth: .infinity, minHeight: ShogunTheme.Auth.fieldHeight)
             .padding(.vertical, ShogunTheme.Spacing.tight)
-            .foregroundStyle(ShogunTheme.onAccent)
-            .background(ShogunTheme.authPrimary, in: Capsule())
+            .foregroundStyle(ShogunTheme.authOnPrimary)
+            .background(ShogunTheme.Auth.silver, in: Capsule())
             .contentShape(Capsule())
             .opacity(enabled ? (configuration.isPressed ? 0.85 : 1) : 0.45)
     }
@@ -94,6 +88,7 @@ struct ShogunAuthContentStyle: ViewModifier {
 struct ShogunListCanvasStyle: ViewModifier {
     func body(content: Content) -> some View {
         content.scrollContentBackground(.hidden).background(ShogunTheme.canvas)
+            .foregroundStyle(ShogunTheme.ink)
     }
 }
 extension View {

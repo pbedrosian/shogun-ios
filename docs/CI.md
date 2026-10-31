@@ -1,6 +1,6 @@
 # Continuous integration
 
-Local validation is the default for Shogun. GitHub Actions provides weekly and manually requested checks. The optional Jenkinsfile calls the same Python runner, so both systems use identical build, analysis, test, and coverage checks. The app remains offline and does not gain runtime dependencies.
+GitHub Actions automatically validates pushes to every branch and pull request creation/updates, alongside weekly and manually requested checks. Local validation remains available. The optional Jenkinsfile calls the same Python runner, so both systems use identical build, analysis, test, and coverage checks. The app remains offline and does not gain runtime dependencies.
 
 ## Checks
 
@@ -12,20 +12,22 @@ included in the iOS coverage denominator. Backend tooling uses the root npm
 commands with the Supabase CLI workdir set to `backend`; hosted backend deployment
 and broader deployment automation remain SHO-27 work.
 
-The named GitHub check is **iOS build, tests and coverage**. Both workflows run
-once a week on Monday at 13:17 UTC (09:17 Eastern daylight time / 08:17 Eastern
-standard time), or through manual dispatch. Pushes and pull requests do not start
-these workflows. Superseded runs on the same ref are cancelled.
+The named iOS check is **iOS build, tests and coverage**; the backend check is
+**Backend schema and permissions**. Both workflows run on pushes to every branch
+and pull request creation, reopening, and updates, without branch exclusions or path filters.
+They also run weekly on Monday at 13:17 UTC (09:17 Eastern daylight time / 08:17
+Eastern standard time), or through manual dispatch. Superseded runs on the same
+ref are cancelled. A branch with an open PR can produce both a branch-push run and
+a PR run; the PR run validates GitHub's proposed merge revision.
 
 GitHub schedules run the default branch and only become active when these workflow
-changes reach that branch. Manual dispatch tests the selected branch. Until the
-updated workflows are published, the existing remote triggers remain active.
-Do not treat a weekly result as validation of later commits: run the local checks
-before requesting a merge. If branch protection requires a check on the PR commit,
-a manual run or a separately approved protection change may still be needed.
+changes reach that branch. Manual dispatch tests the selected branch. Push and PR
+runs use the workflow available for the event's revision; existing branches pick
+up the restored triggers when they incorporate this workflow change. Run local
+checks before requesting a merge, and confirm the PR checks pass on its current
+revision.
 
-The schedule reduces usage; it does not enforce the free allowance. Keep the
-account-wide Actions budget at **$0** with **Stop usage when budget limit is
+Keep the account-wide Actions budget at **$0** with **Stop usage when budget limit is
 reached** enabled, covering all repositories. Included minutes and storage are
 shared across the account; manual runs and other repositories also consume them.
 Do not raise the budget or add payment details to unblock a run. Use local tests
@@ -111,7 +113,7 @@ Sonar integration is implemented but inactive until configured. It requires an e
 4. Run the workflow. Enabling Sonar without all required settings fails the configuration step. When disabled, the summary explicitly says analysis did not run; tests/core coverage still execute.
 5. Confirm coverage imports and PR decoration in Sonar. The scanner waits up to five minutes for the configured Sonar quality gate and fails if it does not pass. Review the project's new-code definition and quality gate before making it a required MR check.
 
-Sonar credentials are not supplied to fork pull requests. The workflow uses schedule/workflow_dispatch and has only contents:read permission. Source checkout credentials are not persisted. Official checkout, artifact, and Sonar scan actions are pinned to immutable commits, with Dependabot configured to propose Actions updates into dev.
+Sonar credentials are not supplied to fork pull requests. The workflow uses push/pull_request/schedule/workflow_dispatch and has only contents:read permission. Source checkout credentials are not persisted. Official checkout, artifact, and Sonar scan actions are pinned to immutable commits, with Dependabot configured to propose Actions updates into dev.
 
 ### Set the Sonar new-code target to 85%
 
@@ -138,7 +140,7 @@ Prefer one Sonar publisher (GitHub Actions by default) so Jenkins does not submi
 
 SHO-13 stays In Development until the repository changes are reviewed and the hosted systems are verified. After approval, push an MR into dev and confirm:
 
-- Pushes and PR updates do not start a run; weekly and manual runs execute the expected revision.
+- Pushes to any branch and PR creation/updates start both workflows; weekly and manual runs execute the expected revision.
 - Build, static analysis, XCTest, standalone checks, and coverage pass on the pinned hosted toolchain.
 - A temporary deliberately failing test in a disposable branch makes the check fail and exposes diagnostics. Remove that test before merge. Local exporter regression tests already verify failed tests/coverage cannot become a green report.
 - Manual dispatch works after the workflow is present on the repository's default branch.

@@ -1,4 +1,5 @@
 import XCTest
+
 @testable import Shogun
 
 final class PresentationStateTests: XCTestCase {
@@ -9,6 +10,32 @@ final class PresentationStateTests: XCTestCase {
         XCTAssertEqual(store.libraryQuery, "")
         XCTAssertEqual(store.searchQuery, "")
         XCTAssertEqual(store.selectedLibraryID, "personal")
+    }
+
+    func testUnknownSavedPreferencesFallBackAndKeepRecognizedFormats() throws {
+        let suite = "shogun-preferences-\(UUID().uuidString)"
+        let preferences = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { preferences.removePersistentDomain(forName: suite) }
+        preferences.set(
+            ["sort": "Unknown sort", "formats": ["DVD", "Unknown format"], "columns": 99],
+            forKey: "library.preferences.v1.\(MockCatalog.userID)")
+        let store = CatalogStore(preferences: preferences)
+        XCTAssertEqual(store.librarySort, .recentlyAdded)
+        XCTAssertEqual(store.libraryFormats, [.dvd])
+        XCTAssertEqual(store.libraryColumns, 3)
+    }
+
+    func testPartialSavedLibraryPreferencesUseDefaults() throws {
+        let suite = "shogun-preferences-\(UUID().uuidString)"
+        let preferences = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { preferences.removePersistentDomain(forName: suite) }
+        preferences.set(
+            ["sort": LibrarySort.titleAscending.rawValue],
+            forKey: "library.preferences.v1.\(MockCatalog.userID)")
+        let store = CatalogStore(preferences: preferences)
+        XCTAssertEqual(store.librarySort, .titleAscending)
+        XCTAssertEqual(store.libraryFormats, [])
+        XCTAssertEqual(store.libraryColumns, 3)
     }
 
     func testZoomMovesOneColumnAtATime() throws {

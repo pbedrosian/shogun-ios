@@ -157,6 +157,7 @@ private struct CollectionPayload: Decodable {
         let libraryId: String
         let movieId: String
         let format: MovieFormat
+        let createdAt: String?
     }
     struct State: Decodable {
         let userId: String
@@ -170,6 +171,11 @@ private struct CollectionPayload: Decodable {
     let copies: [Copy]
     let states: [State]
     let defaultLibraryId: String?
+    private static func copyDate(_ value: String) -> Date? {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.date(from: value) ?? ISO8601DateFormatter().date(from: value)
+    }
     var snapshot: CollectionSnapshot {
         CollectionSnapshot(
             movies: movies.map {
@@ -190,7 +196,8 @@ private struct CollectionPayload: Decodable {
             },
             copies: copies.map {
                 OwnedCopy(
-                    id: $0.id, libraryID: $0.libraryId, movieID: $0.movieId, format: $0.format)
+                    id: $0.id, libraryID: $0.libraryId, movieID: $0.movieId, format: $0.format,
+                    createdAt: $0.createdAt.flatMap(Self.copyDate))
             },
             states: states.map {
                 PersonalMovieState(

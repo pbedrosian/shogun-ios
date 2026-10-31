@@ -17,8 +17,11 @@
 
 ## Git workflow
 
-- `main` is the stable, tested branch. `dev` is the integration branch.
-- Start each change from the latest `dev`. Every new work branch must use `<devName>/sho-<ticket-number>` with lowercase `sho` and the matching Notion ticket number.
+- `main` is the protected release branch. `dev` is the default integration branch and carries the next release's SNAPSHOT version.
+- Feature/fix work starts from latest `dev` and merges back through an MR. Work branches use `<devName>/sho-<ticket-number>` with lowercase `sho` and the matching Notion ticket number.
+- Urgent hotfix ticket branches may start from the current release tag only with explicit approval when dev contains unrelated work; return the fix to dev. See docs/RELEASING.md.
+- Release-candidate branches are the explicit exception: cut `release/<version>-rc.<n>` from an approved dev commit, stabilize and validate that frozen candidate, then promote it to main through an MR. While the RC is under test, hold new merges into dev. Cut subsequent candidates from the prior RC and apply approved changes; return accepted changes to dev after the RC is finished, retaining dev's SNAPSHOT label. See docs/RELEASING.md.
+- Approved frozen release candidates may be distributed to TestFlight alpha against the alpha backend. Production deployments use only an approved immutable final version tag on main (for example `1.0.0`). Uploading/distributing a candidate, cutting a final tag, and deploying production each require explicit user authorization; branch creation does not publish anything.
 - Use `peterbedrosian` as the developer name for this user; for example, ticket SHO-2 uses branch `peterbedrosian/sho-2`. Do not use `feature/`, `fix/`, or `docs/` branch names for new work.
 - Confirm the developer name and ticket number from the task context before creating a branch; ask for any missing value rather than inventing one.
 - Make changes and run appropriate checks, then leave all work uncommitted for the user to review.
@@ -31,7 +34,7 @@
 
 - Shared visual rules live in `apps/ios/Shogun/DesignSystem`: Theme contains semantic color, typography, spacing, size and radius tokens plus native appearance setup; Styles contains reusable ViewModifier and ButtonStyle definitions; Components contains reusable styled view elements.
 - Color values and light/dark variants stay in Assets.xcassets. Use ShogunTheme tokens rather than repeating literal fonts, colors, padding or radii in feature views.
-- Use `.shogunCanvas()`, `.shogunSurface()`, `.shogunBrand()`, `.movieTitleStyle()` and `.movieMetadataStyle()` for their corresponding visual treatments. Header icon labels use ShogunIcon; rating buttons use ShogunRatingButtonStyle.
+- Use `.shogunCanvas()`, `.shogunSurface()`, `ShogunWordmark`, `.movieTitleStyle()` and `.movieMetadataStyle()` for their corresponding visual treatments. Header icon labels use ShogunIcon; rating buttons use ShogunRatingButtonStyle.
 - Keep structural layout, navigation, data bindings and accessibility in feature/component views. Extract a style when it describes a reusable visual role; do not create a separate modifier for every stack.
 - Preserve Dynamic Type semantic fonts, the two-line reserved movie title, top-aligned grid items and the existing Photos-style view menu.
 
