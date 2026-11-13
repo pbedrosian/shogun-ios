@@ -5,6 +5,28 @@ import XCTest
     final class Service: AuthServicing {
         let signals: AsyncStream<AuthSignal>
         let continuation: AsyncStream<AuthSignal>.Continuation
+        var appleDeletionAvailable = false
+        func deleteAccountWithApplePassword(_ password: String) async throws {
+            calls += 1
+            if let failure { throw failure }
+            restored = nil
+        }
+        func deleteAccountWithApple() async throws {
+            calls += 1
+            if slow { try await Task.sleep(for: .seconds(30)) }
+            if let failure { throw failure }
+            restored = nil
+        }
+        var appleIdentityLinkingAvailable = false
+        var linkedAccount: AuthAccount?
+        func linkAppleIdentity() async throws -> AuthAccount {
+            calls += 1
+            if slow { try await Task.sleep(for: .seconds(30)) }
+            if let failure { throw failure }
+            var linked = linkedAccount ?? Self.account
+            linked.appleIdentityLinked = true
+            return linked
+        }
         var appleSignInAvailable = true
         func signInWithApple() async throws -> AuthAccount {
             try await signIn(email: "user@example.test", password: "unused")
@@ -43,6 +65,99 @@ import XCTest
     func settle(_ store: AuthStore) async {
         for _ in 0..<200 { if !store.isBusy { return }; await Task.yield() }
         XCTFail("Authentication did not settle")
+    }
+    func testApplePasswordFallbackPreservesOnFailureAndShowsManualRemovalAfterSuccess() async {
+        let service = Service()
+        var account = Service.account
+        account.appleIdentityLinked = true
+        service.restored = account
+        service.appleDeletionAvailable = true
+        let store = AuthStore(service: service)
+        store.start()
+        await settle(store)
+        store.deleteAccountWithApplePassword("")
+        XCTAssertEqual(service.calls, 0)
+        service.failure = SignInFailure.credentials
+        store.deleteAccountWithApplePassword("wrong")
+        await settle(store)
+        XCTAssertEqual(store.account, account)
+        service.failure = nil
+        store.deleteAccountWithApplePassword("password")
+        await settle(store)
+        XCTAssertNil(store.account)
+        XCTAssertTrue(store.message?.contains("Remove Shogun from Sign in with Apple") == true)
+    }
+    func testAppleDeletionKeepsMainAccountOnFailureAndCancellation() async {
+        let service = Service()
+        var account = Service.account
+        account.appleIdentityLinked = true
+        service.restored = account
+        let store = AuthStore(service: service)
+        store.start()
+        await settle(store)
+        store.deleteAccountWithApple()
+        XCTAssertEqual(service.calls, 0)
+        service.appleDeletionAvailable = true
+        service.failure = SignInFailure.appleReauthentication
+        store.deleteAccountWithApple()
+        await settle(store)
+        XCTAssertEqual(store.account, account)
+        service.failure = nil
+        service.slow = true
+        store.deleteAccountWithApple()
+        store.cancel()
+        for _ in 0..<40 { await Task.yield() }
+        await settle(store)
+        XCTAssertEqual(store.account, account)
+        XCTAssertEqual(service.signOuts, 0)
+        service.slow = false
+        store.deleteAccountWithApple()
+        await settle(store)
+        XCTAssertNil(store.account)
+    }
+    func testAppleLinkingKeepsCurrentAccountOnFailureCancellationAndMismatchedResult() async {
+        let service = Service()
+        service.restored = Service.account
+        let store = AuthStore(service: service)
+        store.start()
+        await settle(store)
+        store.linkAppleIdentity()
+        XCTAssertEqual(service.calls, 0)
+        service.appleIdentityLinkingAvailable = true
+        service.failure = SignInFailure.identityLinking
+        store.linkAppleIdentity()
+        await settle(store)
+        XCTAssertEqual(store.account, Service.account)
+        XCTAssertNotNil(store.error)
+        service.failure = nil
+        service.slow = true
+        store.linkAppleIdentity()
+        store.cancel()
+        for _ in 0..<40 { await Task.yield() }
+        await settle(store)
+        XCTAssertEqual(store.account, Service.account)
+        XCTAssertEqual(service.signOuts, 0)
+        service.slow = false
+        service.linkedAccount = AuthAccount(
+            id: UUID(), email: "other@example.test", libraryID: UUID(), libraryName: "Other")
+        store.linkAppleIdentity()
+        await settle(store)
+        XCTAssertEqual(store.account, Service.account)
+        service.linkedAccount = AuthAccount(
+            id: Service.account.id, email: Service.account.email, libraryID: UUID(),
+            libraryName: "Other")
+        store.linkAppleIdentity()
+        await settle(store)
+        XCTAssertEqual(store.account, Service.account)
+        service.linkedAccount = nil
+        store.linkAppleIdentity()
+        await settle(store)
+        XCTAssertEqual(store.account?.id, Service.account.id)
+        XCTAssertEqual(store.account?.libraryID, Service.account.libraryID)
+        XCTAssertTrue(store.account?.appleIdentityLinked == true)
+        let calls = service.calls
+        store.linkAppleIdentity()
+        XCTAssertEqual(service.calls, calls)
     }
     func testAppleLayoutPreviewCannotStartSignIn() {
         let service = Service()

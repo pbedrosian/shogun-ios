@@ -316,3 +316,34 @@ See [EMAIL.md](EMAIL.md) for verified-domain/SMTP setup, local and hosted config
 callback URLs, templates, testing, troubleshooting, and rollback. See [AUTH.md](AUTH.md)
 for the app setup. External delivery is not configured; local confirmation remains
 disabled and recovery mail is captured in Mailpit.
+
+
+### Apple-linked account deletion
+
+The local delete-account handler accepts exactly one root proof: `password`,
+`reauthentication_token` (Google), `apple`, or `apple_fallback`. Apple contains only
+`reauthentication_token`, `authorization_code` and `client_id`; the current account
+is always derived from the main Auth bearer. The main and fresh sessions must be
+different sessions for the same user, and the proof must be recently authenticated.
+After Auth validation, the server exchanges the one-time code at Apple's fixed
+HTTPS endpoint, checks the returned issuer/audience/expiry and binds the Apple
+subject to Auth's trusted identity data, then revokes authorization before deletion.
+It never decodes a caller-supplied Apple ID token as authorization. All Apple requests
+reject redirects and have bounded timeouts; errors do not expose provider tokens.
+
+Apple-linked accounts reject the implicit password/Google forms. If Apple access is
+unavailable, the explicit `apple_fallback: {password: ...}` form verifies the account's
+current password and can delete without automatic Apple revocation; its response
+includes `apple_revocation_required: true`, which must be disclosed in the client.
+This supports deletion when an Apple token cannot be obtained. A user unable to use
+either credential can initiate a support request from the deletion screen. Complete
+and verify that operational path before release; do not retain an account solely
+because provider authorization is unavailable.
+
+Apple client IDs and signing credentials are server configuration, not request
+trust or app secrets. See [Apple setup](AUTH.md#apple-account-management-and-signing-preparation)
+for the exact environment variable names and opt-in signing gate. No real Apple
+key is stored in this repository. The unit checks generate ephemeral test keys,
+and `backend:test:apple-deletion` uses real local Auth JWTs with mocked Apple
+protocol responses, verifies failed revocation preserves data, and checks the
+explicit password fallback. Never point these disposable fixtures at hosted data.

@@ -4,6 +4,9 @@ import Foundation
 import UIKit
 
 @MainActor final class SupabaseAuthService: AuthServicing {
+    let appleDeletionAvailable: Bool
+    private let appleClientID: String?
+    let appleIdentityLinkingAvailable: Bool
     let appleSignInAvailable: Bool
     private let appleFlow: @MainActor @Sendable () async throws -> AppleSignInProof
     let googleSignInAvailable: Bool
@@ -21,6 +24,9 @@ import UIKit
     init(
         config: AuthConfiguration, storage: any AuthLocalStorage = SecureAuthStorage(),
         session: URLSession = .shared,
+        appleDeletionAvailable: Bool = false,
+        appleClientID: String? = Bundle.main.bundleIdentifier,
+        appleIdentityLinkingAvailable: Bool = false,
         appleSignInAvailable: Bool = false,
         appleFlow: @escaping @MainActor @Sendable () async throws -> AppleSignInProof = {
             try await AppleAuthenticationFlow().authenticate()
@@ -30,6 +36,9 @@ import UIKit
             try await GoogleAuthenticationFlow().authenticate($0)
         }
     ) {
+        self.appleDeletionAvailable = appleDeletionAvailable
+        self.appleClientID = appleClientID
+        self.appleIdentityLinkingAvailable = appleIdentityLinkingAvailable
         self.appleSignInAvailable = appleSignInAvailable
         self.appleFlow = appleFlow
         self.googleSignInAvailable = googleSignInAvailable
@@ -73,17 +82,44 @@ import UIKit
         guard appleSignInAvailable else { throw SignInFailure.configuration }
         do {
             try storage.remove(key: recoveryKey)
-            let proof = try await appleFlow()
-            try Task.checkCancellation()
-            guard !proof.idToken.isEmpty, !proof.nonce.isEmpty else {
-                throw SignInFailure.callback
-            }
+            let proof = try await appleProof()
             _ = try await client.signInWithIdToken(
                 credentials: .init(
                     provider: .apple, idToken: proof.idToken, nonce: proof.nonce))
             try Task.checkCancellation()
             return try await account()
         } catch { throw Self.failure(error) }
+    }
+    func linkAppleIdentity() async throws -> AuthAccount {
+        guard appleIdentityLinkingAvailable else { throw SignInFailure.configuration }
+        let original = try await client.session
+        do {
+            let proof = try await appleProof()
+            let current = try await client.session
+            guard current.user.id == original.user.id else { throw SignInFailure.identityLinking }
+            let linked = try await client.linkIdentityWithIdToken(
+                credentials: .init(
+                    provider: .apple, idToken: proof.idToken, nonce: proof.nonce))
+            guard linked.user.id == original.user.id else {
+                // Fail closed before any collection request; never bootstrap another account.
+                try? await client.signOut(scope: .local)
+                throw SignInFailure.identityLinking
+            }
+            // Complete validation even if cancellation arrived after the server linked it.
+            // The store will avoid publishing a cancelled result; a restore can reconcile it.
+            return try await account(expectedUserID: original.user.id, requiringAppleIdentity: true)
+        } catch {
+            let failure = Self.failure(error)
+            if failure is CancellationError { throw failure }
+            if (failure as? SignInFailure) == .network { throw failure }
+            throw SignInFailure.identityLinking
+        }
+    }
+    private func appleProof() async throws -> AppleSignInProof {
+        let proof = try await appleFlow()
+        try Task.checkCancellation()
+        guard !proof.idToken.isEmpty, !proof.nonce.isEmpty else { throw SignInFailure.callback }
+        return proof
     }
     func signInWithGoogle() async throws -> AuthAccount {
         guard googleSignInAvailable else { throw SignInFailure.configuration }
@@ -127,6 +163,54 @@ import UIKit
             return try await account()
         } catch { throw SignInFailure.callback }
     }
+    func deleteAccountWithApplePassword(_ password: String) async throws {
+        guard appleDeletionAvailable else { throw SignInFailure.configuration }
+        do {
+            let current = try await client.session
+            try await deleteVerifiedAccount(
+                current: current,
+                proofBody: JSONEncoder().encode(["apple_fallback": ["password": password]]),
+                forbiddenFailure: .credentials)
+        } catch { throw Self.failure(error) }
+    }
+    func deleteAccountWithApple() async throws {
+        guard appleDeletionAvailable, let appleClientID else { throw SignInFailure.configuration }
+        let original = try await client.session
+        let secondary = Self.makeClient(
+            config: config, storage: TransientAuthStorage(),
+            key: "shogun-apple-delete-\(UUID().uuidString)",
+            session: authSession, persistent: false)
+        do {
+            let proof = try await appleProof()
+            guard let code = proof.authorizationCode, !code.isEmpty else {
+                throw SignInFailure.appleReauthentication
+            }
+            let fresh = try await secondary.signInWithIdToken(
+                credentials: .init(
+                    provider: .apple, idToken: proof.idToken, nonce: proof.nonce))
+            let verified = try await secondary.user()
+            guard fresh.user.id == original.user.id, verified.id == original.user.id,
+                verified.identities?.contains(where: { $0.provider == "apple" }) == true
+            else { throw SignInFailure.appleReauthentication }
+            try Task.checkCancellation()
+            let current = try await client.session
+            guard current.user.id == original.user.id else {
+                throw SignInFailure.appleReauthentication
+            }
+            let body = try JSONEncoder().encode([
+                "apple": [
+                    "reauthentication_token": fresh.accessToken, "authorization_code": code,
+                    "client_id": appleClientID,
+                ]
+            ])
+            try await deleteVerifiedAccount(
+                current: current, proofBody: body, forbiddenFailure: .appleReauthentication)
+            try? await secondary.signOut(scope: .local)
+        } catch {
+            try? await secondary.signOut(scope: .local)
+            throw Self.failure(error)
+        }
+    }
     func deleteAccountWithGoogle() async throws {
         guard googleSignInAvailable else { throw SignInFailure.configuration }
         let original = try await client.session
@@ -144,7 +228,8 @@ import UIKit
             let current = try await client.session
             guard current.user.id == original.user.id else { throw SignInFailure.reauthentication }
             try await deleteVerifiedAccount(
-                current: current, proof: ["reauthentication_token": proof.accessToken],
+                current: current,
+                proofBody: JSONEncoder().encode(["reauthentication_token": proof.accessToken]),
                 forbiddenFailure: .reauthentication)
             try? await secondary.signOut(scope: .local)
         } catch {
@@ -156,7 +241,8 @@ import UIKit
         do {
             let current = try await client.session
             try await deleteVerifiedAccount(
-                current: current, proof: ["password": password], forbiddenFailure: .credentials)
+                current: current, proofBody: JSONEncoder().encode(["password": password]),
+                forbiddenFailure: .credentials)
         } catch { throw Self.failure(error) }
     }
     private static func makeClient(
@@ -184,12 +270,12 @@ import UIKit
         }
     }
     private func deleteVerifiedAccount(
-        current: Session, proof: [String: String], forbiddenFailure: SignInFailure
+        current: Session, proofBody: Data, forbiddenFailure: SignInFailure
     ) async throws {
         struct Result: Decodable { let deleted: Bool }
         let result: Result = try await request(
             path: "functions/v1/delete-account", method: "POST", token: current.accessToken,
-            body: JSONEncoder().encode(proof), forbiddenFailure: forbiddenFailure)
+            body: proofBody, forbiddenFailure: forbiddenFailure)
         guard result.deleted else { throw SignInFailure.unavailable }
         // Clear local state even if logout now rejects the deleted identity.
         try? await signOut()
@@ -199,9 +285,17 @@ import UIKit
         try? storage.remove(key: recoveryKey)
         do { try await client.signOut(scope: .local) } catch { throw Self.failure(error) }
     }
-    private func account() async throws -> AuthAccount {
+    private func account(
+        expectedUserID: UUID? = nil, requiringAppleIdentity: Bool = false
+    ) async throws -> AuthAccount {
         let current = try await client.session
         let user = try await client.user()  // Validate the identity with Auth before routing.
+        if let expectedUserID, user.id != expectedUserID {
+            try? await client.signOut(scope: .local)
+            throw SignInFailure.identityLinking
+        }
+        let appleLinked = user.identities?.contains(where: { $0.provider == "apple" }) == true
+        guard !requiringAppleIdentity || appleLinked else { throw SignInFailure.identityLinking }
         let libraryID: UUID = try await request(
             path: "rest/v1/rpc/bootstrap_account", method: "POST", token: current.accessToken)
         struct Library: Decodable {
@@ -215,7 +309,7 @@ import UIKit
         return AuthAccount(
             id: user.id, email: user.email ?? "", libraryID: library.id, libraryName: library.name,
             googleIdentityLinked: user.identities?.contains(where: { $0.provider == "google" })
-                == true)
+                == true, appleIdentityLinked: appleLinked)
     }
     private func request<T: Decodable>(
         path: String, method: String, token: String, body: Data? = nil,

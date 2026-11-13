@@ -2,8 +2,9 @@
 
 The app uses the official Supabase Swift SDK's Auth product, pinned to 2.55.4.
 Email/password signup, sign-in, password recovery, persistent sessions and account
-deletion are connected. Google sign-in is enabled for Shogun Dev only; Apple and
-release social login remain pending. Collection synchronization is connected; see [COLLECTIONS.md](COLLECTIONS.md).
+deletion are connected. Google and native Apple sign-in are enabled for Shogun Dev;
+real Apple consent/linking/revocation acceptance is pending. Release social login
+remains disabled. Collection synchronization is connected; see [COLLECTIONS.md](COLLECTIONS.md).
 
 For actual inbox delivery, domain/SMTP configuration, email confirmation and full
 reset acceptance checks, follow [EMAIL.md](EMAIL.md). Hosted alpha has custom SMTP and confirmed device acceptance; see the validation
@@ -320,3 +321,125 @@ Sign in with Apple before extracting its logo resources.
 Artwork: [Apple Design Resources](https://developer.apple.com/design/resources/),
 [Apple custom button guidance](https://developer.apple.com/design/human-interface-guidelines/sign-in-with-apple/),
 [Google branding guidelines](https://developers.google.com/identity/branding-guidelines).
+
+
+## Apple account management and signing preparation
+
+Native Apple linking and deletion are implemented locally behind the Debug-only
+`ShogunAppleAccountManagementEnabled` flag (enabled for approved alpha testing). This flag controls the
+Profile linking action and Apple deletion support; Release forces it off. The
+separate `ShogunAppleSignInEnabled` flag is also enabled in Debug. Release forces
+both off. Dev signing requires the entitlement/profile setup described below.
+
+While signed in, Profile asks for explicit confirmation before using the SDK's
+`linkIdentityWithIdToken` endpoint. The request carries the existing authenticated
+session, not an email-based merge. Both the returned session and the Auth-verified
+user must retain the current user UUID; the store also preserves the current
+library ID. Cancellation and ordinary linking failure retain the main account.
+A cancellation after the server accepts a link can require restoration to reconcile
+the displayed provider state. Conflicting identities are not moved between users.
+Manual identity linking must be enabled in the approved Supabase Auth environment
+before live acceptance; this is enabled under the shared-alpha exception below.
+
+Apple deletion prefers fresh native authorization through an isolated memory-only
+Auth client. It sends a one-time Apple authorization code, the expected native
+client ID and a distinct same-user Supabase OAuth proof to the server. The server
+validates both Supabase tokens online, checks identity/session/freshness, exchanges
+the code directly with Apple and binds Apple's returned subject to the authenticated
+user's Apple identity. It revokes the returned Apple token before deleting the
+Shogun account. Failed revocation preserves the account; temporary proof sessions
+are cleaned up. A failure after successful revocation can require renewed Apple
+consent before a retry. Codes, Apple tokens and the generated client secret stay
+in memory; none are logged or returned to the app.
+
+If Apple confirmation is unavailable, the user can explicitly choose the Shogun
+password fallback. The server reauthenticates the current user's password and
+returns `apple_revocation_required: true` after deletion. The app clearly instructs
+the user to remove Shogun's Apple access manually, both before confirmation and
+after success; it never claims automatic revocation in this path. The ordinary
+password/Google payload cannot implicitly bypass Apple handling. The deletion
+screen also provides a user-initiated support-email route when neither credential
+is accessible. Live acceptance must cover unavailable/revoked Apple credentials
+and the support deletion process, not only successful native consent.
+
+### Signing opt-in
+
+`Configuration/AppleSignIn.entitlements` contains only the Apple sign-in capability.
+Debug leaves `CODE_SIGN_ENTITLEMENTS` empty by default so current signing continues
+to work. After the App ID/profile setup is approved and complete, add this to the
+private `Configuration/Local.xcconfig` (or pass it as an Xcode build-setting override):
+
+```xcconfig
+SHOGUN_APPLE_SIGN_IN_ENTITLEMENTS = Configuration/AppleSignIn.entitlements
+```
+
+The Dev audience is `com.petebedrosian.shogun.dev`; the release audience is
+`com.petebedrosian.shogun`. Decide Apple primary/grouped App IDs before the first
+real identity is linked, then regenerate the matching provisioning profile.
+On November 12, 2026, the release App ID was verified with Sign in with Apple
+enabled as the primary. The explicit Dev App ID was registered and grouped under
+it. The Development profile `Shogun Dev Apple Sign In` was generated using the
+existing development certificate and registered device, then installed in Xcode's
+local provisioning-profile directory. Its Apple sign-in entitlement is `Default`.
+The private Dev configuration opts into the entitlement above; standard automatic
+signing selects a compatible Xcode-managed profile without provisioning updates.
+The clean signed Dev build was verified with the Apple entitlement in both its
+signature and embedded profile, then installed on the registered iPhone.
+Release signing remains unchanged. No Apple server key has been created, and
+hosted provider configuration remains gated to the approved release except for
+Peter's November 12 shared-alpha Apple-testing exception (see below).
+
+### Shared-alpha testing exception
+
+On November 12, Peter chose to retain `shogun-alpha` instead of creating a second
+Dev backend and accepted the narrow pre-release Apple-testing exception. Use
+separate test accounts; preserve the existing 1.0.0 account and library. Release
+flags stay off, and this exception does not authorize unrelated deployments.
+
+The updated `delete-account` function was deployed as version 2. All 35 backend
+checks passed, and hosted smoke checks rejected missing/invalid authentication.
+The saved version-1 rollback source matches tag `1.0.0`; an ignored local rollback
+copy is in `build/alpha-delete-account-rollback`. To restore that source if needed:
+
+```sh
+npx supabase --workdir build/alpha-delete-account-rollback functions deploy delete-account --project-ref dxiwdblobeqyzxjktois --use-api --no-verify-jwt
+```
+
+The function continues to validate sessions online itself; gateway JWT verification
+remains unchanged. Never roll back Apple deletion support while Apple-linked users
+still depend on it without first arranging a supported deletion path.
+
+The 1.0.0 password request/response contract remains supported for accounts without
+Apple linked. Apple-linked accounts require the newer explicit Apple deletion or
+fallback flow; keep them separate from the 1.0.0 testing account. No hosted account
+was created or deleted for the smoke checks, and schema/catalog were unchanged.
+Peter registered and downloaded the Apple key, then explicitly authorized its
+transfer to `shogun-alpha` server-only secrets. The four stored secret hashes were
+verified without exposing values; the temporary transfer file was removed. Apple
+provider and server client allowlists contain only `com.petebedrosian.shogun.dev`.
+Explicit manual linking is enabled; email confirmation remains on and anonymous
+sign-in remains off. Native-only login leaves the OAuth secret field blank; the
+private key is stored in Edge Function secrets for revocation, never in that field
+or in the app. Dev login/account-management flags are now on for device testing.
+
+At the approved release setup, add the release client audience after reviewing
+the environment and enabling Release signing/presentation. Retain nonce
+verification. The deletion function uses
+server-only `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY` (PKCS#8 P-256 `.p8`)
+and comma-separated `APPLE_CLIENT_IDS` with only approved native audiences. It
+creates short-lived ES256 client-secret JWTs per attempt. Never put the private
+key or generated client secret in iOS configuration, Git or Notion. Native ID-token
+sign-in itself does not embed an Apple client secret in the app.
+
+Validation commands include `npm run backend:test:apple-deletion` and the retained
+`backend:test:google-deletion` command. Both use the shared local OAuth fixture;
+real GoTrue-issued JWTs and local data cascades are exercised, while Apple's
+exchange/revocation endpoints are mocked with ephemeral test signing keys. These
+checks do not establish real Apple consent or revocation. Live flags are enabled
+only for the approved Dev/alpha acceptance; Release remains disabled until that
+acceptance and release approval are complete.
+
+References: [Supabase identity linking](https://supabase.com/docs/guides/auth/auth-identity-linking),
+[Apple signing setup](https://developer.apple.com/documentation/signinwithapple/configuring-your-environment-for-sign-in-with-apple),
+[Apple token validation](https://developer.apple.com/documentation/signinwithapplerestapi/generate-and-validate-tokens),
+[Apple token revocation](https://developer.apple.com/documentation/signinwithapplerestapi/revoke-tokens).

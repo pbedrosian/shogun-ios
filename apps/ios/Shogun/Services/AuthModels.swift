@@ -6,13 +6,14 @@ struct AuthAccount: Equatable {
     let libraryID: UUID
     let libraryName: String
     var googleIdentityLinked = false
+    var appleIdentityLinked = false
 }
 
 enum AuthSignal { case signedOut, recovery }
 
 enum SignInFailure: Error, LocalizedError, Equatable {
     case configuration, credentials, confirmation, network, expired, password, callback,
-        unavailable, reauthentication
+        unavailable, reauthentication, identityLinking, appleReauthentication
     var errorDescription: String? {
         switch self {
         case .configuration:
@@ -28,6 +29,12 @@ enum SignInFailure: Error, LocalizedError, Equatable {
             return "This account link is invalid or expired. Request a new link on this device."
         case .reauthentication:
             return "Confirm with the same Google account you use in Shogun, then try again."
+        case .appleReauthentication:
+            return
+                "Confirm with the Apple Account connected to this Shogun account, then try again."
+        case .identityLinking:
+            return
+                "Apple could not be connected to this account. Your existing account and collection have not been moved. Try again or use your current sign-in method."
         case .unavailable: return "The account request could not be completed. Please try again."
         }
     }
@@ -36,6 +43,11 @@ enum SignInFailure: Error, LocalizedError, Equatable {
 @MainActor protocol AuthServicing: AnyObject {
     var signals: AsyncStream<AuthSignal> { get }
     var appleSignInAvailable: Bool { get }
+    var appleDeletionAvailable: Bool { get }
+    func deleteAccountWithApplePassword(_ password: String) async throws
+    func deleteAccountWithApple() async throws
+    var appleIdentityLinkingAvailable: Bool { get }
+    func linkAppleIdentity() async throws -> AuthAccount
     func signInWithApple() async throws -> AuthAccount
     var googleSignInAvailable: Bool { get }
     func signInWithGoogle() async throws -> AuthAccount
@@ -51,6 +63,13 @@ enum SignInFailure: Error, LocalizedError, Equatable {
 }
 
 extension AuthServicing {
+    func deleteAccountWithApplePassword(_ password: String) async throws {
+        throw SignInFailure.configuration
+    }
+    var appleDeletionAvailable: Bool { false }
+    func deleteAccountWithApple() async throws { throw SignInFailure.configuration }
+    var appleIdentityLinkingAvailable: Bool { false }
+    func linkAppleIdentity() async throws -> AuthAccount { throw SignInFailure.configuration }
     var appleSignInAvailable: Bool { false }
     func signInWithApple() async throws -> AuthAccount { throw SignInFailure.configuration }
     func deleteAccountWithGoogle() async throws { throw SignInFailure.configuration }

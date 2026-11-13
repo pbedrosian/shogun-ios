@@ -8,6 +8,7 @@ import UIKit
 struct AppleSignInProof: Sendable {
     let idToken: String
     let nonce: String
+    var authorizationCode: String? = nil
 }
 
 struct AppleSignInChallenge {
@@ -27,12 +28,16 @@ struct AppleSignInChallenge {
         request.state = state
         return request
     }
-    func proof(identityToken: Data?, returnedState: String?) throws -> AppleSignInProof {
+    func proof(identityToken: Data?, returnedState: String?, authorizationCode: Data? = nil) throws
+        -> AppleSignInProof
+    {
         guard returnedState == state,
             let identityToken, let token = String(data: identityToken, encoding: .utf8),
             !token.isEmpty
         else { throw SignInFailure.callback }
-        return AppleSignInProof(idToken: token, nonce: nonce)
+        return AppleSignInProof(
+            idToken: token, nonce: nonce,
+            authorizationCode: authorizationCode.flatMap { String(data: $0, encoding: .utf8) })
     }
     private static func randomValue() throws -> String {
         var bytes = [UInt8](repeating: 0, count: 32)
@@ -93,7 +98,8 @@ final class AppleAuthenticationFlow: NSObject, ASAuthorizationControllerDelegate
             finish(
                 .success(
                     try challenge.proof(
-                        identityToken: credential.identityToken, returnedState: credential.state)))
+                        identityToken: credential.identityToken, returnedState: credential.state,
+                        authorizationCode: credential.authorizationCode)))
         } catch { finish(.failure(error)) }
     }
     func authorizationController(

@@ -1,7 +1,10 @@
 #include "Version.xcconfig"
 SUPABASE_URL =
 SUPABASE_PUBLISHABLE_KEY =
+// Opt in only after the Dev App ID and signing profile support Apple sign-in.
+SHOGUN_APPLE_SIGN_IN_ENTITLEMENTS =
 #include? "Local.xcconfig"
+CODE_SIGN_ENTITLEMENTS = $(SHOGUN_APPLE_SIGN_IN_ENTITLEMENTS)
 INFOPLIST_FILE = Configuration/Debug-Info.plist
 
 // Install development builds alongside the TestFlight app.

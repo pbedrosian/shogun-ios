@@ -1,7 +1,8 @@
 # Database schema and permissions (SHO-18)
 
 All commands below run from the repository root. Supabase/PostgreSQL enforce
-permissions; the iOS app is still the offline demo until SHO-19/20.
+permissions; normal signed-in iOS sessions use durable account-scoped collections.
+Offline sample data is restricted to explicit Debug UI-test fixtures.
 
 ## Apply and test locally
 

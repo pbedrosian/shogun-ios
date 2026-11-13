@@ -11,6 +11,23 @@
             ProcessInfo.processInfo.arguments.contains("-shogun-auth-apple")
         }
         func signInWithApple() async throws -> AuthAccount { account }
+        var appleIdentityLinkingAvailable: Bool {
+            ProcessInfo.processInfo.arguments.contains("-shogun-auth-apple-linking")
+        }
+        var appleDeletionAvailable: Bool {
+            ProcessInfo.processInfo.arguments.contains("-shogun-auth-apple-deletion")
+        }
+        func deleteAccountWithApplePassword(_ password: String) async throws {
+            if password == "invalid-password" { throw SignInFailure.credentials }
+            continuation.yield(.signedOut)
+        }
+        func deleteAccountWithApple() async throws { continuation.yield(.signedOut) }
+        private var appleLinked = ProcessInfo.processInfo.arguments.contains(
+            "-shogun-auth-apple-linked")
+        func linkAppleIdentity() async throws -> AuthAccount {
+            appleLinked = true
+            return account
+        }
         let signals: AsyncStream<AuthSignal>
         private let continuation: AsyncStream<AuthSignal>.Continuation
         private var account: AuthAccount {
@@ -18,7 +35,8 @@
                 id: UUID(uuidString: "10000000-0000-0000-0000-000000000001")!,
                 email: "owner@shogun.test",
                 libraryID: UUID(uuidString: "20000000-0000-0000-0000-000000000001")!,
-                libraryName: "My Library", googleIdentityLinked: googleSignInAvailable)
+                libraryName: "My Library", googleIdentityLinked: googleSignInAvailable,
+                appleIdentityLinked: appleLinked)
         }
         private let recovery = ProcessInfo.processInfo.arguments.contains("-shogun-auth-recovery")
         init() { (signals, continuation) = AsyncStream.makeStream() }

@@ -21,9 +21,13 @@ import Foundation
     private var started = false
     private var pendingCallback: URL?
     var configured: Bool { service != nil }
+    var appleIdentityLinkingAvailable: Bool { service?.appleIdentityLinkingAvailable == true }
     var appleSignInVisible: Bool { previewAppleSignIn || appleSignInAvailable }
     var appleSignInAvailable: Bool { service?.appleSignInAvailable == true }
     var googleSignInAvailable: Bool { service?.googleSignInAvailable == true }
+    var appleDeletionAvailable: Bool {
+        service?.appleDeletionAvailable == true && account?.appleIdentityLinked == true
+    }
     var googleDeletionAvailable: Bool {
         googleSignInAvailable && account?.googleIdentityLinked == true
     }
@@ -121,6 +125,20 @@ import Foundation
             }
         }
     }
+    func linkAppleIdentity() {
+        guard !isBusy, let service, service.appleIdentityLinkingAvailable,
+            let original = account, !original.appleIdentityLinked
+        else { return }
+        perform(clearAccountOnCancellation: false) { [self] in
+            let linked = try await service.linkAppleIdentity()
+            try Task.checkCancellation()
+            guard account?.id == original.id, linked.id == original.id,
+                linked.libraryID == original.libraryID, linked.appleIdentityLinked
+            else { throw SignInFailure.identityLinking }
+            try accept(linked)
+            message = "Apple is connected to your account."
+        }
+    }
     func signInWithApple() {
         guard !isBusy, let service, service.appleSignInAvailable else { return }
         perform { [self] in try accept(try await service.signInWithApple()) }
@@ -152,6 +170,27 @@ import Foundation
             try accept(try await service.changePassword(password))
             needsPasswordUpdate = false
             message = "Your password has been updated."
+        }
+    }
+    func deleteAccountWithApplePassword(_ password: String) {
+        guard !isBusy, appleDeletionAvailable, let service else { return }
+        guard !password.isEmpty else {
+            error = "Enter your current password."
+            return
+        }
+        perform { [self] in
+            try await service.deleteAccountWithApplePassword(password)
+            clearAccount()
+            message =
+                "Your Shogun account has been deleted. Remove Shogun from Sign in with Apple in your Apple Account settings to remove Apple access too."
+        }
+    }
+    func deleteAccountWithApple() {
+        guard !isBusy, appleDeletionAvailable, let service else { return }
+        perform(clearAccountOnCancellation: false) { [self] in
+            try await service.deleteAccountWithApple()
+            clearAccount()
+            message = "Your account has been deleted."
         }
     }
     func deleteAccountWithGoogle() {

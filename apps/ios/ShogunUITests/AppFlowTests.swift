@@ -223,6 +223,91 @@ final class AppFlowTests: XCTestCase {
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.55)).tap()
     }
 
+    func testApplePasswordFallbackInDarkLargeText() {
+        launch(
+            dark: true, large: true,
+            extra: [
+                "-shogun-auth-google", "-shogun-auth-apple-linked", "-shogun-auth-apple-deletion",
+            ])
+        reveal(app.buttons["auth.google"])
+        app.buttons["auth.google"].tap()
+        XCTAssertTrue(app.tabBars.buttons["Profile"].waitForExistence(timeout: 5))
+        app.tabBars.buttons["Profile"].tap()
+        reveal(app.buttons["auth.deleteAccount"])
+        app.buttons["auth.deleteAccount"].tap()
+        let fallback = app.buttons["auth.appleDeletionFallback"]
+        reveal(fallback)
+        fallback.tap()
+        app.swipeDown()
+        XCTAssertTrue(app.staticTexts["auth.appleDeletionFallbackNotice"].exists)
+        let password = app.secureTextFields["auth.deletePassword"]
+        reveal(password)
+        password.tap()
+        password.typeText("valid-password\n")
+        let remove = app.buttons["auth.requestDeletion"]
+        reveal(remove)
+        remove.tap()
+        app.buttons["Delete permanently"].tap()
+        XCTAssertTrue(app.textFields["auth.email"].waitForExistence(timeout: 5))
+        XCTAssertTrue(
+            app.staticTexts.containing(
+                NSPredicate(format: "label CONTAINS %@", "Remove Shogun from Sign in with Apple")
+            ).firstMatch.exists)
+    }
+    func testAppleDeletionPrefersNativeConfirmation() {
+        launch(extra: [
+            "-shogun-auth-google", "-shogun-auth-apple-linked", "-shogun-auth-apple-deletion",
+        ])
+        app.buttons["auth.google"].tap()
+        XCTAssertTrue(app.tabBars.buttons["Profile"].waitForExistence(timeout: 5))
+        app.tabBars.buttons["Profile"].tap()
+        reveal(app.buttons["auth.deleteAccount"])
+        app.buttons["auth.deleteAccount"].tap()
+        XCTAssertTrue(app.staticTexts["auth.deleteAppleIdentity"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.secureTextFields["auth.deletePassword"].exists)
+        XCTAssertFalse(app.buttons["Use password instead"].exists)
+        app.buttons["auth.requestDeletion"].tap()
+        app.buttons["Keep account"].tap()
+        XCTAssertTrue(app.buttons["auth.requestDeletion"].exists)
+        app.buttons["auth.requestDeletion"].tap()
+        app.buttons["Delete permanently"].tap()
+        XCTAssertTrue(app.textFields["auth.email"].waitForExistence(timeout: 5))
+    }
+    func testAppleIdentityLinkingRequiresConfirmationAndKeepsCurrentAccount() {
+        verifyAppleIdentityLinking()
+    }
+    func testAppleIdentityLinkingInDarkLargeText() {
+        verifyAppleIdentityLinking(dark: true, large: true)
+    }
+    private func verifyAppleIdentityLinking(dark: Bool = false, large: Bool = false) {
+        launch(
+            dark: dark, large: large, extra: ["-shogun-auth-google", "-shogun-auth-apple-linking"])
+        app.buttons["auth.google"].tap()
+        XCTAssertTrue(app.tabBars.buttons["Profile"].waitForExistence(timeout: 5))
+        app.tabBars.buttons["Profile"].tap()
+        let accountEmail = app.staticTexts["auth.accountEmail"]
+        XCTAssertTrue(accountEmail.waitForExistence(timeout: 5))
+        let email = accountEmail.label
+        let connect = app.buttons["auth.connectApple"]
+        reveal(connect)
+        connect.tap()
+        app.buttons["Cancel"].tap()
+        XCTAssertFalse(app.staticTexts["auth.appleConnected"].exists)
+        connect.tap()
+        app.buttons["Continue with Apple"].tap()
+        XCTAssertTrue(app.staticTexts["auth.appleConnected"].waitForExistence(timeout: 5))
+        XCTAssertFalse(connect.exists)
+        let preview = XCTAttachment(screenshot: app.screenshot())
+        preview.name = "Apple connected to existing Shogun account"
+        preview.lifetime = .keepAlways
+        add(preview)
+        for _ in 0..<8 {
+            if accountEmail.exists { break }
+            app.swipeDown()
+        }
+        XCTAssertTrue(accountEmail.waitForExistence(timeout: 5))
+        XCTAssertEqual(accountEmail.label, email)
+    }
     func testAppleLayoutPreviewIsDisabledOnSignInAndSignup() {
         launch(extra: ["-shogun-auth-apple-preview", "-shogun-auth-google"])
         let apple = app.buttons["auth.apple"]

@@ -51,6 +51,8 @@ jobs:
         run: npm run backend:test:deletion
       - name: Google reauthentication deletion checks
         run: npm run backend:test:google-deletion
+      - name: Apple reauthentication and mocked revocation checks
+        run: npm run backend:test:apple-deletion
       - name: Stop local backend
         if: always()
         run: npm run backend:stop
