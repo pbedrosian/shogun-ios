@@ -48,7 +48,7 @@ struct ShogunAuthFieldStyle: ViewModifier {
             .padding(.vertical, ShogunTheme.Spacing.compact)
             .frame(minHeight: ShogunTheme.Auth.fieldHeight)
             .background(
-                ShogunTheme.raised, in: RoundedRectangle(cornerRadius: ShogunTheme.Radius.control))
+                ShogunTheme.raised, in: Capsule())
     }
 }
 struct ShogunAuthPrimaryButtonStyle: ButtonStyle {

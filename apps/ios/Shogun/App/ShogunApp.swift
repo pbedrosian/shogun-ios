@@ -20,7 +20,11 @@ import SwiftUI
                         collection: CollectionUITestService(userID: $0),
                         discovery: DiscoveryUITestService(), libraryPreferences: preferences)
                 }
-                _auth = StateObject(wrappedValue: AuthStore(service: AuthUITestService()))
+                _auth = StateObject(
+                    wrappedValue: AuthStore(
+                        service: AuthUITestService(),
+                        previewAppleSignIn: ProcessInfo.processInfo.arguments.contains(
+                            "-shogun-auth-apple-preview")))
                 return
             }
             let allowHTTP = true
@@ -29,8 +33,26 @@ import SwiftUI
         #endif
         let config = try? AuthConfiguration(
             info: Bundle.main.infoDictionary ?? [:], allowLocalHTTP: allowHTTP)
-        let service = config.map { SupabaseAuthService(config: $0) }
-        _auth = StateObject(wrappedValue: AuthStore(service: service))
+        #if DEBUG
+            let applePreview = true
+            let appleEnabled =
+                Bundle.main.object(forInfoDictionaryKey: "ShogunAppleSignInEnabled") as? Bool
+                == true
+            let googleEnabled =
+                Bundle.main.object(forInfoDictionaryKey: "ShogunGoogleSignInEnabled") as? Bool
+                == true
+        #else
+            let applePreview = false
+            let appleEnabled = false
+            let googleEnabled = false
+        #endif
+        let service = config.map {
+            SupabaseAuthService(
+                config: $0, appleSignInAvailable: appleEnabled,
+                googleSignInAvailable: googleEnabled)
+        }
+        _auth = StateObject(
+            wrappedValue: AuthStore(service: service, previewAppleSignIn: applePreview))
         services = service.map { auth in
             { userID in
                 let backend = auth.backendClient(for: userID)

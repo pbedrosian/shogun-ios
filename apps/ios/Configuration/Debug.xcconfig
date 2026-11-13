@@ -3,3 +3,7 @@ SUPABASE_URL =
 SUPABASE_PUBLISHABLE_KEY =
 #include? "Local.xcconfig"
 INFOPLIST_FILE = Configuration/Debug-Info.plist
+
+// Install development builds alongside the TestFlight app.
+INFOPLIST_KEY_CFBundleDisplayName = Shogun Dev
+SHOGUN_AUTH_SCHEME = shogun-dev

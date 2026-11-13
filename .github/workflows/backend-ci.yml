@@ -49,6 +49,8 @@ jobs:
         run: npm run backend:test:catalog
       - name: Account deletion security and cascade tests
         run: npm run backend:test:deletion
+      - name: Google reauthentication deletion checks
+        run: npm run backend:test:google-deletion
       - name: Stop local backend
         if: always()
         run: npm run backend:stop

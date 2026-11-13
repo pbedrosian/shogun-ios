@@ -5,6 +5,8 @@ struct DeleteAccountView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var password = ""
     @State private var confirming = false
+    @State private var usePassword = false
+    private var usesGoogle: Bool { auth.googleDeletionAvailable && !usePassword }
     @FocusState private var passwordFocused: Bool
     var body: some View {
         NavigationStack {
@@ -22,22 +24,43 @@ struct DeleteAccountView: View {
                             ).foregroundStyle(ShogunTheme.muted)
                     }
                     Section("Confirm your identity") {
-                        SecureField("Current password", text: $password).textContentType(.password)
+                        if usesGoogle {
+                            Text(
+                                "Sign in with Google as \(auth.account?.email ?? "your current account") to confirm deletion."
+                            )
+                            .accessibilityIdentifier("auth.deleteGoogleIdentity")
+                        } else {
+                            SecureField("Current password", text: $password).textContentType(
+                                .password
+                            )
                             .focused($passwordFocused).submitLabel(.done)
                             .onSubmit { passwordFocused = false }
                             .disabled(auth.isBusy).accessibilityIdentifier("auth.deletePassword")
+                        }
+                        if auth.googleDeletionAvailable {
+                            Button(usesGoogle ? "Use password instead" : "Use Google instead") {
+                                usePassword.toggle()
+                                password = ""
+                                auth.clearFeedback()
+                            }.disabled(auth.isBusy)
+                        }
                     }
                     Section {
                         if let error = auth.error {
                             Text(error).foregroundStyle(ShogunTheme.error).accessibilityIdentifier(
                                 "auth.deleteError")
                         }
-                        if auth.isBusy { ProgressView("Deleting account…") }
+                        if auth.isBusy {
+                            ProgressView(
+                                usesGoogle
+                                    ? "Confirming and deleting account…" : "Deleting account…")
+                        }
                         Button("Delete account", role: .destructive) {
                             passwordFocused = false
                             confirming = true
                         }
-                        .disabled(password.isEmpty || auth.isBusy).accessibilityIdentifier(
+                        .disabled((!usesGoogle && password.isEmpty) || auth.isBusy)
+                        .accessibilityIdentifier(
                             "auth.requestDeletion")
                     }
 
@@ -56,7 +79,11 @@ struct DeleteAccountView: View {
                 .interactiveDismissDisabled(auth.isBusy)
                 .alert("Delete your account permanently?", isPresented: $confirming) {
                     Button("Delete permanently", role: .destructive) {
-                        auth.deleteAccount(password: password)
+                        if usesGoogle {
+                            auth.deleteAccountWithGoogle()
+                        } else {
+                            auth.deleteAccount(password: password)
+                        }
                         password = ""
                     }
                     Button("Keep account", role: .cancel) {}

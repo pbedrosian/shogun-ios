@@ -74,6 +74,7 @@ __pycache__/
 
 # Local backend tooling and credentials
 node_modules/
+/supabase/.temp/
 .env
 .env.*
 !.env.example

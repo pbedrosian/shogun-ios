@@ -46,7 +46,12 @@ def simulator_configuration(runtimes, requested=None):
         available = [runtime for runtime in available if runtime["identifier"] == requested]
     if not available:
         raise ValueError("No compatible installed iOS simulator runtime. Install one in Xcode Settings > Components.")
-    runtime = max(available, key=lambda item: tuple(int(n) for n in item["version"].split(".")))
+    # Device-specific runtimes can share a version with the standard runtime.
+    # Prefer the documented iPhone 16 destination when versions tie.
+    runtime = max(available, key=lambda item: (
+        tuple(int(n) for n in item["version"].split(".")),
+        any(device.get("name") == "iPhone 16" for device in item.get("supportedDeviceTypes", [])),
+    ))
     devices = [device for device in runtime.get("supportedDeviceTypes", [])
                if device.get("productFamily") == "iPhone" or device.get("name", "").startswith("iPhone")]
     if not devices:
