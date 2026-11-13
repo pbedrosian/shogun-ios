@@ -104,7 +104,7 @@ def main():
         command(["xcrun", "simctl", "bootstatus", simulator, "-b"], output, "simulator-ready", timeout=180)
         status = command(common + ["-destination", f"platform=iOS Simulator,id={simulator}",
                                    "-resultBundlePath", bundle, "-enableCodeCoverage", "YES",
-                                   "-parallel-testing-enabled", "NO", "test"], output, "xctest", check=False)
+                                   "-parallel-testing-enabled", "NO", "test"], output, "xctest", timeout=1800, check=False)
         # Export diagnostic artifacts even when XCTest fails; never turn a failed run green.
         export(bundle, output, ROOT, json.loads((ROOT / "ci/coverage-policy.json").read_text()))
         if status:
