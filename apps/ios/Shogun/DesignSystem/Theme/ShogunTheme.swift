@@ -28,6 +28,8 @@ enum ShogunTheme {
     }
 
     enum Auth {
+        static let providerBackground = Color("AuthProviderBackground")
+        static let providerInk = Color("AuthProviderInk")
         static let providerButtonSize: CGFloat = 48
         static let providerGlyphSize: CGFloat = 20
         static let dividerThickness: CGFloat = 1

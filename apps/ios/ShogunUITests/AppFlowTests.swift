@@ -298,8 +298,9 @@ final class AppFlowTests: XCTestCase {
         let fallback = app.buttons["auth.appleDeletionFallback"]
         reveal(fallback)
         fallback.tap()
-        app.swipeDown()
-        XCTAssertTrue(app.staticTexts["auth.appleDeletionFallbackNotice"].exists)
+        let notice = app.staticTexts["auth.appleDeletionFallbackNotice"]
+        revealForm(notice)
+        XCTAssertTrue(notice.exists)
         let password = app.secureTextFields["auth.deletePassword"]
         reveal(password)
         password.tap()
@@ -752,7 +753,9 @@ final class AppFlowTests: XCTestCase {
         let query = app.textFields["addMovie.search"]
         XCTAssertTrue(query.waitForExistence(timeout: 5))
         query.tap()
-        query.typeText("Arrival\n")
+        // Let the debounced request fail before retrying. Return submits a second
+        // request, which can consume the fixture's one-shot failure on slow runners.
+        query.typeText("Arrival")
         let retry = app.buttons["Retry search"]
         XCTAssertTrue(retry.waitForExistence(timeout: 5))
         retry.tap()
