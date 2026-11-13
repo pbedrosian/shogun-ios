@@ -29,6 +29,7 @@ enum ShogunTheme {
 
     enum Auth {
         static let providerButtonSize: CGFloat = 48
+        static let providerGlyphSize: CGFloat = 20
         static let dividerThickness: CGFloat = 1
         static let silver = LinearGradient(
             colors: [

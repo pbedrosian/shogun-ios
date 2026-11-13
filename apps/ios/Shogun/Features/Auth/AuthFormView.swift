@@ -6,6 +6,7 @@ struct AuthFormView: View {
     @State private var email = ""
     @State private var password = ""
     @State private var confirmation = ""
+    @State private var emailSelected = false
     @State private var validation: String?
     @FocusState private var emailFocused: Bool
     @FocusState private var passwordFocused: Bool
@@ -16,63 +17,80 @@ struct AuthFormView: View {
     private var showsPasswordFields: Bool {
         mode == .signIn || (mode == .signUp && signupEmailIsValid)
     }
+    private var showsEmailForm: Bool { mode == .recover || emailSelected }
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: ShogunTheme.Spacing.large) {
                 AuthHeader(title: mode.rawValue)
                 VStack(alignment: .leading, spacing: ShogunTheme.Spacing.large) {
-                    if mode != .recover && (auth.appleSignInVisible || auth.googleSignInAvailable) {
+                    if mode != .recover {
                         socialSignIn
-                        emailDivider
                     }
-                    VStack(alignment: .leading, spacing: ShogunTheme.Spacing.regular) {
-                        VStack(alignment: .leading, spacing: ShogunTheme.Spacing.small) {
-                            Text("Email").font(ShogunTheme.Typography.body)
-                            TextField("you@example.com", text: $email)
-                                .textContentType(mode == .signUp ? .emailAddress : .username)
-                                .keyboardType(.emailAddress)
-                                .textInputAutocapitalization(.never).autocorrectionDisabled()
-                                .focused($emailFocused).submitLabel(mode == .recover ? .go : .next)
-                                .onSubmit {
-                                    if mode == .recover {
-                                        submit()
-                                    } else if mode == .signUp && !signupEmailIsValid {
-                                        validation = "Enter a valid email address."
-                                    } else {
-                                        passwordFocused = true
+                    if showsEmailForm {
+                        if mode != .recover
+                            && (auth.appleSignInVisible || auth.googleSignInAvailable)
+                        {
+                            emailDivider
+                        }
+                        VStack(alignment: .leading, spacing: ShogunTheme.Spacing.regular) {
+                            VStack(alignment: .leading, spacing: ShogunTheme.Spacing.small) {
+                                Text("Email").font(ShogunTheme.Typography.body)
+                                TextField("you@example.com", text: $email)
+                                    .textContentType(mode == .signUp ? .emailAddress : .username)
+                                    .keyboardType(.emailAddress)
+                                    .textInputAutocapitalization(.never).autocorrectionDisabled()
+                                    .focused($emailFocused).submitLabel(
+                                        mode == .recover ? .go : .next
+                                    )
+                                    .onSubmit {
+                                        if mode == .recover {
+                                            submit()
+                                        } else if mode == .signUp && !signupEmailIsValid {
+                                            validation = "Enter a valid email address."
+                                        } else {
+                                            passwordFocused = true
+                                        }
                                     }
-                                }
-                                .accessibilityLabel("Email").accessibilityIdentifier("auth.email")
-                                .shogunAuthField()
+                                    .accessibilityLabel("Email").accessibilityIdentifier(
+                                        "auth.email"
+                                    )
+                                    .shogunAuthField()
+                            }
+                            if showsPasswordFields {
+                                AuthPasswordField(
+                                    title: "Password", identifier: "auth.password", text: $password,
+                                    isFocused: $passwordFocused, isNew: mode == .signUp,
+                                    next: mode == .signUp
+                                ) {
+                                    if mode == .signUp {
+                                        confirmationFocused = true
+                                    } else {
+                                        submit()
+                                    }
+                                }.id(mode)
+                            }
+                            if mode == .signUp && showsPasswordFields {
+                                AuthPasswordField(
+                                    title: "Confirm password", identifier: "auth.confirmPassword",
+                                    text: $confirmation,
+                                    isFocused: $confirmationFocused, isNew: true, next: false,
+                                    onSubmit: submit)
+                                Text("Use at least 8 characters.")
+                                    .font(ShogunTheme.Typography.footnote).foregroundStyle(
+                                        ShogunTheme.muted)
+                            }
+                        }.disabled(auth.isBusy)
+                        if mode == .signIn {
+                            Button("Forgot password?") { changeMode(.recover) }
+                                .font(ShogunTheme.Typography.body).frame(
+                                    maxWidth: .infinity, minHeight: ShogunTheme.Size.touchTarget,
+                                    alignment: .trailing
+                                )
+                                .accessibilityIdentifier("auth.forgotPassword").disabled(
+                                    auth.isBusy
+                                )
+                                .padding(.top, -ShogunTheme.Spacing.regular)
                         }
-                        if showsPasswordFields {
-                            AuthPasswordField(
-                                title: "Password", identifier: "auth.password", text: $password,
-                                isFocused: $passwordFocused, isNew: mode == .signUp,
-                                next: mode == .signUp
-                            ) {
-                                if mode == .signUp { confirmationFocused = true } else { submit() }
-                            }.id(mode)
-                        }
-                        if mode == .signUp && showsPasswordFields {
-                            AuthPasswordField(
-                                title: "Confirm password", identifier: "auth.confirmPassword",
-                                text: $confirmation,
-                                isFocused: $confirmationFocused, isNew: true, next: false,
-                                onSubmit: submit)
-                            Text("Use at least 8 characters.")
-                                .font(ShogunTheme.Typography.footnote).foregroundStyle(
-                                    ShogunTheme.muted)
-                        }
-                    }.disabled(auth.isBusy)
-                    if mode == .signIn {
-                        Button("Forgot password?") { changeMode(.recover) }
-                            .font(ShogunTheme.Typography.body).frame(
-                                maxWidth: .infinity, minHeight: ShogunTheme.Size.touchTarget,
-                                alignment: .trailing
-                            )
-                            .accessibilityIdentifier("auth.forgotPassword").disabled(auth.isBusy)
-                            .padding(.top, -ShogunTheme.Spacing.regular)
                     }
                     if !auth.configured {
                         Text(SignInFailure.configuration.localizedDescription).font(
@@ -87,17 +105,19 @@ struct AuthFormView: View {
                     if auth.error != nil && auth.configured {
                         Button("Retry connection", action: auth.retryRestore)
                     }
-                    Button(action: submit) {
-                        HStack(spacing: ShogunTheme.Spacing.small) {
-                            if auth.isBusy { ProgressView().tint(ShogunTheme.authOnPrimary) }
-                            Text(
-                                mode == .recover
-                                    ? "Send reset link"
-                                    : mode == .signUp ? "Create with Email" : mode.rawValue)
-                        }
-                    }.buttonStyle(ShogunAuthPrimaryButtonStyle())
-                        .disabled(auth.isBusy || !auth.configured).accessibilityIdentifier(
-                            "auth.submit")
+                    if showsEmailForm {
+                        Button(action: submit) {
+                            HStack(spacing: ShogunTheme.Spacing.small) {
+                                if auth.isBusy { ProgressView().tint(ShogunTheme.authOnPrimary) }
+                                Text(
+                                    mode == .recover
+                                        ? "Send reset link"
+                                        : mode == .signUp ? "Create with Email" : mode.rawValue)
+                            }
+                        }.buttonStyle(ShogunAuthPrimaryButtonStyle())
+                            .disabled(auth.isBusy || !auth.configured).accessibilityIdentifier(
+                                "auth.submit")
+                    }
                     if auth.isBusy {
                         Button("Cancel request", action: auth.cancel).frame(
                             maxWidth: .infinity, minHeight: ShogunTheme.Size.touchTarget
@@ -192,6 +212,31 @@ struct AuthFormView: View {
                 .accessibilityLabel(mode == .signUp ? "Sign up with Google" : "Sign in with Google")
                 .accessibilityIdentifier("auth.google")
             }
+            Button {
+                validation = nil
+                auth.clearFeedback()
+                emailSelected = true
+            } label: {
+                Image(systemName: "envelope")
+                    .resizable().scaledToFit()
+                    .frame(
+                        width: ShogunTheme.Auth.providerGlyphSize,
+                        height: ShogunTheme.Auth.providerGlyphSize
+                    )
+                    .foregroundStyle(ShogunTheme.ink)
+                    .frame(
+                        width: ShogunTheme.Auth.providerButtonSize,
+                        height: ShogunTheme.Auth.providerButtonSize
+                    )
+                    .background(ShogunTheme.surface, in: Circle())
+                    .overlay(
+                        Circle().strokeBorder(
+                            emailSelected ? ShogunTheme.accent : ShogunTheme.muted.opacity(0.25)))
+            }
+            .accessibilityLabel(mode == .signUp ? "Sign up with email" : "Sign in with email")
+            .accessibilityIdentifier("auth.emailMethod")
+            .accessibilityAddTraits(emailSelected ? .isSelected : [])
+            .accessibilityHint("Show the email form.")
         }
         .buttonStyle(.plain)
         .disabled(auth.isBusy)
@@ -217,6 +262,9 @@ struct AuthFormView: View {
     }
     private func prepareSocialSignIn() {
         validation = nil
+        emailSelected = false
+        password = ""
+        confirmation = ""
         emailFocused = false
         passwordFocused = false
         confirmationFocused = false

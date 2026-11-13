@@ -171,12 +171,21 @@ final class AppFlowTests: XCTestCase {
         app = XCUIApplication()
         preferencesSuite = "shogun-ui-\(UUID().uuidString)"
     }
-    private func launch(dark: Bool = false, large: Bool = false, extra: [String] = []) {
+    private func launch(dark: Bool = false, large: Bool = false, extra: [String] = [], selectEmailForm: Bool = true) {
         app.launchEnvironment["SHOGUN_UI_PREFERENCES_SUITE"] = preferencesSuite
         app.launchArguments = ["-shogun-auth-ui"] + extra
         if dark { app.launchArguments += ["-AppleInterfaceStyle", "Dark"] }
         if large { app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"] }
-        app.launch(); XCTAssertTrue(app.textFields["auth.email"].waitForExistence(timeout: 10))
+        app.launch(); XCTAssertTrue(app.buttons["auth.emailMethod"].waitForExistence(timeout: 10))
+        if selectEmailForm { selectEmail() }
+    }
+    private func selectEmail() {
+        if !app.textFields["auth.email"].exists {
+            let email = app.buttons["auth.emailMethod"]
+            reveal(email)
+            email.tap()
+        }
+        XCTAssertTrue(app.textFields["auth.email"].waitForExistence(timeout: 5))
     }
     private func reveal(_ element: XCUIElement) {
         for _ in 0..<8 { if element.isHittable { return }; app.swipeUp() }
@@ -185,6 +194,57 @@ final class AppFlowTests: XCTestCase {
     private func fill(_ password: String) {
         let email = app.textFields["auth.email"]; email.tap(); email.typeText("owner@shogun.test")
         let field = app.secureTextFields["auth.password"]; field.tap(); field.typeText(password)
+    }
+    func testEmailMethodRevealsSignInAndProgressiveSignup() {
+        launch(extra: ["-shogun-auth-apple", "-shogun-auth-google"], selectEmailForm: false)
+        let emailMethod = app.buttons["auth.emailMethod"]
+        let apple = app.buttons["auth.apple"]
+        let google = app.buttons["auth.google"]
+        XCTAssertFalse(app.textFields["auth.email"].exists)
+        XCTAssertFalse(app.buttons["auth.submit"].exists)
+        XCTAssertEqual(emailMethod.label, "Sign in with email")
+        XCTAssertEqual(emailMethod.frame.width, apple.frame.width, accuracy: 1)
+        XCTAssertEqual(emailMethod.frame.midY, google.frame.midY, accuracy: 1)
+        XCTAssertGreaterThan(emailMethod.frame.minX, google.frame.maxX)
+        let choices = XCTAttachment(screenshot: app.screenshot())
+        choices.name = "Apple Google and email method choices"
+        choices.lifetime = .keepAlways
+        add(choices)
+        selectEmail()
+        XCTAssertTrue(app.secureTextFields["auth.password"].exists)
+        XCTAssertTrue(app.buttons["auth.submit"].exists)
+        app.terminate()
+        launch(extra: ["-shogun-auth-apple", "-shogun-auth-google"], selectEmailForm: false)
+        app.buttons["auth.createAccount"].tap()
+        XCTAssertEqual(emailMethod.label, "Sign up with email")
+        XCTAssertFalse(app.textFields["auth.email"].exists)
+        XCTAssertFalse(app.buttons["auth.submit"].exists)
+        selectEmail()
+        XCTAssertFalse(app.secureTextFields["auth.password"].exists)
+        app.textFields["auth.email"].tap()
+        app.textFields["auth.email"].typeText("new@shogun.test")
+        XCTAssertTrue(app.secureTextFields["auth.password"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.secureTextFields["auth.confirmPassword"].exists)
+    }
+    func testEmailMethodAndRecoveryInDarkLargeText() {
+        launch(dark: true, large: true, extra: ["-shogun-auth-apple", "-shogun-auth-google"], selectEmailForm: false)
+        let emailMethod = app.buttons["auth.emailMethod"]
+        reveal(emailMethod)
+        XCTAssertTrue(emailMethod.isHittable)
+        XCTAssertFalse(app.textFields["auth.email"].exists)
+        let choices = XCTAttachment(screenshot: app.screenshot())
+        choices.name = "Email method choice dark accessibility text"
+        choices.lifetime = .keepAlways
+        add(choices)
+        selectEmail()
+        let forgot = app.buttons["auth.forgotPassword"]
+        reveal(forgot)
+        forgot.tap()
+        XCTAssertTrue(app.textFields["auth.email"].exists)
+        XCTAssertFalse(emailMethod.exists)
+        XCTAssertFalse(app.buttons["auth.apple"].exists)
+        XCTAssertFalse(app.buttons["auth.google"].exists)
+        XCTAssertEqual(app.buttons["auth.submit"].label, "Send reset link")
     }
     func testLibraryPreferencesSurviveAppRelaunch() {
         launch()
@@ -248,7 +308,7 @@ final class AppFlowTests: XCTestCase {
         reveal(remove)
         remove.tap()
         app.buttons["Delete permanently"].tap()
-        XCTAssertTrue(app.textFields["auth.email"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["auth.emailMethod"].waitForExistence(timeout: 5))
         XCTAssertTrue(
             app.staticTexts.containing(
                 NSPredicate(format: "label CONTAINS %@", "Remove Shogun from Sign in with Apple")
@@ -271,7 +331,7 @@ final class AppFlowTests: XCTestCase {
         XCTAssertTrue(app.buttons["auth.requestDeletion"].exists)
         app.buttons["auth.requestDeletion"].tap()
         app.buttons["Delete permanently"].tap()
-        XCTAssertTrue(app.textFields["auth.email"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["auth.emailMethod"].waitForExistence(timeout: 5))
     }
     func testAppleIdentityLinkingRequiresConfirmationAndKeepsCurrentAccount() {
         verifyAppleIdentityLinking()
@@ -349,6 +409,7 @@ final class AppFlowTests: XCTestCase {
         reveal(app.buttons["auth.signOut"])
         app.buttons["auth.signOut"].tap()
         XCTAssertTrue(apple.waitForExistence(timeout: 5))
+        selectEmail()
         reveal(app.buttons["auth.forgotPassword"])
         app.buttons["auth.forgotPassword"].tap()
         XCTAssertFalse(apple.exists)
@@ -414,7 +475,7 @@ final class AppFlowTests: XCTestCase {
         profile.tap()
         XCTAssertTrue(app.staticTexts["auth.accountEmail"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.staticTexts["auth.accountEmail"].label, "owner@shogun.test")
-        reveal(app.buttons["auth.signOut"]); app.buttons["auth.signOut"].tap(); XCTAssertTrue(app.textFields["auth.email"].waitForExistence(timeout: 5))
+        reveal(app.buttons["auth.signOut"]); app.buttons["auth.signOut"].tap(); XCTAssertTrue(app.buttons["auth.emailMethod"].waitForExistence(timeout: 5))
     }
     func testCreateAccountRevealsPasswordsAfterValidEmail() {
         launch(extra: ["-shogun-auth-google", "-AppleInterfaceStyle", "Light"])
@@ -463,13 +524,14 @@ final class AppFlowTests: XCTestCase {
 #if SHOGUN_LIVE_AUTH
     func testLiveLocalSignInRelaunchAndSignOut() {
         app.launchArguments = []; app.launch()
-        XCTAssertTrue(app.textFields["auth.email"].waitForExistence(timeout: 15))
+        XCTAssertTrue(app.buttons["auth.emailMethod"].waitForExistence(timeout: 15))
+        selectEmail()
         fill("Shogun-local-only-25!"); app.buttons["auth.submit"].tap()
         XCTAssertTrue(app.buttons["library.selector"].waitForExistence(timeout: 10))
         app.terminate(); app.launch()
         XCTAssertTrue(app.buttons["library.selector"].waitForExistence(timeout: 10))
         app.tabBars.buttons["Profile"].tap(); XCTAssertEqual(app.staticTexts["auth.accountEmail"].label, "owner@shogun.test")
-        reveal(app.buttons["auth.signOut"]); app.buttons["auth.signOut"].tap(); XCTAssertTrue(app.textFields["auth.email"].waitForExistence(timeout: 10))
+        reveal(app.buttons["auth.signOut"]); app.buttons["auth.signOut"].tap(); XCTAssertTrue(app.buttons["auth.emailMethod"].waitForExistence(timeout: 10))
     }
 #endif
     func testGoogleAccountDeletionNeedsConfirmationWithoutPassword() {
@@ -487,7 +549,7 @@ final class AppFlowTests: XCTestCase {
         XCTAssertTrue(request.exists)
         request.tap()
         app.alerts.buttons["Delete permanently"].tap()
-        XCTAssertTrue(app.textFields["auth.email"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["auth.emailMethod"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["auth.message"].label.contains("deleted"))
     }
     func testProfileHeaderAndAccountDeletionConfirmation() {
@@ -506,7 +568,7 @@ final class AppFlowTests: XCTestCase {
         XCTAssertTrue(app.staticTexts["auth.deleteError"].waitForExistence(timeout: 5))
         password.tap(); password.typeText("valid-password\n"); reveal(request); request.tap()
         app.alerts.buttons["Delete permanently"].tap()
-        XCTAssertTrue(app.textFields["auth.email"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["auth.emailMethod"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["auth.message"].label.contains("deleted"))
     }
     func testRecoveryPasswordScreen() {

@@ -308,8 +308,11 @@ References: [Supabase native Swift token exchange](https://supabase.com/docs/ref
 ### Social-first authentication layout
 
 At Peter's request on November 12, 2026, sign-in and signup present circular provider
-buttons first, then a mode-specific “Or log in with” / “Or sign up with” divider,
-then the email form in a rounded panel. Signup still reveals password fields only
+buttons beside a matching circular email selector. Sign-in and signup initially
+hide email fields and their submit action; selecting email reveals the form and a
+mode-specific “Or log in with” / “Or sign up with” divider in the rounded panel.
+The email selection remains active when switching between login and signup;
+provider sign-in clears hidden passwords. Signup still reveals password fields only
 after a valid email. Recovery stays email-only; no divider appears if no provider
 is available. Apple authentication remains gated as described above; Dev can show its disabled preview. Buttons use
 48-point targets, explicit VoiceOver labels, official unmodified artwork and equal
