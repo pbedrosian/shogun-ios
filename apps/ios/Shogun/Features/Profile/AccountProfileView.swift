@@ -50,11 +50,21 @@ struct AccountProfileView: View {
                         Button("Sign out", role: .destructive, action: auth.signOut).disabled(
                             auth.isBusy
                         ).accessibilityIdentifier("auth.signOut")
-                        Button("Delete account", role: .destructive) {
-                            auth.clearFeedback()
-                            deleting = true
+                    } footer: {
+                        HStack {
+                            Spacer()
+                            Button("Delete account", role: .destructive) {
+                                auth.clearFeedback()
+                                deleting = true
+                            }
+                            .buttonStyle(.plain)
+                            .font(ShogunTheme.Typography.footnote)
+                            .foregroundStyle(ShogunTheme.muted)
+                            .frame(minHeight: ShogunTheme.Size.touchTarget)
+                            .disabled(auth.isBusy).accessibilityIdentifier("auth.deleteAccount")
+                            Spacer()
                         }
-                        .disabled(auth.isBusy).accessibilityIdentifier("auth.deleteAccount")
+                        .textCase(nil)
                     }
 
                 }.listRowBackground(ShogunTheme.surface)

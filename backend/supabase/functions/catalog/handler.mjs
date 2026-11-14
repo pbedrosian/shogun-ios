@@ -1,6 +1,6 @@
 import { bearerHeader, verifySession } from '../_shared/session.mjs';
 import { backendRelease } from '../_shared/release.mjs';
-import { createTMDBClient, CatalogError, validID } from './tmdb.mjs';
+import { createTMDBClient, CatalogError, validID, validPosterPath } from './tmdb.mjs';
 
 export function createCatalogHandler(env, request = fetch) {
   const client = createTMDBClient(env.tmdbToken,request);
@@ -19,10 +19,14 @@ export function createCatalogHandler(env, request = fetch) {
         if (Object.keys(body).some(k=>k!=='operation')) throw new Error();
       } else if (body.operation==='search') {
         if (Object.keys(body).some(k=>!['operation','query','page'].includes(k)) || typeof body.query!=='string' || body.query.length>200 || !Number.isInteger(body.page) || body.page<1 || body.page>500) throw new Error();
-      } else if (body.operation==='details') {
+      } else if (body.operation==='details' || body.operation==='posters') {
         if (Object.keys(body).some(k=>!['operation','movieID'].includes(k)) || !validID(body.movieID)) throw new Error();
+      } else if (body.operation==='set_cover') {
+        if (Object.keys(body).some(k=>!['operation','movieID','path'].includes(k)) || !validID(body.movieID)
+          || (body.path!==null && !validPosterPath(body.path))) throw new Error();
       } else if (body.operation==='import') {
-        if (Object.keys(body).some(k=>!['operation','movieID','requestID','libraryID','formats'].includes(k)) || !validID(body.movieID)
+        if (Object.keys(body).some(k=>!['operation','movieID','requestID','libraryID','formats','coverPath'].includes(k)) || !validID(body.movieID)
+          || (Object.hasOwn(body,'coverPath') && body.coverPath!==null && !validPosterPath(body.coverPath))
           || ![body.requestID,body.libraryID].every(v=>typeof v==='string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v))
           || !Array.isArray(body.formats) || body.formats.length<1 || body.formats.length>99
           || body.formats.some(v=>!['VHS','DVD','Blu-ray','4K UHD','Digital'].includes(v))) throw new Error();
@@ -36,15 +40,38 @@ export function createCatalogHandler(env, request = fetch) {
         const query = body.query.trim();
         return reply(200, query ? await client.search(query,body.page,incoming.signal) : {page:1,totalPages:0,results:[]});
       }
+      if (body.operation==='posters') return reply(200,{posters:await client.posters(body.movieID,incoming.signal)});
+      if (body.operation==='set_cover') {
+        if (!env.admin) return reply(503,{error:'unavailable'});
+        // A syntactically valid filename is insufficient: it must belong to this movie.
+        // Reset remains available even when TMDB is offline.
+        if (body.path!==null && !(await client.posters(body.movieID,incoming.signal)).some(p=>p.path===body.path)) {
+          return reply(400,{error:'invalid_cover'});
+        }
+        const response=await request(env.url.replace(/\/$/,'')+'/rest/v1/rpc/set_movie_cover',{
+          method:'POST',redirect:'error',signal:AbortSignal.any([incoming.signal,AbortSignal.timeout(15000)]),
+          headers:{apikey:env.admin,Authorization:'Bearer '+env.admin,'Content-Type':'application/json'},
+          body:JSON.stringify({actor:session.user.id,provider_id:body.movieID,poster_path:body.path}),
+        });
+        if (!response.ok) {
+          const error=await response.json().catch(()=>({}));
+          return reply(error.code==='42501'?403:error.code==='22023'?400:503,{error:'cover_save_failed'});
+        }
+        return reply(200,{saved:true});
+      }
       if (body.operation==='import') {
         if (!env.admin) return reply(503,{error:'unavailable'});
         // Fetch canonical details here. Client metadata is never trusted for a provider ID.
         const metadata = await client.details(body.movieID,incoming.signal);
-        const response = await request(env.url.replace(/\/$/,'')+'/rest/v1/rpc/import_catalog_movie', {
+        const withCover = Object.hasOwn(body,'coverPath');
+        if (withCover && body.coverPath!==null && !(await client.posters(body.movieID,incoming.signal)).some(p=>p.path===body.coverPath)) {
+          return reply(400,{error:'invalid_cover'});
+        }
+        const response = await request(env.url.replace(/\/$/,'')+'/rest/v1/rpc/'+(withCover?'import_catalog_movie_with_cover':'import_catalog_movie'), {
           method:'POST', redirect:'error', signal:AbortSignal.any([incoming.signal,AbortSignal.timeout(15000)]),
           headers:{apikey:env.admin,Authorization:'Bearer '+env.admin,'Content-Type':'application/json'},
           body:JSON.stringify({actor:session.user.id,request_id:body.requestID,target_library:body.libraryID,
-            metadata,copy_formats:body.formats,provider_id:body.movieID}),
+            metadata,copy_formats:body.formats,provider_id:body.movieID,...(withCover?{poster_path:body.coverPath}:{})}),
         });
         if (!response.ok) {
           const error = await response.json().catch(()=>({}));

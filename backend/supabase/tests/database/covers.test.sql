@@ -1,0 +1,40 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+set search_path=public,extensions;
+select no_plan();
+insert into auth.users(id,email) values
+ ('10000000-0000-0000-0000-000000000081','cover-one@shogun.test'),
+ ('10000000-0000-0000-0000-000000000082','cover-two@shogun.test');
+insert into public.movies(id,source,tmdb_id,title,poster_path) values
+ ('20000000-0000-0000-0000-000000000081','tmdb',2147000081,'Cover film','https://image.tmdb.org/t/p/w342/default.jpg');
+select ok((select relrowsecurity from pg_class where oid='public.movie_cover_preferences'::regclass),'covers use RLS');
+select ok(not has_function_privilege('authenticated','public.set_movie_cover(uuid,bigint,text)','execute'),'clients cannot call trusted setter');
+select ok(not has_function_privilege('anon','public.set_movie_cover(uuid,bigint,text)','execute'),'anonymous cannot call setter');
+select ok(not has_table_privilege('authenticated','public.movie_cover_preferences','INSERT'),'direct writes cannot bypass provider validation');
+select throws_ok($$select public.set_movie_cover(null,2147000081,'/valid.jpg')$$,'42501',null,'setter rejects absent account');
+select throws_ok($$select public.set_movie_cover('10000000-0000-0000-0000-000000000081',2147000082,'/valid.jpg')$$,'22023',null,'setter rejects missing catalog film');
+select throws_ok($$select public.set_movie_cover('10000000-0000-0000-0000-000000000081',2147000081,'https://evil.test/a.jpg')$$,'23514',null,'unsafe path rejected');
+select public.set_movie_cover('10000000-0000-0000-0000-000000000081',2147000081,'/one.jpg');
+select public.set_movie_cover('10000000-0000-0000-0000-000000000081',2147000081,'/one.jpg');
+select public.set_movie_cover('10000000-0000-0000-0000-000000000082',2147000081,'/two.jpg');
+set local role authenticated;
+select set_config('request.jwt.claim.sub','10000000-0000-0000-0000-000000000081',true);
+select is((select count(*) from public.movie_cover_preferences),1::bigint,'only own preference visible and retry deduplicated');
+select is((select poster_path from public.movie_cover_preferences),'/one.jpg','first account cover retained');
+select is((select m->>'cover_poster_path' from jsonb_array_elements(public.collection_snapshot()->'movies') m where m->>'id'='20000000-0000-0000-0000-000000000081'),'https://image.tmdb.org/t/p/w342/one.jpg','snapshot uses own cover');
+select is((select poster_path from public.movies where tmdb_id=2147000081),'https://image.tmdb.org/t/p/w342/default.jpg','global default unchanged');
+select throws_ok($$update public.movie_cover_preferences set poster_path='/hijack.jpg'$$,'42501',null,'client table updates denied');
+select set_config('request.jwt.claim.sub','10000000-0000-0000-0000-000000000082',true);
+select is((select poster_path from public.movie_cover_preferences),'/two.jpg','second account isolated');
+reset role;
+select public.set_movie_cover('10000000-0000-0000-0000-000000000081',2147000081,null);
+select public.set_movie_cover('10000000-0000-0000-0000-000000000081',2147000081,null);
+select is((select count(*) from public.movie_cover_preferences where user_id='10000000-0000-0000-0000-000000000081'),0::bigint,'reset is repeatable');
+set local role authenticated;
+select set_config('request.jwt.claim.sub','10000000-0000-0000-0000-000000000081',true);
+select is((select m->>'cover_poster_path' from jsonb_array_elements(public.collection_snapshot()->'movies') m where m->>'id'='20000000-0000-0000-0000-000000000081'),null::text,'reset restores default via absent override');
+reset role;
+delete from auth.users where id='10000000-0000-0000-0000-000000000082';
+select is((select count(*) from public.movie_cover_preferences),0::bigint,'account deletion removes preferences');
+select * from finish();
+rollback;

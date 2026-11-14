@@ -80,7 +80,8 @@ for rendering only and must never be submitted as a database UUID.
 
 Browsing does not create metadata, owned copies or diary rows. The + flow now
 connects discovery results to save/import and manual entry through **SHO-3**;
-quick add remains **SHO-4**. Unowned catalog details intentionally do not display
+Search results/details open that same form with the movie preselected (**SHO-4**);
+see [SEARCH_ADD.md](SEARCH_ADD.md). Unowned catalog details intentionally do not display
 a writable personal diary. Owned
 matches link to the existing persisted copy/diary screen.
 
@@ -147,3 +148,6 @@ calls a service-role-only transaction. Client-supplied metadata and actor IDs ar
 rejected. Browsing Search and details still creates no collection rows.
 
 See [MOVIE_ADD.md](MOVIE_ADD.md) for manual entry, quantity and retry behavior.
+
+See [MOVIE_COVERS.md](MOVIE_COVERS.md) for account-scoped alternate posters,
+validated selection/reset, snapshot compatibility and local permission checks.

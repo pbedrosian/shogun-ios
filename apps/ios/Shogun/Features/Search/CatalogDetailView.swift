@@ -3,17 +3,34 @@ import SwiftUI
 struct CatalogDetailView: View {
     @StateObject private var detail: CatalogDetailStore
     @ObservedObject var collection: CollectionStore
+    private let service: any MovieDiscoveryServicing
+    @State private var addingMovie: CatalogMovie?
     init(movie: CatalogMovie, service: any MovieDiscoveryServicing, collection: CollectionStore) {
         _detail = StateObject(wrappedValue: CatalogDetailStore(movie: movie, service: service))
         self.collection = collection
+        self.service = service
     }
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: ShogunTheme.Spacing.large) {
-                CatalogPosterView(movie: detail.movie).frame(
+                CatalogPosterView(
+                    movie: detail.movie,
+                    preferredURL: collection.catalog?.movies.first { $0.tmdbID == detail.movie.id }?
+                        .posterURL
+                ).frame(
                     maxWidth: ShogunTheme.Size.detailPosterWidth
                 )
                 .frame(maxWidth: .infinity)
+                Button(
+                    collection.catalog?.ownedMovie(tmdbID: detail.movie.id) == nil
+                        ? "Add to library" : "Add another copy"
+                ) { addingMovie = detail.movie }
+                .disabled(collection.catalog?.writableLibraries.isEmpty != false)
+                .accessibilityIdentifier("discovery.addToLibrary")
+                if collection.catalog?.writableLibraries.isEmpty != false, !collection.isBusy {
+                    Text("You need an owner or editor library to add a movie.")
+                        .font(ShogunTheme.Typography.footnote).foregroundStyle(ShogunTheme.muted)
+                }
                 MovieOverviewView(
                     title: detail.movie.title, year: detail.movie.releaseYearText,
                     synopsis: detail.movie.synopsis)
@@ -47,5 +64,27 @@ struct CatalogDetailView: View {
         }.shogunCanvas().navigationTitle("Movie").navigationBarTitleDisplayMode(.inline)
             .accessibilityIdentifier("discovery.detail")
             .task { await detail.load() }
+            .sheet(item: $addingMovie) { movie in
+                SearchAddMovieSheet(movie: movie, service: service, collection: collection)
+            }
+    }
+}
+
+struct SearchAddMovieSheet: View {
+    let movie: CatalogMovie
+    let service: any MovieDiscoveryServicing
+    @ObservedObject var collection: CollectionStore
+    var body: some View {
+        if let catalog = collection.catalog {
+            ConnectedAddMovieSheet(
+                discovery: service, initialMovie: movie,
+                preferredLibraryID: collection.defaultLibraryID
+            )
+            .environmentObject(catalog).environment(\.collection, collection)
+        } else {
+            ContentUnavailableView(
+                "Collection unavailable", systemImage: "film.stack",
+                description: Text("Close this sheet and refresh your collection."))
+        }
     }
 }
