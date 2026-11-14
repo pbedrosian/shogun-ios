@@ -41,6 +41,7 @@ hosted migration deployment.
 | `movies` | Stable metadata identity, distinct from copies and personal state |
 | `owned_copies` | One owned copy and format per row, belonging to a library |
 | `personal_movie_state` | Watched flag and nullable 1–5 rating per user/movie |
+| `movie_cover_preferences` | Private validated TMDB poster selection per user/movie; clients can read only their own rows |
 | `user_preferences` | User's default writable library |
 
 UUIDs are internal identities. Movie provider identity is a separate unique,
