@@ -101,7 +101,9 @@ def main():
         command(common + ["-destination", "generic/platform=iOS Simulator", "build", "analyze"], output, "build-analyze")
         # Only XCTest needs a booted simulator. Build/analyze without that load.
         command(["xcrun", "simctl", "boot", simulator], output, "simulator-boot", timeout=60)
-        command(["xcrun", "simctl", "bootstatus", simulator, "-b"], output, "simulator-ready", timeout=180)
+        # Cold hosted runners can exceed three minutes mounting a fresh runtime.
+        # Keep startup bounded and fail before XCTest if the device never becomes ready.
+        command(["xcrun", "simctl", "bootstatus", simulator, "-b"], output, "simulator-ready", timeout=420)
         status = command(common + ["-destination", f"platform=iOS Simulator,id={simulator}",
                                    "-resultBundlePath", bundle, "-enableCodeCoverage", "YES",
                                    "-parallel-testing-enabled", "NO", "test"], output, "xctest", timeout=1800, check=False)
