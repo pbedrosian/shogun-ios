@@ -213,7 +213,7 @@ struct MovieDetailView: View {
                     "movie.removeFromCollection")
             }
         } label: {
-            ShogunIcon(systemName: "ellipsis")
+            ShogunIcon(systemName: "ellipsis", includesTouchTarget: false)
         }
         .accessibilityLabel("Movie actions").accessibilityIdentifier("movie.actions")
         .disabled(saving || collection?.isBusy == true)
