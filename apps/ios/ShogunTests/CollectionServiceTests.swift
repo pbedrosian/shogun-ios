@@ -123,6 +123,27 @@ import XCTest
 }
 
 @MainActor final class MovieAddTests: XCTestCase {
+    func testSearchAddPrefersWritableDefaultAndPreservesUserDestination() {
+        let draft = MovieAddDraft(discovery: Discovery())
+        let libraries = [
+            MovieLibrary(id: "personal", name: "My Library", isShared: false),
+            MovieLibrary(id: "family", name: "Family", isShared: true),
+        ]
+        draft.prepareLibrary(preferredID: "family", selectedID: "personal", writable: libraries)
+        XCTAssertEqual(draft.libraryID, "family")
+        draft.libraryID = "personal"
+        draft.prepareLibrary(preferredID: "family", selectedID: "family", writable: libraries)
+        XCTAssertEqual(draft.libraryID, "personal")
+        draft.libraryID = ""
+        draft.prepareLibrary(preferredID: "revoked", selectedID: "personal", writable: libraries)
+        XCTAssertEqual(draft.libraryID, "personal")
+        draft.libraryID = ""
+        draft.prepareLibrary(preferredID: "revoked", selectedID: "missing", writable: libraries)
+        XCTAssertEqual(draft.libraryID, "personal")
+        draft.libraryID = ""
+        draft.prepareLibrary(preferredID: nil, selectedID: "missing", writable: [])
+        XCTAssertEqual(draft.libraryID, "")
+    }
     func testDraftCoverChoiceHasStableRetryIdentityAndResetsForOtherMovies() async throws {
         let draft = MovieAddDraft(discovery: Discovery())
         draft.libraryID = "library"

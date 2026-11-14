@@ -15,9 +15,15 @@ struct ConnectedAddMovieSheet: View {
     private enum Field: Hashable { case title, year, director, synopsis, runtime, genres, poster }
     @FocusState private var editing: Field?
     @FocusState private var searching: Bool
-    init(discovery: any MovieDiscoveryServicing) {
+    private let preferredLibraryID: String?
+    init(
+        discovery: any MovieDiscoveryServicing, initialMovie: CatalogMovie? = nil,
+        preferredLibraryID: String? = nil
+    ) {
         _search = StateObject(wrappedValue: CatalogSearchStore(service: discovery))
         _draft = StateObject(wrappedValue: MovieAddDraft(discovery: discovery))
+        _selection = State(initialValue: initialMovie)
+        self.preferredLibraryID = preferredLibraryID
     }
     var body: some View {
         NavigationStack {
@@ -181,10 +187,9 @@ struct ConnectedAddMovieSheet: View {
                 }
             }
             .onAppear {
-                draft.libraryID =
-                    catalog.writableLibraries.first(where: {
-                        $0.id == catalog.selectedLibraryID
-                    })?.id ?? catalog.writableLibraries.first?.id ?? ""
+                draft.prepareLibrary(
+                    preferredID: preferredLibraryID,
+                    selectedID: catalog.selectedLibraryID, writable: catalog.writableLibraries)
             }
             .onDisappear { search.invalidate() }
     }

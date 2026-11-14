@@ -584,8 +584,16 @@ final class AppFlowTests: XCTestCase {
         launch(dark: true, large: true)
         let email = app.textFields["auth.email"]
         email.tap(); email.typeText("large-text@example.com\n")
-        let password = app.secureTextFields["auth.password"]; reveal(password); password.tap(); password.typeText("visible-test")
-        let toggle = app.buttons["auth.password.visibility"]; reveal(toggle); toggle.tap()
+        // Return advances focus and scrolls the password field into view. A screen-wide
+        // swipe here can land on the active keyboard and inject an extra character.
+        let password = app.secureTextFields["auth.password"]
+        let passwordReady = XCTNSPredicateExpectation(predicate: NSPredicate(format: "hittable == true"), object: password)
+        XCTAssertEqual(XCTWaiter.wait(for: [passwordReady], timeout: 5), .completed)
+        password.tap(); password.typeText("visible-test")
+        let toggle = app.buttons["auth.password.visibility"]
+        let toggleReady = XCTNSPredicateExpectation(predicate: NSPredicate(format: "hittable == true"), object: toggle)
+        XCTAssertEqual(XCTWaiter.wait(for: [toggleReady], timeout: 5), .completed)
+        toggle.tap()
         XCTAssertEqual(app.textFields["auth.password"].value as? String, "visible-test")
         toggle.tap(); XCTAssertTrue(app.secureTextFields["auth.password"].exists)
         toggle.tap() // Switching forms must restore secure entry even after showing a password.
