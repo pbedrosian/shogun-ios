@@ -6,7 +6,9 @@ import Auth
 /// The SDK's storage protocol allows a missing value; raw Keychain status does not.
 struct SecureAuthStorage: AuthLocalStorage {
     let service: String
-    init(service: String = "com.petebedrosian.shogun.auth") { self.service = service }
+    init(service: String = "\(Bundle.main.bundleIdentifier ?? "com.petebedrosian.shogun").auth") {
+        self.service = service
+    }
     private func query(_ key: String) -> [String: Any] {
         [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: key]
     }

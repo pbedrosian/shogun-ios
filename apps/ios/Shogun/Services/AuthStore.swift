@@ -15,14 +15,30 @@ import Foundation
     @Published private(set) var message: String?
     @Published private(set) var error: String?
     private let service: (any AuthServicing)?
+    private let previewAppleSignIn: Bool
     private var operation: Task<Void, Never>?
     private var observer: Task<Void, Never>?
     private var started = false
     private var pendingCallback: URL?
     var configured: Bool { service != nil }
+    var appleIdentityLinkingAvailable: Bool { service?.appleIdentityLinkingAvailable == true }
+    var appleSignInVisible: Bool { previewAppleSignIn || appleSignInAvailable }
+    var appleSignInAvailable: Bool { service?.appleSignInAvailable == true }
+    var googleSignInAvailable: Bool { service?.googleSignInAvailable == true }
+    var appleDeletionAvailable: Bool {
+        service?.appleDeletionAvailable == true && account?.appleIdentityLinked == true
+    }
+    var googleDeletionAvailable: Bool {
+        googleSignInAvailable && account?.googleIdentityLinked == true
+    }
 
-    init(service: (any AuthServicing)?, demo: Bool = false) {
+    init(service: (any AuthServicing)?, demo: Bool = false, previewAppleSignIn: Bool = false) {
         self.service = service
+        #if DEBUG
+            self.previewAppleSignIn = previewAppleSignIn
+        #else
+            self.previewAppleSignIn = false
+        #endif
         isDemo = demo
         if demo {
             isRestoring = false
@@ -109,6 +125,28 @@ import Foundation
             }
         }
     }
+    func linkAppleIdentity() {
+        guard !isBusy, let service, service.appleIdentityLinkingAvailable,
+            let original = account, !original.appleIdentityLinked
+        else { return }
+        perform(clearAccountOnCancellation: false) { [self] in
+            let linked = try await service.linkAppleIdentity()
+            try Task.checkCancellation()
+            guard account?.id == original.id, linked.id == original.id,
+                linked.libraryID == original.libraryID, linked.appleIdentityLinked
+            else { throw SignInFailure.identityLinking }
+            try accept(linked)
+            message = "Apple is connected to your account."
+        }
+    }
+    func signInWithApple() {
+        guard !isBusy, let service, service.appleSignInAvailable else { return }
+        perform { [self] in try accept(try await service.signInWithApple()) }
+    }
+    func signInWithGoogle() {
+        guard !isBusy, let service, service.googleSignInAvailable else { return }
+        perform { [self] in try accept(try await service.signInWithGoogle()) }
+    }
     func handle(_ url: URL) {
         guard AuthConfiguration.acceptsCallback(url) else { return }
         if isBusy {
@@ -132,6 +170,35 @@ import Foundation
             try accept(try await service.changePassword(password))
             needsPasswordUpdate = false
             message = "Your password has been updated."
+        }
+    }
+    func deleteAccountWithApplePassword(_ password: String) {
+        guard !isBusy, appleDeletionAvailable, let service else { return }
+        guard !password.isEmpty else {
+            error = "Enter your current password."
+            return
+        }
+        perform { [self] in
+            try await service.deleteAccountWithApplePassword(password)
+            clearAccount()
+            message =
+                "Your Shogun account has been deleted. Remove Shogun from Sign in with Apple in your Apple Account settings to remove Apple access too."
+        }
+    }
+    func deleteAccountWithApple() {
+        guard !isBusy, appleDeletionAvailable, let service else { return }
+        perform(clearAccountOnCancellation: false) { [self] in
+            try await service.deleteAccountWithApple()
+            clearAccount()
+            message = "Your account has been deleted."
+        }
+    }
+    func deleteAccountWithGoogle() {
+        guard !isBusy, googleDeletionAvailable, let service else { return }
+        perform(clearAccountOnCancellation: false) { [self] in
+            try await service.deleteAccountWithGoogle()
+            clearAccount()
+            message = "Your account has been deleted."
         }
     }
     func deleteAccount(password: String) {
@@ -166,7 +233,10 @@ import Foundation
         account = result
         isDemo = false
     }
-    private func perform(_ action: @escaping @MainActor () async throws -> Void) {
+    private func perform(
+        clearAccountOnCancellation: Bool = true,
+        _ action: @escaping @MainActor () async throws -> Void
+    ) {
         guard !isBusy else { return }
         isBusy = true
         error = nil
@@ -177,8 +247,10 @@ import Foundation
                 try Task.checkCancellation()
             } catch {
                 if Task.isCancelled || error is CancellationError {
-                    clearAccount()
-                    try? await service?.signOut()
+                    if clearAccountOnCancellation {
+                        clearAccount()
+                        try? await service?.signOut()
+                    }
                 } else {
                     self.error = (error as? SignInFailure ?? .unavailable).localizedDescription
                 }

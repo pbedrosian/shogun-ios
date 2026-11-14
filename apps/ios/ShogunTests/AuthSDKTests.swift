@@ -1,5 +1,6 @@
 import XCTest
 import Auth
+import AuthenticationServices
 @testable import Shogun
 
 final class MemoryAuthStorage: AuthLocalStorage, @unchecked Sendable {
@@ -38,10 +39,17 @@ final class AuthURLProtocol: URLProtocol, @unchecked Sendable {
     var user: [String: Any] { ["id":userID,"aud":"authenticated","email":"owner@example.test","app_metadata":[:],"user_metadata":[:],"created_at":"2026-01-01T00:00:00Z","updated_at":"2026-01-01T00:00:00Z","is_anonymous":false] }
     func json(_ value: Any) -> Data { try! JSONSerialization.data(withJSONObject: value, options: .fragmentsAllowed) }
     var token: Data { json(["access_token":"test-access-token","refresh_token":"test-refresh-token","token_type":"bearer","expires_in":3600,"expires_at":Date().timeIntervalSince1970 + 3600,"user":user]) }
-    func service(_ storage: MemoryAuthStorage = MemoryAuthStorage()) throws -> SupabaseAuthService {
+    func service(
+        _ storage: MemoryAuthStorage = MemoryAuthStorage(), google: Bool = false,
+        flow: @escaping @MainActor @Sendable (URL) async throws -> URL = { _ in
+            throw CancellationError()
+        }
+    ) throws -> SupabaseAuthService {
         let config = try AuthConfiguration(info: ["SUPABASE_URL":"https://auth.example.test","SUPABASE_PUBLISHABLE_KEY":"sb_publishable_test"], allowLocalHTTP: false)
         let sessionConfig = URLSessionConfiguration.ephemeral; sessionConfig.protocolClasses = [AuthURLProtocol.self]
-        return SupabaseAuthService(config: config, storage: storage, session: URLSession(configuration: sessionConfig))
+        return SupabaseAuthService(
+            config: config, storage: storage, session: URLSession(configuration: sessionConfig),
+            googleSignInAvailable: google, googleFlow: flow)
     }
     func installHandler() {
         let token = token, user = json(user), id = json(libraryID), library = json([["id":libraryID,"name":"My Library"]])
@@ -57,6 +65,430 @@ final class AuthURLProtocol: URLProtocol, @unchecked Sendable {
             default: return (200, Data("{}".utf8))
             }
         }
+    }
+    func testAppleChallengeRejectsMissingTokenAndMismatchedOrStaleState() throws {
+        let challenge = try AppleSignInChallenge()
+        let second = try AppleSignInChallenge()
+        let request = challenge.request()
+        XCTAssertEqual(request.requestedScopes, [.email])
+        XCTAssertEqual(request.state, challenge.state)
+        XCTAssertEqual(request.nonce?.count, 64)
+        XCTAssertNotEqual(request.nonce, challenge.nonce)
+        XCTAssertNotEqual(challenge.nonce, second.nonce)
+        XCTAssertNotEqual(challenge.state, second.state)
+        let proof = try challenge.proof(
+            identityToken: Data("apple-id-token".utf8), returnedState: request.state)
+        XCTAssertEqual(proof.nonce, challenge.nonce)
+        XCTAssertEqual(proof.idToken, "apple-id-token")
+        let deletionProof = try challenge.proof(identityToken: Data("token".utf8), returnedState: request.state, authorizationCode: Data("one-time-code".utf8))
+        XCTAssertEqual(deletionProof.authorizationCode, "one-time-code")
+        for state in [nil, "wrong", second.state] {
+            XCTAssertThrowsError(
+                try challenge.proof(identityToken: Data("token".utf8), returnedState: state))
+        }
+        for token in [nil, Data(), Data([0xff])] {
+            XCTAssertThrowsError(
+                try challenge.proof(identityToken: token, returnedState: request.state))
+        }
+    }
+    func testAppleExchangesTokenWithRawNonceAndRestoresValidatedAccount() async throws {
+        installHandler()
+        let normal = AuthURLProtocol.handler!
+        var exchanges = 0
+        AuthURLProtocol.handler = { request in
+            if request.url!.path == "/auth/v1/token" {
+                exchanges += 1
+                XCTAssertEqual(
+                    URLComponents(url: request.url!, resolvingAgainstBaseURL: false)?.queryItems?
+                        .first?.value, "id_token")
+                let body =
+                    try JSONSerialization.jsonObject(with: self.requestBody(request))
+                    as! [String: Any]
+                XCTAssertEqual(body["provider"] as? String, "apple")
+                XCTAssertEqual(body["id_token"] as? String, "apple-id-token")
+                XCTAssertEqual(body["nonce"] as? String, "raw-one-time-nonce")
+            }
+            return try normal(request)
+        }
+        let storage = MemoryAuthStorage()
+        let auth = try appleService(storage) {
+            AppleSignInProof(idToken: "apple-id-token", nonce: "raw-one-time-nonce")
+        }
+        let account = try await auth.signInWithApple()
+        XCTAssertEqual(account.id.uuidString.lowercased(), userID)
+        XCTAssertEqual(account.libraryID.uuidString.lowercased(), libraryID)
+        XCTAssertEqual(exchanges, 1)
+        let restored = try await appleService(storage) { throw CancellationError() }.restore()
+        XCTAssertEqual(restored, account)
+    }
+    func testAppleUnavailableCancelledAndMalformedProofNeverReachBackend() async throws {
+        AuthURLProtocol.handler = { _ in
+            XCTFail("Unexpected backend request")
+            return (500, Data())
+        }
+        let disabled = try service()
+        XCTAssertFalse(disabled.appleSignInAvailable)
+        do {
+            _ = try await disabled.signInWithApple()
+            XCTFail()
+        } catch { XCTAssertEqual(error as? SignInFailure, .configuration) }
+        for error in [CancellationError() as Error, ASAuthorizationError(.canceled)] {
+            let auth = try appleService { throw error }
+            do {
+                _ = try await auth.signInWithApple()
+                XCTFail()
+            } catch { XCTAssertTrue(error is CancellationError) }
+        }
+        for proof in [
+            AppleSignInProof(idToken: "", nonce: "nonce"),
+            AppleSignInProof(idToken: "token", nonce: ""),
+        ] {
+            let auth = try appleService { proof }
+            do {
+                _ = try await auth.signInWithApple()
+                XCTFail()
+            } catch { XCTAssertEqual(error as? SignInFailure, .callback) }
+        }
+    }
+    func testAppleRejectedExchangeDoesNotCreateLocalSession() async throws {
+        AuthURLProtocol.handler = { request in
+            XCTAssertEqual(request.url!.path, "/auth/v1/token")
+            return (400, Data(#"{"code":"bad_jwt","msg":"Invalid identity token"}"#.utf8))
+        }
+        let storage = MemoryAuthStorage()
+        let auth = try appleService(storage) {
+            AppleSignInProof(idToken: "rejected", nonce: "nonce")
+        }
+        do {
+            _ = try await auth.signInWithApple()
+            XCTFail()
+        } catch {}
+        let restored = try await auth.restore()
+        XCTAssertNil(restored)
+    }
+    func testAppleLinkingUsesAuthenticatedLinkAndPreservesAccountAndLibrary() async throws {
+        for outcome in [
+            "success", "conflict", "cancel", "wrong-user", "unverified-user", "missing-identity",
+        ] {
+            installHandler()
+            let normal = AuthURLProtocol.handler!
+            var linking = false
+            var bootstrapCalls = 0
+            var linkedUser = user
+            linkedUser["identities"] = [
+                [
+                    "id": "apple-subject", "identity_id": "30000000-0000-0000-0000-000000000001",
+                    "user_id": userID, "provider": "apple",
+                ]
+            ]
+            if outcome == "wrong-user" { linkedUser["id"] = "10000000-0000-0000-0000-000000000099" }
+            if outcome == "missing-identity" { linkedUser = user }
+            let linkedToken = json([
+                "access_token": "linked-access-token", "refresh_token": "linked-refresh",
+                "token_type": "bearer", "expires_in": 3600,
+                "expires_at": Date().timeIntervalSince1970 + 3600, "user": linkedUser,
+            ])
+            let linkedUserData = json(linkedUser)
+            var wrongUser = linkedUser
+            wrongUser["id"] = "10000000-0000-0000-0000-000000000099"
+            let unverifiedUserData = json(wrongUser)
+            let libraryIDResponse = json(libraryID)
+            let libraryResponse = json([["id": libraryID, "name": "My Library"]])
+            AuthURLProtocol.handler = { request in
+                if request.url!.path == "/auth/v1/token",
+                    request.url!.query?.contains("id_token") == true
+                {
+                    let body =
+                        try JSONSerialization.jsonObject(with: self.requestBody(request))
+                        as! [String: Any]
+                    XCTAssertEqual(
+                        request.value(forHTTPHeaderField: "Authorization"),
+                        "Bearer test-access-token")
+                    XCTAssertEqual(body["link_identity"] as? Bool, true)
+                    XCTAssertEqual(body["provider"] as? String, "apple")
+                    XCTAssertEqual(body["nonce"] as? String, "link-nonce")
+                    if outcome == "conflict" {
+                        return (
+                            422,
+                            Data(#"{"code":"identity_already_exists","msg":"Already linked"}"#.utf8)
+                        )
+                    }
+                    linking = true
+                    return (200, linkedToken)
+                }
+                if linking && request.url!.path == "/auth/v1/user" {
+                    return (200, outcome == "unverified-user" ? unverifiedUserData : linkedUserData)
+                }
+                if request.url!.path == "/rest/v1/rpc/bootstrap_account" {
+                    bootstrapCalls += 1
+                    if linking { XCTAssertEqual(outcome, "success") }
+                    return (200, libraryIDResponse)
+                }
+                if linking && request.url!.path == "/rest/v1/libraries" {
+                    return (200, libraryResponse)
+                }
+                return try normal(request)
+            }
+            let auth = try appleService(linking: true) {
+                if outcome == "cancel" { throw CancellationError() }
+                return AppleSignInProof(idToken: "apple-link-token", nonce: "link-nonce")
+            }
+            let original = try await auth.signIn(email: "owner@example.test", password: "password")
+            if outcome == "success" {
+                let linked = try await auth.linkAppleIdentity()
+                XCTAssertEqual(linked.id, original.id)
+                XCTAssertEqual(linked.libraryID, original.libraryID)
+                XCTAssertTrue(linked.appleIdentityLinked)
+                XCTAssertEqual(bootstrapCalls, 2)
+            } else {
+                do {
+                    _ = try await auth.linkAppleIdentity()
+                    XCTFail()
+                } catch {
+                    XCTAssertTrue(
+                        outcome == "cancel"
+                            ? error is CancellationError
+                            : error as? SignInFailure == .identityLinking)
+                }
+                XCTAssertEqual(bootstrapCalls, 1)
+                if outcome == "conflict" || outcome == "cancel" {
+                    let restored = try await auth.restore()
+                    XCTAssertEqual(restored, original)
+                }
+            }
+        }
+    }
+    func testAppleLinkingIsDisabledUnlessExplicitlyConfigured() async throws {
+        let auth = try appleService {
+            XCTFail("Apple authorization should not start")
+            throw CancellationError()
+        }
+        XCTAssertFalse(auth.appleIdentityLinkingAvailable)
+        do {
+            _ = try await auth.linkAppleIdentity()
+            XCTFail()
+        } catch { XCTAssertEqual(error as? SignInFailure, .configuration) }
+    }
+    func testAppleDeletionIsolatedProofCodeAndMainSessionLifecycle() async throws {
+        for outcome in ["success", "wrong-account", "cancel", "missing-code", "failure"] {
+            installHandler()
+            let normal = AuthURLProtocol.handler!
+            var owner = user
+            owner["identities"] = [
+                [
+                    "id": "apple-subject", "identity_id": "30000000-0000-0000-0000-000000000001",
+                    "user_id": userID, "provider": "apple",
+                ]
+            ]
+            var proofUser = owner
+            if outcome == "wrong-account" {
+                proofUser["id"] = "10000000-0000-0000-0000-000000000099"
+            }
+            let ownerData = json(owner)
+            let proofData = json(proofUser)
+            let mainToken = json([
+                "access_token": "test-access-token", "refresh_token": "main-refresh",
+                "token_type": "bearer", "expires_in": 3600,
+                "expires_at": Date().timeIntervalSince1970 + 3600, "user": owner,
+            ])
+            let proofToken = json([
+                "access_token": "apple-proof-access", "refresh_token": "proof-refresh",
+                "token_type": "bearer", "expires_in": 3600,
+                "expires_at": Date().timeIntervalSince1970 + 3600, "user": proofUser,
+            ])
+            var requests = 0
+            var proofRevoked = false
+            AuthURLProtocol.handler = { request in
+                switch request.url!.path {
+                case "/auth/v1/token":
+                    return (
+                        200,
+                        request.url!.query?.contains("id_token") == true ? proofToken : mainToken
+                    )
+                case "/auth/v1/user":
+                    return (
+                        200,
+                        request.value(forHTTPHeaderField: "Authorization")
+                            == "Bearer apple-proof-access" ? proofData : ownerData
+                    )
+                case "/functions/v1/delete-account":
+                    requests += 1
+                    XCTAssertEqual(
+                        request.value(forHTTPHeaderField: "Authorization"),
+                        "Bearer test-access-token")
+                    let body =
+                        try JSONSerialization.jsonObject(with: self.requestBody(request))
+                        as! [String: [String: String]]
+                    XCTAssertEqual(
+                        body["apple"],
+                        [
+                            "reauthentication_token": "apple-proof-access",
+                            "authorization_code": "one-time-code",
+                            "client_id": "com.petebedrosian.shogun.dev",
+                        ])
+                    return (outcome == "failure" ? 403 : 200, Data(#"{"deleted":true}"#.utf8))
+                case "/auth/v1/logout":
+                    if request.value(forHTTPHeaderField: "Authorization")
+                        == "Bearer apple-proof-access"
+                    {
+                        proofRevoked = true
+                    }
+                    return (204, Data())
+                default: return try normal(request)
+                }
+            }
+            let auth = try appleService(deletion: true) {
+                if outcome == "cancel" { throw CancellationError() }
+                return AppleSignInProof(
+                    idToken: "apple-token", nonce: "nonce",
+                    authorizationCode: outcome == "missing-code" ? nil : "one-time-code")
+            }
+            let original = try await auth.signIn(email: "relay@example.test", password: "password")
+            XCTAssertTrue(original.appleIdentityLinked)
+            if outcome == "success" {
+                try await auth.deleteAccountWithApple()
+                let restored = try await auth.restore()
+                XCTAssertNil(restored)
+            } else {
+                do {
+                    try await auth.deleteAccountWithApple()
+                    XCTFail()
+                } catch {
+                    XCTAssertTrue(
+                        outcome == "cancel"
+                            ? error is CancellationError
+                            : error as? SignInFailure == .appleReauthentication)
+                }
+                let restored = try await auth.restore()
+                XCTAssertEqual(restored, original)
+            }
+            XCTAssertEqual(requests, outcome == "success" || outcome == "failure" ? 1 : 0)
+            if outcome != "cancel" && outcome != "missing-code" { XCTAssertTrue(proofRevoked) }
+        }
+        let disabled = try appleService {
+            XCTFail("Disabled deletion must not start Apple")
+            throw CancellationError()
+        }
+        do {
+            try await disabled.deleteAccountWithApple()
+            XCTFail()
+        } catch { XCTAssertEqual(error as? SignInFailure, .configuration) }
+    }
+    func testApplePasswordFallbackSendsOnlyExplicitPasswordProof() async throws {
+        installHandler()
+        let normal = AuthURLProtocol.handler!
+        var requests = 0
+        AuthURLProtocol.handler = { request in
+            if request.url!.path == "/functions/v1/delete-account" {
+                requests += 1
+                XCTAssertEqual(
+                    request.value(forHTTPHeaderField: "Authorization"), "Bearer test-access-token")
+                let body =
+                    try JSONSerialization.jsonObject(with: self.requestBody(request))
+                    as! [String: [String: String]]
+                XCTAssertEqual(body, ["apple_fallback": ["password": "password"]])
+                return (200, Data(#"{"deleted":true,"apple_revocation_required":true}"#.utf8))
+            }
+            return try normal(request)
+        }
+        let auth = try appleService(deletion: true) {
+            XCTFail("Password fallback must not start Apple authorization")
+            throw CancellationError()
+        }
+        _ = try await auth.signIn(email: "owner@example.test", password: "password")
+        try await auth.deleteAccountWithApplePassword("password")
+        XCTAssertEqual(requests, 1)
+        let restored = try await auth.restore()
+        XCTAssertNil(restored)
+    }
+    private func appleService(
+        _ storage: MemoryAuthStorage = MemoryAuthStorage(), linking: Bool = false, deletion: Bool = false,
+        flow: @escaping @MainActor @Sendable () async throws -> AppleSignInProof
+    ) throws -> SupabaseAuthService {
+        let config = try AuthConfiguration(
+            info: [
+                "SUPABASE_URL": "https://auth.example.test",
+                "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_test",
+            ], allowLocalHTTP: false)
+        let session = URLSessionConfiguration.ephemeral
+        session.protocolClasses = [AuthURLProtocol.self]
+        return SupabaseAuthService(
+            config: config, storage: storage, session: URLSession(configuration: session),
+            appleDeletionAvailable: deletion, appleClientID: "com.petebedrosian.shogun.dev",
+            appleIdentityLinkingAvailable: linking, appleSignInAvailable: true, appleFlow: flow)
+    }
+    nonisolated private func requestBody(_ request: URLRequest) -> Data {
+        if let body = request.httpBody { return body }
+        guard let stream = request.httpBodyStream else { return Data() }
+        stream.open()
+        defer { stream.close() }
+        var result = Data()
+        var buffer = [UInt8](repeating: 0, count: 4096)
+        while stream.hasBytesAvailable {
+            let count = stream.read(&buffer, maxLength: buffer.count)
+            if count <= 0 { break }
+            result.append(buffer, count: count)
+        }
+        return result
+    }
+    func testGoogleUsesPKCEDevCallbackAndRestoresExistingAccount() async throws {
+        installHandler()
+        let normal = AuthURLProtocol.handler!
+        AuthURLProtocol.handler = { request in
+            if request.url!.path == "/auth/v1/token" {
+                let query = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)!
+                    .queryItems!
+                XCTAssertEqual(query.first(where: { $0.name == "grant_type" })?.value, "pkce")
+            }
+            return try normal(request)
+        }
+        let storage = MemoryAuthStorage()
+        let auth = try service(storage, google: true) { url in
+            let components = URLComponents(url: url, resolvingAgainstBaseURL: false)!
+            XCTAssertEqual(components.host, "auth.example.test")
+            XCTAssertEqual(components.path, "/auth/v1/authorize")
+            let items = components.queryItems!
+            XCTAssertEqual(items.first(where: { $0.name == "provider" })?.value, "google")
+            XCTAssertEqual(
+                items.first(where: { $0.name == "redirect_to" })?.value,
+                AuthConfiguration.redirect.absoluteString)
+            XCTAssertEqual(
+                items.first(where: { $0.name == "code_challenge_method" })?.value, "s256")
+            XCTAssertFalse(items.first(where: { $0.name == "code_challenge" })!.value!.isEmpty)
+            return URL(
+                string: "\(AuthConfiguration.redirect.absoluteString)?code=google-test-code")!
+        }
+        let account = try await auth.signInWithGoogle()
+        XCTAssertEqual(account.id.uuidString.lowercased(), userID)
+        XCTAssertEqual(account.libraryID.uuidString.lowercased(), libraryID)
+        let restored = try await service(storage).restore()
+        XCTAssertEqual(restored, account)
+    }
+    func testGoogleRejectsOtherAppCallbackBeforeExchangingCode() async throws {
+        installHandler()
+        AuthURLProtocol.handler = { _ in
+            XCTFail("Untrusted callback must not make an API request"); return (400, Data())
+        }
+        let other = AuthConfiguration.redirect.scheme == "shogun-dev" ? "shogun" : "shogun-dev"
+        let auth = try service(google: true) { _ in
+            URL(string: "\(other)://auth-callback?code=bad")!
+        }
+        do { _ = try await auth.signInWithGoogle(); XCTFail() } catch {
+            XCTAssertEqual(error as? SignInFailure, .callback)
+        }
+    }
+    func testGoogleDisabledAndCancellationDoNotCreateSession() async throws {
+        let disabled = try service()
+        XCTAssertFalse(disabled.googleSignInAvailable)
+        do { _ = try await disabled.signInWithGoogle(); XCTFail() } catch {
+            XCTAssertEqual(error as? SignInFailure, .configuration)
+        }
+        let cancelled = try service(google: true)
+        do { _ = try await cancelled.signInWithGoogle(); XCTFail() } catch {
+            XCTAssertTrue(error is CancellationError)
+        }
+        let restored = try await cancelled.restore()
+        XCTAssertNil(restored)
     }
     func testOfficialSDKPersistsRestoresRefreshesAndSignsOutOffline() async throws {
         installHandler(); let storage = MemoryAuthStorage()
@@ -79,11 +511,97 @@ final class AuthURLProtocol: URLProtocol, @unchecked Sendable {
         try await first.recover(email: "owner@example.test")
         let resumed = try service(storage)
         let signal = Task { for await event in resumed.signals { if case .recovery = event { return true } }; return false }
-        let account = try await resumed.callback(URL(string: "shogun://auth-callback?code=test-code")!)
+        let account = try await resumed.callback(
+            URL(string: "\(AuthConfiguration.redirect.absoluteString)?code=test-code")!)
         let recovered = await signal.value; XCTAssertTrue(recovered); XCTAssertEqual(account.email, "owner@example.test")
         let updated = try await resumed.changePassword("new-password"); XCTAssertEqual(updated, account)
         do { _ = try await resumed.callback(URL(string: "https://evil.test")!); XCTFail() } catch { XCTAssertEqual(error as? SignInFailure, .callback) }
         do { _ = try await resumed.callback(AuthConfiguration.redirect); XCTFail() } catch { XCTAssertEqual(error as? SignInFailure, .callback) }
+    }
+    func testGoogleDeletionUsesSeparateProofAndClearsMainSessionOnlyOnSuccess() async throws {
+        for outcome in ["wrong-account", "cancel", "failure", "success"] {
+            let storage = MemoryAuthStorage()
+            let owner = userID
+            let freshID =
+                outcome == "wrong-account" ? "10000000-0000-0000-0000-000000000099" : owner
+            func googleUser(_ id: String) -> [String: Any] {
+                var value = user
+                value["id"] = id
+                value["identities"] = [
+                    [
+                        "id": "google-subject",
+                        "identity_id": "30000000-0000-0000-0000-000000000001", "user_id": id,
+                        "provider": "google",
+                    ]
+                ]
+                return value
+            }
+            let originalUser = json(googleUser(owner)), proofUser = json(googleUser(freshID))
+            let mainToken = json([
+                "access_token": "test-access-token", "refresh_token": "main-refresh",
+                "token_type": "bearer", "expires_in": 3600,
+                "expires_at": Date().timeIntervalSince1970 + 3600, "user": googleUser(owner),
+            ])
+            let proofToken = json([
+                "access_token": "proof-access", "refresh_token": "proof-refresh",
+                "token_type": "bearer", "expires_in": 3600,
+                "expires_at": Date().timeIntervalSince1970 + 3600, "user": googleUser(freshID),
+            ])
+            installHandler()
+            let normal = AuthURLProtocol.handler!
+            var deletionRequests = 0
+            var proofRevoked = false
+            AuthURLProtocol.handler = { request in
+                let path = request.url!.path
+                if path == "/auth/v1/token" {
+                    return (200, request.url!.query!.contains("pkce") ? proofToken : mainToken)
+                }
+                if path == "/auth/v1/user" {
+                    return (
+                        200,
+                        request.value(forHTTPHeaderField: "Authorization") == "Bearer proof-access"
+                            ? proofUser : originalUser
+                    )
+                }
+                if path == "/functions/v1/delete-account" {
+                    deletionRequests += 1
+                    XCTAssertEqual(
+                        request.value(forHTTPHeaderField: "Authorization"),
+                        "Bearer test-access-token")
+                    return (outcome == "failure" ? 403 : 200, Data(#"{"deleted":true}"#.utf8))
+                }
+                if path == "/auth/v1/logout" {
+                    if request.value(forHTTPHeaderField: "Authorization") == "Bearer proof-access" {
+                        proofRevoked = true
+                    }
+                    return (204, Data())
+                }
+                return try normal(request)
+            }
+            let auth = try service(storage, google: true) { _ in
+                if outcome == "cancel" { throw CancellationError() }
+                return URL(string: "\(AuthConfiguration.redirect.absoluteString)?code=delete-test")!
+            }
+            let before = try await auth.signIn(email: "owner@example.test", password: "password")
+            XCTAssertTrue(before.googleIdentityLinked)
+            if outcome == "success" {
+                try await auth.deleteAccountWithGoogle()
+                let after = try await auth.restore()
+                XCTAssertNil(after)
+            } else {
+                do { try await auth.deleteAccountWithGoogle(); XCTFail() } catch {
+                    if outcome == "cancel" {
+                        XCTAssertTrue(error is CancellationError)
+                    } else {
+                        XCTAssertEqual(error as? SignInFailure, .reauthentication)
+                    }
+                }
+                let after = try await auth.restore()
+                XCTAssertEqual(after, before)
+            }
+            XCTAssertEqual(deletionRequests, outcome == "success" || outcome == "failure" ? 1 : 0)
+            if outcome != "cancel" { XCTAssertTrue(proofRevoked) }
+        }
     }
     func testDeleteAccountUsesAuthenticatedEndpointAndClearsPersistedSession() async throws {
         installHandler(); let storage = MemoryAuthStorage(); let first = try service(storage)

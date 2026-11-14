@@ -275,10 +275,17 @@ References: [Supabase local development](https://supabase.com/docs/guides/local-
 
 Local startup includes the Edge Functions runtime and `delete-account` endpoint at
 `POST /functions/v1/delete-account`. It requires the caller's session JWT and a JSON
-body containing only `password`. Auth validates the caller online, then verifies
-their current password. No caller-supplied account ID is accepted. The function
-uses its server-only service-role credential to hard-delete that verified Auth user.
-The temporary password-verification session is revoked if deletion fails.
+body containing exactly one of `password` or `reauthentication_token`. The body is
+limited while streaming to 12 KiB (4 KiB for password requests); a forged or absent
+Content-Length cannot bypass the limit. Password
+requests retain current-password verification. Google requests require a separate
+OAuth session for the same user: both tokens are validated online with Auth before
+claims are inspected. The proof must have a distinct session ID, a linked Google
+identity, an unexpired authenticated-user JWT, and an OAuth authentication timestamp
+within five minutes (at most 30 seconds clock skew). Refreshing an old session is
+insufficient. No caller-supplied account ID is accepted. Only the server's service
+credential can hard-delete the verified caller. Verified temporary proof sessions
+are revoked after the attempt; the iOS client also cleans up its isolated session.
 
 Existing foreign-key cascades remove the profile, libraries owned by the account
 (including shared libraries), their copies/memberships, personal movie state, and
@@ -289,7 +296,13 @@ owned-object cleanup before Auth deletion, which Supabase otherwise rejects.
 `npm run backend:test` checks handler authorization/error behavior without Docker.
 `npm run backend:test:deletion` runs real JWT/password/cascade checks against only
 the fixed local backend and cleans up its temporary accounts/data. Backend CI runs
-both. Never run deletion tests against real user accounts.
+both. `npm run backend:test:google-deletion` adds local, disposable OAuth-identity/
+AMR fixtures and real GoTrue-issued JWTs to check wrong-account, password, stale and
+same-session, tampered-signature and revoked-proof rejection, successful deletion
+and data cascades. This emulates the
+OAuth result locally; actual Google consent remains a separate device test. The
+fixture script is pinned to the local backend/container and cleans its own data.
+Never run deletion tests against real user accounts.
 
 For a hosted environment, deploy the function before enabling the iOS deletion UI:
 `npx supabase --workdir backend functions deploy delete-account --project-ref YOUR_PROJECT_REF`.
@@ -303,3 +316,34 @@ See [EMAIL.md](EMAIL.md) for verified-domain/SMTP setup, local and hosted config
 callback URLs, templates, testing, troubleshooting, and rollback. See [AUTH.md](AUTH.md)
 for the app setup. External delivery is not configured; local confirmation remains
 disabled and recovery mail is captured in Mailpit.
+
+
+### Apple-linked account deletion
+
+The local delete-account handler accepts exactly one root proof: `password`,
+`reauthentication_token` (Google), `apple`, or `apple_fallback`. Apple contains only
+`reauthentication_token`, `authorization_code` and `client_id`; the current account
+is always derived from the main Auth bearer. The main and fresh sessions must be
+different sessions for the same user, and the proof must be recently authenticated.
+After Auth validation, the server exchanges the one-time code at Apple's fixed
+HTTPS endpoint, checks the returned issuer/audience/expiry and binds the Apple
+subject to Auth's trusted identity data, then revokes authorization before deletion.
+It never decodes a caller-supplied Apple ID token as authorization. All Apple requests
+reject redirects and have bounded timeouts; errors do not expose provider tokens.
+
+Apple-linked accounts reject the implicit password/Google forms. If Apple access is
+unavailable, the explicit `apple_fallback: {password: ...}` form verifies the account's
+current password and can delete without automatic Apple revocation; its response
+includes `apple_revocation_required: true`, which must be disclosed in the client.
+This supports deletion when an Apple token cannot be obtained. A user unable to use
+either credential can initiate a support request from the deletion screen. Complete
+and verify that operational path before release; do not retain an account solely
+because provider authorization is unavailable.
+
+Apple client IDs and signing credentials are server configuration, not request
+trust or app secrets. See [Apple setup](AUTH.md#apple-account-management-and-signing-preparation)
+for the exact environment variable names and opt-in signing gate. No real Apple
+key is stored in this repository. The unit checks generate ephemeral test keys,
+and `backend:test:apple-deletion` uses real local Auth JWTs with mocked Apple
+protocol responses, verifies failed revocation preserves data, and checks the
+explicit password fallback. Never point these disposable fixtures at hosted data.

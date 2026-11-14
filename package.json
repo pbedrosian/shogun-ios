@@ -24,7 +24,9 @@
     "backend:demo": "node scripts/backend/demo-account.mjs",
     "backend:test:collection": "node scripts/backend/collection-api.mjs",
     "backend:test:movie-add": "node scripts/backend/movie-add-api.mjs",
-    "backend:test:catalog": "node scripts/backend/catalog-api.mjs"
+    "backend:test:catalog": "node scripts/backend/catalog-api.mjs",
+    "backend:test:google-deletion": "node scripts/backend/oauth-delete-account-api.mjs --provider google",
+    "backend:test:apple-deletion": "node scripts/backend/oauth-delete-account-api.mjs --provider apple"
   },
   "devDependencies": {
     "supabase": "2.122.0",

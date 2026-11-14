@@ -3,6 +3,10 @@
 Native iPhone movie catalog with a Supabase backend, managed in one repository.
 The iOS app connects to Supabase authentication and durable account-scoped collections. Search discovers movies through TMDB; the sample catalog is retained only for explicit Debug UI tests.
 
+Start with the [Notion developer guide](https://app.notion.com/p/3fb08c1af1ec814ab486d8f4cd96be74)
+for product journeys, architecture, data/permission diagrams, onboarding, authentication,
+operations and user help. Repository runbooks below hold executable setup details.
+
 ## Repository layout
 
 ```text
@@ -231,7 +235,7 @@ See [CI usage controls](docs/CI.md) for activation and billing limits.
 
 Branch roles, SNAPSHOT/RC labels, promotion and final-tag deployment are documented
 in [Releasing](docs/RELEASING.md). The upcoming dev version is `1.1.0-SNAPSHOT`;
-main remains `0.2` until the approved candidate is promoted.
+main carries `1.0.0`; subsequent promotion follows the approved release workflow.
 
 ## Troubleshooting
 

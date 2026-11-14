@@ -68,8 +68,9 @@ server secrets. Hosted environment/promotion work remains separate.
 | TMDB client | Provider authentication, fixed HTTPS origin, timeouts, rate-limit/error mapping, metadata and artwork normalization. |
 
 Collection RPCs and catalog requests share transport; their feature errors remain
-separate. Edge Functions share live-session validation, with deletion still requiring
-current-password reauthentication and server-side administrative deletion.
+separate. Edge Functions share live-session validation, with deletion requiring
+current-password or fresh provider reauthentication and server-side administrative
+deletion. Apple-linked deletion also performs token revocation; see [AUTH.md](AUTH.md).
 
 A TMDB movie ID is separate from a persisted Supabase movie UUID. `Movie.tmdbID`
 retains the provider mapping from the backend. An ownership badge requires an exact

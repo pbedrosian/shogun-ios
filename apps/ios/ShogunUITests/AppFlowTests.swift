@@ -171,12 +171,21 @@ final class AppFlowTests: XCTestCase {
         app = XCUIApplication()
         preferencesSuite = "shogun-ui-\(UUID().uuidString)"
     }
-    private func launch(dark: Bool = false, large: Bool = false, extra: [String] = []) {
+    private func launch(dark: Bool = false, large: Bool = false, extra: [String] = [], selectEmailForm: Bool = true) {
         app.launchEnvironment["SHOGUN_UI_PREFERENCES_SUITE"] = preferencesSuite
         app.launchArguments = ["-shogun-auth-ui"] + extra
         if dark { app.launchArguments += ["-AppleInterfaceStyle", "Dark"] }
         if large { app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"] }
-        app.launch(); XCTAssertTrue(app.textFields["auth.email"].waitForExistence(timeout: 10))
+        app.launch(); XCTAssertTrue(app.buttons["auth.emailMethod"].waitForExistence(timeout: 10))
+        if selectEmailForm { selectEmail() }
+    }
+    private func selectEmail() {
+        if !app.textFields["auth.email"].exists {
+            let email = app.buttons["auth.emailMethod"]
+            reveal(email)
+            email.tap()
+        }
+        XCTAssertTrue(app.textFields["auth.email"].waitForExistence(timeout: 5))
     }
     private func reveal(_ element: XCUIElement) {
         for _ in 0..<8 { if element.isHittable { return }; app.swipeUp() }
@@ -185,6 +194,57 @@ final class AppFlowTests: XCTestCase {
     private func fill(_ password: String) {
         let email = app.textFields["auth.email"]; email.tap(); email.typeText("owner@shogun.test")
         let field = app.secureTextFields["auth.password"]; field.tap(); field.typeText(password)
+    }
+    func testEmailMethodRevealsSignInAndProgressiveSignup() {
+        launch(extra: ["-shogun-auth-apple", "-shogun-auth-google"], selectEmailForm: false)
+        let emailMethod = app.buttons["auth.emailMethod"]
+        let apple = app.buttons["auth.apple"]
+        let google = app.buttons["auth.google"]
+        XCTAssertFalse(app.textFields["auth.email"].exists)
+        XCTAssertFalse(app.buttons["auth.submit"].exists)
+        XCTAssertEqual(emailMethod.label, "Sign in with email")
+        XCTAssertEqual(emailMethod.frame.width, apple.frame.width, accuracy: 1)
+        XCTAssertEqual(emailMethod.frame.midY, google.frame.midY, accuracy: 1)
+        XCTAssertGreaterThan(emailMethod.frame.minX, google.frame.maxX)
+        let choices = XCTAttachment(screenshot: app.screenshot())
+        choices.name = "Apple Google and email method choices"
+        choices.lifetime = .keepAlways
+        add(choices)
+        selectEmail()
+        XCTAssertTrue(app.secureTextFields["auth.password"].exists)
+        XCTAssertTrue(app.buttons["auth.submit"].exists)
+        app.terminate()
+        launch(extra: ["-shogun-auth-apple", "-shogun-auth-google"], selectEmailForm: false)
+        app.buttons["auth.createAccount"].tap()
+        XCTAssertEqual(emailMethod.label, "Sign up with email")
+        XCTAssertFalse(app.textFields["auth.email"].exists)
+        XCTAssertFalse(app.buttons["auth.submit"].exists)
+        selectEmail()
+        XCTAssertFalse(app.secureTextFields["auth.password"].exists)
+        app.textFields["auth.email"].tap()
+        app.textFields["auth.email"].typeText("new@shogun.test")
+        XCTAssertTrue(app.secureTextFields["auth.password"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.secureTextFields["auth.confirmPassword"].exists)
+    }
+    func testEmailMethodAndRecoveryInDarkLargeText() {
+        launch(dark: true, large: true, extra: ["-shogun-auth-apple", "-shogun-auth-google"], selectEmailForm: false)
+        let emailMethod = app.buttons["auth.emailMethod"]
+        reveal(emailMethod)
+        XCTAssertTrue(emailMethod.isHittable)
+        XCTAssertFalse(app.textFields["auth.email"].exists)
+        let choices = XCTAttachment(screenshot: app.screenshot())
+        choices.name = "Email method choice dark accessibility text"
+        choices.lifetime = .keepAlways
+        add(choices)
+        selectEmail()
+        let forgot = app.buttons["auth.forgotPassword"]
+        reveal(forgot)
+        forgot.tap()
+        XCTAssertTrue(app.textFields["auth.email"].exists)
+        XCTAssertFalse(emailMethod.exists)
+        XCTAssertFalse(app.buttons["auth.apple"].exists)
+        XCTAssertFalse(app.buttons["auth.google"].exists)
+        XCTAssertEqual(app.buttons["auth.submit"].label, "Send reset link")
     }
     func testLibraryPreferencesSurviveAppRelaunch() {
         launch()
@@ -223,8 +283,185 @@ final class AppFlowTests: XCTestCase {
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.55)).tap()
     }
 
+    func testApplePasswordFallbackInDarkLargeText() {
+        launch(
+            dark: true, large: true,
+            extra: [
+                "-shogun-auth-google", "-shogun-auth-apple-linked", "-shogun-auth-apple-deletion",
+            ])
+        reveal(app.buttons["auth.google"])
+        app.buttons["auth.google"].tap()
+        XCTAssertTrue(app.tabBars.buttons["Profile"].waitForExistence(timeout: 5))
+        app.tabBars.buttons["Profile"].tap()
+        reveal(app.buttons["auth.deleteAccount"])
+        app.buttons["auth.deleteAccount"].tap()
+        let fallback = app.buttons["auth.appleDeletionFallback"]
+        reveal(fallback)
+        fallback.tap()
+        let notice = app.staticTexts["auth.appleDeletionFallbackNotice"]
+        revealForm(notice)
+        XCTAssertTrue(notice.exists)
+        let password = app.secureTextFields["auth.deletePassword"]
+        reveal(password)
+        password.tap()
+        password.typeText("valid-password\n")
+        let remove = app.buttons["auth.requestDeletion"]
+        reveal(remove)
+        remove.tap()
+        app.buttons["Delete permanently"].tap()
+        XCTAssertTrue(app.buttons["auth.emailMethod"].waitForExistence(timeout: 5))
+        XCTAssertTrue(
+            app.staticTexts.containing(
+                NSPredicate(format: "label CONTAINS %@", "Remove Shogun from Sign in with Apple")
+            ).firstMatch.exists)
+    }
+    func testAppleDeletionPrefersNativeConfirmation() {
+        launch(extra: [
+            "-shogun-auth-google", "-shogun-auth-apple-linked", "-shogun-auth-apple-deletion",
+        ])
+        app.buttons["auth.google"].tap()
+        XCTAssertTrue(app.tabBars.buttons["Profile"].waitForExistence(timeout: 5))
+        app.tabBars.buttons["Profile"].tap()
+        reveal(app.buttons["auth.deleteAccount"])
+        app.buttons["auth.deleteAccount"].tap()
+        XCTAssertTrue(app.staticTexts["auth.deleteAppleIdentity"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.secureTextFields["auth.deletePassword"].exists)
+        XCTAssertFalse(app.buttons["Use password instead"].exists)
+        app.buttons["auth.requestDeletion"].tap()
+        app.buttons["Keep account"].tap()
+        XCTAssertTrue(app.buttons["auth.requestDeletion"].exists)
+        app.buttons["auth.requestDeletion"].tap()
+        app.buttons["Delete permanently"].tap()
+        XCTAssertTrue(app.buttons["auth.emailMethod"].waitForExistence(timeout: 5))
+    }
+    func testAppleIdentityLinkingRequiresConfirmationAndKeepsCurrentAccount() {
+        verifyAppleIdentityLinking()
+    }
+    func testAppleIdentityLinkingInDarkLargeText() {
+        verifyAppleIdentityLinking(dark: true, large: true)
+    }
+    private func verifyAppleIdentityLinking(dark: Bool = false, large: Bool = false) {
+        launch(
+            dark: dark, large: large, extra: ["-shogun-auth-google", "-shogun-auth-apple-linking"])
+        app.buttons["auth.google"].tap()
+        XCTAssertTrue(app.tabBars.buttons["Profile"].waitForExistence(timeout: 5))
+        app.tabBars.buttons["Profile"].tap()
+        let accountEmail = app.staticTexts["auth.accountEmail"]
+        XCTAssertTrue(accountEmail.waitForExistence(timeout: 5))
+        let email = accountEmail.label
+        let connect = app.buttons["auth.connectApple"]
+        reveal(connect)
+        connect.tap()
+        app.buttons["Cancel"].tap()
+        XCTAssertFalse(app.staticTexts["auth.appleConnected"].exists)
+        connect.tap()
+        app.buttons["Continue with Apple"].tap()
+        XCTAssertTrue(app.staticTexts["auth.appleConnected"].waitForExistence(timeout: 5))
+        XCTAssertFalse(connect.exists)
+        let preview = XCTAttachment(screenshot: app.screenshot())
+        preview.name = "Apple connected to existing Shogun account"
+        preview.lifetime = .keepAlways
+        add(preview)
+        for _ in 0..<8 {
+            if accountEmail.exists { break }
+            app.swipeDown()
+        }
+        XCTAssertTrue(accountEmail.waitForExistence(timeout: 5))
+        XCTAssertEqual(accountEmail.label, email)
+    }
+    func testAppleLayoutPreviewIsDisabledOnSignInAndSignup() {
+        launch(extra: ["-shogun-auth-apple-preview", "-shogun-auth-google"])
+        let apple = app.buttons["auth.apple"]
+        XCTAssertTrue(apple.waitForExistence(timeout: 5))
+        XCTAssertFalse(apple.isEnabled)
+        XCTAssertTrue(app.buttons["auth.google"].isEnabled)
+        reveal(app.buttons["auth.createAccount"])
+        app.buttons["auth.createAccount"].tap()
+        XCTAssertTrue(apple.exists)
+        XCTAssertFalse(apple.isEnabled)
+        XCTAssertTrue(app.buttons["auth.google"].isEnabled)
+        reveal(apple)
+        let preview = XCTAttachment(screenshot: app.screenshot())
+        preview.name = "Dev layout with disabled Apple sign-in"
+        preview.lifetime = .keepAlways
+        add(preview)
+    }
+    func testAppleButtonSignsInFromSignupAndReturnsAfterSignOut() {
+        launch(extra: [
+            "-shogun-auth-apple", "-shogun-auth-google", "-AppleInterfaceStyle", "Light",
+        ])
+        let apple = app.buttons["auth.apple"]
+        XCTAssertTrue(apple.waitForExistence(timeout: 5))
+        XCTAssertEqual(app.staticTexts["auth.emailDivider"].label, "Or log in with")
+        XCTAssertLessThan(apple.frame.maxY, app.staticTexts["auth.emailDivider"].frame.minY)
+        XCTAssertLessThan(app.staticTexts["auth.emailDivider"].frame.maxY, app.textFields["auth.email"].frame.minY)
+        reveal(app.buttons["auth.createAccount"])
+        app.buttons["auth.createAccount"].tap()
+        XCTAssertEqual(app.staticTexts["auth.emailDivider"].label, "Or sign up with")
+        XCTAssertFalse(app.secureTextFields["auth.password"].exists)
+        reveal(apple)
+        let preview = XCTAttachment(screenshot: app.screenshot())
+        preview.name = "Apple and Google sign-in light"
+        preview.lifetime = .keepAlways
+        add(preview)
+        apple.tap()
+        XCTAssertTrue(app.tabBars.buttons["Profile"].waitForExistence(timeout: 5))
+        app.tabBars.buttons["Profile"].tap()
+        reveal(app.buttons["auth.signOut"])
+        app.buttons["auth.signOut"].tap()
+        XCTAssertTrue(apple.waitForExistence(timeout: 5))
+        selectEmail()
+        reveal(app.buttons["auth.forgotPassword"])
+        app.buttons["auth.forgotPassword"].tap()
+        XCTAssertFalse(apple.exists)
+    }
+    func testAppleButtonIsReachableInDarkLargeText() {
+        launch(dark: true, large: true, extra: ["-shogun-auth-apple", "-shogun-auth-google"])
+        let apple = app.buttons["auth.apple"]
+        XCTAssertTrue(apple.waitForExistence(timeout: 5))
+        reveal(apple)
+        XCTAssertTrue(apple.isHittable)
+        let preview = XCTAttachment(screenshot: app.screenshot())
+        preview.name = "Apple and Google sign-in dark large text"
+        preview.lifetime = .keepAlways
+        add(preview)
+    }
+    func testGoogleButtonSignsInAndSignOutReturnsToForm() {
+        launch(extra: ["-shogun-auth-google", "-AppleInterfaceStyle", "Light"])
+        let google = app.buttons["auth.google"]
+        XCTAssertTrue(google.waitForExistence(timeout: 5))
+        app.buttons["auth.createAccount"].tap()
+        XCTAssertEqual(app.buttons["auth.submit"].label, "Create with Email")
+        XCTAssertTrue(google.exists)
+        reveal(google)
+        let preview = XCTAttachment(screenshot: app.screenshot())
+        preview.name = "Google sign-in light"
+        preview.lifetime = .keepAlways
+        add(preview)
+        google.tap()
+        XCTAssertTrue(app.tabBars.buttons["Profile"].waitForExistence(timeout: 5))
+        app.tabBars.buttons["Profile"].tap()
+        XCTAssertEqual(app.staticTexts["auth.accountEmail"].label, "owner@shogun.test")
+        reveal(app.buttons["auth.signOut"])
+        app.buttons["auth.signOut"].tap()
+        XCTAssertTrue(google.waitForExistence(timeout: 5))
+    }
+    func testGoogleButtonIsReachableInDarkLargeText() {
+        launch(dark: true, large: true, extra: ["-shogun-auth-google"])
+        let google = app.buttons["auth.google"]
+        XCTAssertTrue(google.waitForExistence(timeout: 5))
+        reveal(google)
+        XCTAssertEqual(google.label, "Sign in with Google")
+        XCTAssertEqual(app.staticTexts["auth.emailDivider"].label, "Or log in with")
+        XCTAssertTrue(google.isHittable)
+        let preview = XCTAttachment(screenshot: app.screenshot())
+        preview.name = "Google sign-in dark large text"
+        preview.lifetime = .keepAlways
+        add(preview)
+    }
     func testSignInFailureSuccessAndSignOut() {
         launch(); XCTAssertTrue(app.descendants(matching: .any)["auth.brand"].firstMatch.exists)
+        XCTAssertFalse(app.staticTexts["auth.emailDivider"].exists)
         XCTAssertFalse(app.buttons["auth.demo"].exists)
         XCTAssertFalse(app.staticTexts["Your movies.\nYour collection."].exists)
         fill("invalid-password"); app.buttons["auth.submit"].tap()
@@ -239,14 +476,39 @@ final class AppFlowTests: XCTestCase {
         profile.tap()
         XCTAssertTrue(app.staticTexts["auth.accountEmail"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.staticTexts["auth.accountEmail"].label, "owner@shogun.test")
-        reveal(app.buttons["auth.signOut"]); app.buttons["auth.signOut"].tap(); XCTAssertTrue(app.textFields["auth.email"].waitForExistence(timeout: 5))
+        reveal(app.buttons["auth.signOut"]); app.buttons["auth.signOut"].tap(); XCTAssertTrue(app.buttons["auth.emailMethod"].waitForExistence(timeout: 5))
+    }
+    func testCreateAccountRevealsPasswordsAfterValidEmail() {
+        launch(extra: ["-shogun-auth-google", "-AppleInterfaceStyle", "Light"])
+        app.buttons["auth.createAccount"].tap()
+        XCTAssertFalse(app.secureTextFields["auth.password"].exists)
+        XCTAssertFalse(app.secureTextFields["auth.confirmPassword"].exists)
+        XCTAssertTrue(app.buttons["auth.google"].exists)
+        app.buttons["auth.submit"].tap()
+        XCTAssertEqual(app.staticTexts["auth.validation"].label, "Enter a valid email address.")
+        let email = app.textFields["auth.email"]
+        email.tap()
+        email.typeText("not-an-email")
+        XCTAssertFalse(app.secureTextFields["auth.password"].exists)
+        email.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 12))
+        email.typeText("owner@shogun.test")
+        XCTAssertTrue(app.secureTextFields["auth.password"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.secureTextFields["auth.confirmPassword"].exists)
+        reveal(app.buttons["auth.backToSignIn"])
+        app.buttons["auth.backToSignIn"].tap()
+        XCTAssertTrue(app.secureTextFields["auth.password"].exists)
+        XCTAssertFalse(app.secureTextFields["auth.confirmPassword"].exists)
     }
     func testCreateAccountConfirmationAndRecovery() {
-        launch(dark: true); let create = app.buttons["auth.createAccount"]; reveal(create); create.tap()
+        launch(dark: true); let create = app.buttons["auth.createAccount"]; reveal(create);
+        create.tap()
         fill("new-password")
-        app.buttons["auth.submit"].tap(); XCTAssertTrue(app.staticTexts["auth.validation"].waitForExistence(timeout: 5))
-        let confirm = app.secureTextFields["auth.confirmPassword"]; reveal(confirm); confirm.tap(); confirm.typeText("new-password")
-        app.buttons["auth.submit"].tap(); XCTAssertTrue(app.staticTexts["auth.message"].waitForExistence(timeout: 5))
+        app.buttons["auth.submit"].tap();
+        XCTAssertTrue(app.staticTexts["auth.validation"].waitForExistence(timeout: 5))
+        let confirm = app.secureTextFields["auth.confirmPassword"]; reveal(confirm); confirm.tap();
+        confirm.typeText("new-password")
+        app.buttons["auth.submit"].tap();
+        XCTAssertTrue(app.staticTexts["auth.message"].waitForExistence(timeout: 5))
         let back = app.buttons["auth.backToSignIn"]; reveal(back); back.tap()
         app.buttons["auth.forgotPassword"].tap(); app.buttons["auth.submit"].tap()
         XCTAssertTrue(app.staticTexts["auth.message"].waitForExistence(timeout: 5))
@@ -263,15 +525,34 @@ final class AppFlowTests: XCTestCase {
 #if SHOGUN_LIVE_AUTH
     func testLiveLocalSignInRelaunchAndSignOut() {
         app.launchArguments = []; app.launch()
-        XCTAssertTrue(app.textFields["auth.email"].waitForExistence(timeout: 15))
+        XCTAssertTrue(app.buttons["auth.emailMethod"].waitForExistence(timeout: 15))
+        selectEmail()
         fill("Shogun-local-only-25!"); app.buttons["auth.submit"].tap()
         XCTAssertTrue(app.buttons["library.selector"].waitForExistence(timeout: 10))
         app.terminate(); app.launch()
         XCTAssertTrue(app.buttons["library.selector"].waitForExistence(timeout: 10))
         app.tabBars.buttons["Profile"].tap(); XCTAssertEqual(app.staticTexts["auth.accountEmail"].label, "owner@shogun.test")
-        reveal(app.buttons["auth.signOut"]); app.buttons["auth.signOut"].tap(); XCTAssertTrue(app.textFields["auth.email"].waitForExistence(timeout: 10))
+        reveal(app.buttons["auth.signOut"]); app.buttons["auth.signOut"].tap(); XCTAssertTrue(app.buttons["auth.emailMethod"].waitForExistence(timeout: 10))
     }
 #endif
+    func testGoogleAccountDeletionNeedsConfirmationWithoutPassword() {
+        launch(extra: ["-shogun-auth-google"])
+        app.buttons["auth.google"].tap()
+        XCTAssertTrue(app.tabBars.buttons["Profile"].waitForExistence(timeout: 5))
+        app.tabBars.buttons["Profile"].tap()
+        reveal(app.buttons["auth.deleteAccount"])
+        app.buttons["auth.deleteAccount"].tap()
+        XCTAssertTrue(app.staticTexts["auth.deleteGoogleIdentity"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.secureTextFields["auth.deletePassword"].exists)
+        let request = app.buttons["auth.requestDeletion"]
+        reveal(request); request.tap()
+        app.alerts.buttons["Keep account"].tap()
+        XCTAssertTrue(request.exists)
+        request.tap()
+        app.alerts.buttons["Delete permanently"].tap()
+        XCTAssertTrue(app.buttons["auth.emailMethod"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["auth.message"].label.contains("deleted"))
+    }
     func testProfileHeaderAndAccountDeletionConfirmation() {
         launch(); fill("valid-password"); app.buttons["auth.submit"].tap()
         XCTAssertTrue(app.buttons["library.selector"].waitForExistence(timeout: 5))
@@ -288,7 +569,7 @@ final class AppFlowTests: XCTestCase {
         XCTAssertTrue(app.staticTexts["auth.deleteError"].waitForExistence(timeout: 5))
         password.tap(); password.typeText("valid-password\n"); reveal(request); request.tap()
         app.alerts.buttons["Delete permanently"].tap()
-        XCTAssertTrue(app.textFields["auth.email"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["auth.emailMethod"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["auth.message"].label.contains("deleted"))
     }
     func testRecoveryPasswordScreen() {
@@ -301,6 +582,8 @@ final class AppFlowTests: XCTestCase {
     }
     func testLargeTextAndPasswordVisibility() {
         launch(dark: true, large: true)
+        let email = app.textFields["auth.email"]
+        email.tap(); email.typeText("large-text@example.com\n")
         let password = app.secureTextFields["auth.password"]; reveal(password); password.tap(); password.typeText("visible-test")
         let toggle = app.buttons["auth.password.visibility"]; reveal(toggle); toggle.tap()
         XCTAssertEqual(app.textFields["auth.password"].value as? String, "visible-test")
@@ -470,7 +753,9 @@ final class AppFlowTests: XCTestCase {
         let query = app.textFields["addMovie.search"]
         XCTAssertTrue(query.waitForExistence(timeout: 5))
         query.tap()
-        query.typeText("Arrival\n")
+        // Let the debounced request fail before retrying. Return submits a second
+        // request, which can consume the fixture's one-shot failure on slow runners.
+        query.typeText("Arrival")
         let retry = app.buttons["Retry search"]
         XCTAssertTrue(retry.waitForExistence(timeout: 5))
         retry.tap()
