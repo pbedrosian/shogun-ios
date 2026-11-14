@@ -1,6 +1,7 @@
 // The default smoke checks need no provider credential; --live explicitly calls TMDB.
 import assert from 'node:assert/strict';
 import { settings } from './local.mjs';
+import { backendRelease } from '../../backend/supabase/functions/_shared/release.mjs';
 const config=settings();
 const args=process.argv.slice(2);
 if(args.some(a=>a!=='--live')) throw new Error('Usage: catalog-api.mjs [--live]');
@@ -14,6 +15,7 @@ const response=await fetch(config.url+'/auth/v1/token?grant_type=password',{meth
  headers:{apikey:config.anon,'Content-Type':'application/json'},body:JSON.stringify({email:'owner@shogun.test',password:'Shogun-local-only-25!'})});
 assert.equal(response.status,200,'fixture sign-in');
 const session=await response.json();
+assert.deepEqual(await call(session.access_token,{operation:'version'}),backendRelease,'runtime backend matches the app release source');
 await call('invalid',{operation:'search',query:'Arrival',page:1},401);
 await call(session.access_token,{operation:'search',query:'Arrival',page:1,url:'https://attacker.test'},400);
 await call(session.access_token,{operation:'details',movieID:-1},400);

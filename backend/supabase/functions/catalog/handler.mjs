@@ -1,4 +1,5 @@
 import { bearerHeader, verifySession } from '../_shared/session.mjs';
+import { backendRelease } from '../_shared/release.mjs';
 import { createTMDBClient, CatalogError, validID } from './tmdb.mjs';
 
 export function createCatalogHandler(env, request = fetch) {
@@ -14,7 +15,9 @@ export function createCatalogHandler(env, request = fetch) {
       if (new TextEncoder().encode(raw).length>4096) throw new Error();
       body = JSON.parse(raw);
       if (!body || typeof body!=='object' || Array.isArray(body)) throw new Error();
-      if (body.operation==='search') {
+      if (body.operation==='version') {
+        if (Object.keys(body).some(k=>k!=='operation')) throw new Error();
+      } else if (body.operation==='search') {
         if (Object.keys(body).some(k=>!['operation','query','page'].includes(k)) || typeof body.query!=='string' || body.query.length>200 || !Number.isInteger(body.page) || body.page<1 || body.page>500) throw new Error();
       } else if (body.operation==='details') {
         if (Object.keys(body).some(k=>!['operation','movieID'].includes(k)) || !validID(body.movieID)) throw new Error();
@@ -28,6 +31,7 @@ export function createCatalogHandler(env, request = fetch) {
     const session = await verifySession({url:env.url,key:env.anon},authorization,request,incoming.signal);
     if (!session.user) return reply(session.status,{error: session.status===401 ? 'unauthorized' : 'unavailable'});
     try {
+      if (body.operation==='version') return reply(200,backendRelease);
       if (body.operation==='search') {
         const query = body.query.trim();
         return reply(200, query ? await client.search(query,body.page,incoming.signal) : {page:1,totalPages:0,results:[]});

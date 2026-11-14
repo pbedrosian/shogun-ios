@@ -30,6 +30,8 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
+      - name: Verify shared app/backend release version
+        run: npm run release:check
       - name: Local-only tooling checks
         run: npm run backend:test
       - name: Start an ephemeral local backend and apply migrations

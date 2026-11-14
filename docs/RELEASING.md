@@ -1,20 +1,22 @@
 # Branches and release versions
 
 `dev` is the GitHub default branch and the base for feature work. `main` holds
-released, tested code and requires an MR. The first upcoming release is `1.0.0`;
-main remains at its existing `0.2` until that release is approved and promoted.
-SHO-26's hosted alpha setup was accepted and merged into dev in PR #28 on
-October 30, 2026. Each candidate records the approved source commit, release
-scope, build number and target environment. The prepared first candidate is `release/1.0.0-rc.1`.
+released, tested code and requires an MR. Current development targets
+`1.1.0-SNAPSHOT`. Each candidate records the approved source commit, release
+scope, build number and target environment. Historical 1.0.0 preparation and
+acceptance records remain below.
 
-| Stage | Git branch / tag | App display label | Numeric iOS version |
+| Stage | Git branch / tag | App/backend release label | Numeric iOS version |
 | --- | --- | --- | --- |
 | Upcoming development | `dev` and feature branches | `1.1.0-SNAPSHOT` | `1.1.0` |
-| Candidate stabilization | `release/1.0.0-rc.1` | `1.0.0-rc.1` | `1.0.0` |
-| Promoted release | `main`, immutable tag `1.0.0` | `1.0.0` | `1.0.0` |
+| Candidate stabilization | `release/1.1.0-rc.1` when approved | `1.1.0-rc.1` | `1.1.0` |
+| Promoted release | `main`, immutable tag `1.1.0` when approved | `1.1.0` | `1.1.0` |
 | Next development cycle | `dev` | Next agreed version plus `-SNAPSHOT` | That version's numeric base |
 
-Apple bundle versions stay numeric. `Configuration/Version.xcconfig` supplies
+`release-version.json` is the shared app/backend version source. After changing it,
+run `npm run release:generate`; commit both generated files with the source change.
+`npm run release:check` and both CI workflows reject version drift. Apple bundle
+versions stay numeric. Generated `Configuration/Version.xcconfig` supplies
 `SHOGUN_BASE_VERSION` for `MARKETING_VERSION` and `SHOGUN_DISPLAY_VERSION` for
 the About screen. `CURRENT_PROJECT_VERSION` remains the numeric build counter;
 use a new build number for each separately uploaded TestFlight/App Store build.
@@ -22,6 +24,42 @@ Debug/Release are compiler configurations, not release channels: both use the
 branch's explicit version file. Never derive the channel from whichever branch a
 build machine happens to have checked out, or put `SNAPSHOT`/`rc` into Apple's
 `CFBundleShortVersionString`.
+
+## Backend snapshot validation
+
+The authenticated catalog operation `{ "operation": "version" }` returns the
+backend's semantic release label and channel, generated from the same version
+source as the app. It needs a valid live Auth session; it does not call TMDB.
+Function deployment numbers and timestamped migrations remain separate revision
+identifiers inside a product release such as `1.1.0-SNAPSHOT`.
+
+With the local stack running and source migrations applied, run:
+
+```sh
+npm run backend:snapshot:test -- --output build/backend-1.1-snapshot-1
+```
+
+Use a fresh output directory. The command refuses hosted endpoints and a local
+database with a different migration set. It runs backend unit/security/SQL checks,
+prepares only the standard local fixture accounts, verifies real-JWT permissions,
+collections, movie additions, runtime version discovery and password/Google/Apple
+deletion. Provider protocols are mocked where documented; actual provider consent
+and physical-device acceptance remain separate. Optional feature suites such as
+covers are included when present in the source.
+
+The output manifest records the shared release version, Git revision/dirty state,
+migrations, SHA-256 hashes and each test result. A passing run captures the tested
+code/configuration under `source/`, excluding environment files and credentials.
+Source changes during the run invalidate it. This gives the backend a concrete
+tested snapshot alongside the UI snapshot. It does not deploy anything.
+
+After explicit rollout approval, deploy from the captured snapshot, apply its
+migrations before compatible functions, verify the live version operation and
+record actual function deployment IDs. Compare unchanged components against the
+manifest too. The label alone does not prove a complete rollout. Shared alpha
+serves existing TestFlight clients, so additive compatibility checks remain
+required. Final `1.1.0` publication still uses the approved immutable main tag;
+this workflow creates no tag, upload, merge or automatic production deployment.
 
 ## Feature and candidate flow
 
