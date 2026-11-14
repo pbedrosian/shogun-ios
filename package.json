@@ -6,6 +6,9 @@
     "node": ">=22"
   },
   "scripts": {
+    "release:generate": "node scripts/release-version.mjs --write",
+    "release:check": "node scripts/release-version.mjs --check",
+    "backend:snapshot:test": "node scripts/backend/snapshot.mjs",
     "dev": "node scripts/backend/dev.mjs",
     "backend:docs": "node scripts/backend/docs.mjs",
     "backend:doctor": "node scripts/backend/local.mjs doctor",
