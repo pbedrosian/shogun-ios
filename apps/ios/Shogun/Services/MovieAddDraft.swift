@@ -60,6 +60,13 @@ struct MovieAddRequest: Equatable {
     private let discovery: any MovieDiscoveryServicing
     private var lastRequest: MovieAddRequest?
     init(discovery: any MovieDiscoveryServicing) { self.discovery = discovery }
+    func prepareLibrary(preferredID: String?, selectedID: String, writable: [MovieLibrary]) {
+        guard libraryID.isEmpty else { return }
+        libraryID =
+            [preferredID, selectedID].compactMap { $0 }.first { id in
+                writable.contains { $0.id == id }
+            } ?? writable.first?.id ?? ""
+    }
     var formats: [MovieFormat] {
         MovieFormat.allCases.flatMap { format in
             Array(repeating: format, count: min(99, max(0, quantities[format] ?? 0)))

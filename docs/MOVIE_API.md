@@ -80,7 +80,8 @@ for rendering only and must never be submitted as a database UUID.
 
 Browsing does not create metadata, owned copies or diary rows. The + flow now
 connects discovery results to save/import and manual entry through **SHO-3**;
-quick add remains **SHO-4**. Unowned catalog details intentionally do not display
+Search results/details open that same form with the movie preselected (**SHO-4**);
+see [SEARCH_ADD.md](SEARCH_ADD.md). Unowned catalog details intentionally do not display
 a writable personal diary. Owned
 matches link to the existing persisted copy/diary screen.
 
