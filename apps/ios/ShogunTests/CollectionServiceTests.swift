@@ -3,6 +3,48 @@ import XCTest
 @testable import Shogun
 
 @MainActor final class CollectionServiceTests: XCTestCase {
+    func testCoverRequestsFilterUnsafeArtworkAndSerializeResetWithoutIdentity() async throws {
+        var bodies: [[String: Any]] = []
+        let service = SupabaseCollectionService(catalog: { data in
+            let body = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+            bodies.append(body)
+            if body["operation"] as? String == "posters" {
+                return Data(
+                    #"{"posters":[{"path":"/safe.jpg","url":"https://image.tmdb.org/t/p/w342/safe.jpg","language":"en","width":1000,"height":1500},{"path":"/bad.jpg","url":"https://evil.test/bad.jpg","width":1,"height":1}]}"#
+                        .utf8)
+            }
+            return Data(#"{"saved":true}"#.utf8)
+        }) { _, _ in Data() }
+        let covers = try await service.covers(tmdbID: 106)
+        XCTAssertEqual(covers.map(\.path), ["/safe.jpg"])
+        try await service.setCover(tmdbID: 106, path: "/safe.jpg")
+        try await service.setCover(tmdbID: 106, path: nil)
+        XCTAssertTrue(bodies[2]["path"] is NSNull)
+        XCTAssertEqual(bodies[1]["movieID"] as? Int, 106)
+        XCTAssertNil(bodies[1]["actor"])
+        let failing = SupabaseCollectionService(catalog: { _ in
+            throw BackendHTTPError(status: 400, code: "invalid_cover")
+        }) { _, _ in Data() }
+        do {
+            try await failing.setCover(tmdbID: 106, path: "/bad.jpg")
+            XCTFail()
+        } catch { XCTAssertEqual(error as? CollectionFailure, .invalidCover) }
+    }
+    func testSnapshotUsesPrivateCoverAndFallsBackForOlderPayloads() async throws {
+        for override in ["null", "\"https://image.tmdb.org/t/p/w342/chosen.jpg\""] {
+            let service = SupabaseCollectionService { _, _ in
+                Data(
+                    """
+                    {"libraries":[],"memberships":[],"copies":[],"states":[],"movies":[
+                    {"id":"movie","title":"Film","synopsis":"","poster_path":"https://image.tmdb.org/t/p/w342/default.jpg","cover_poster_path":\(override)}]}
+                    """.utf8)
+            }
+            let snapshot = try await service.load()
+            XCTAssertEqual(
+                snapshot.movies.first?.posterURL?.lastPathComponent,
+                override == "null" ? "default.jpg" : "chosen.jpg")
+        }
+    }
     func testWireMappingPreservesIdentityAndSerializesWritesWithoutUserIDs() async throws {
         let id = "30000000-0000-0000-0000-000000000001"
         var calls: [(String, [String: Any])] = []
@@ -81,6 +123,54 @@ import XCTest
 }
 
 @MainActor final class MovieAddTests: XCTestCase {
+    func testDraftCoverChoiceHasStableRetryIdentityAndResetsForOtherMovies() async throws {
+        let draft = MovieAddDraft(discovery: Discovery())
+        draft.libraryID = "library"
+        draft.quantities = [.uhd: 1]
+        await draft.select(DiscoveryUITestService.arrival)
+        let original = draft.saveIntent()
+        draft.chooseCover(.poster("/chosen.jpg"))
+        let chosen = draft.saveIntent()
+        XCTAssertNotEqual(chosen.id, original.id)
+        XCTAssertEqual(chosen.coverSelection, .poster("/chosen.jpg"))
+        XCTAssertEqual(draft.saveIntent(), chosen)
+        draft.chooseCover(.defaultCover)
+        XCTAssertNotEqual(draft.saveIntent().id, chosen.id)
+        XCTAssertEqual(draft.saveIntent().coverSelection, .defaultCover)
+        draft.resetSelection()
+        XCTAssertNil(draft.coverSelection)
+        await draft.select(DiscoveryUITestService.arrival)
+        draft.chooseCover(.poster("/chosen.jpg"))
+        draft.enterManually(title: "Manual")
+        XCTAssertNil(draft.coverSelection)
+        draft.chooseCover(.poster("/foreign.jpg"))
+        XCTAssertNil(draft.coverSelection)
+    }
+    func testImportSerializesCoverChoiceDefaultAndOmissionDistinctly() async throws {
+        var bodies: [[String: Any]] = []
+        let service = SupabaseCollectionService(catalog: { data in
+            bodies.append(try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any]))
+            return Data("{}".utf8)
+        }) { _, _ in Data() }
+        var request = MovieAddRequest(
+            id: UUID().uuidString, libraryID: "library", providerID: 329865,
+            metadata: MovieMetadata(DiscoveryUITestService.arrival), formats: [.uhd],
+            coverSelection: .poster("/chosen.jpg"))
+        try await service.addMovie(request)
+        XCTAssertEqual(bodies.last?["coverPath"] as? String, "/chosen.jpg")
+        request.coverSelection = .defaultCover
+        try await service.addMovie(request)
+        XCTAssertTrue(bodies.last?["coverPath"] is NSNull)
+        request.coverSelection = nil
+        try await service.addMovie(request)
+        XCTAssertNil(bodies.last?["coverPath"])
+        request.coverSelection = .poster("https://evil.test/a.jpg")
+        XCTAssertFalse(request.isValid)
+        do {
+            try await service.addMovie(request)
+            XCTFail()
+        } catch { XCTAssertEqual(error as? CollectionFailure, .invalid) }
+    }
     final class Discovery: MovieDiscoveryServicing {
         var fail = false
         var before: (() async -> Void)?

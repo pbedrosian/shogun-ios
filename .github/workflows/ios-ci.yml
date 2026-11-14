@@ -20,9 +20,11 @@ jobs:
   validate:
     name: iOS build, tests and coverage
     runs-on: macos-15
-    timeout-minutes: 45
+    timeout-minutes: 60
     env:
-      DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
+      DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
+      # Keep XCTest paired with the selected Xcode SDK, not the newest runner runtime.
+      CI_SIMULATOR_RUNTIME: com.apple.CoreSimulator.SimRuntime.iOS-26-2
     steps:
       - name: Check out source and full history
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

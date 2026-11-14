@@ -732,9 +732,8 @@ final class AppFlowTests: XCTestCase {
             .firstMatch
         XCTAssertEqual(savedDirector.value as? String, "A Director")
         XCTAssertTrue(app.staticTexts["2 copies"].exists)
-        let edit = app.buttons["movie.editCopies.20000000-0000-0000-0000-000000000001"]
-        revealForm(edit)
-        edit.tap()
+        app.buttons["movie.actions"].tap()
+        app.buttons["movie.updateCount"].tap()
         let decrease = app.buttons["editCopies.Blu-ray-Decrement"]
         revealForm(decrease)
         decrease.tap()

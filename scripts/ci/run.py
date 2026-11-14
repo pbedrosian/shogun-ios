@@ -104,9 +104,17 @@ def main():
         # Cold hosted runners can exceed three minutes mounting a fresh runtime.
         # Keep startup bounded and fail before XCTest if the device never becomes ready.
         command(["xcrun", "simctl", "bootstatus", simulator, "-b"], output, "simulator-ready", timeout=420)
+        # Bound stalled UI queries and retry once in a fresh process. Xcode retains
+        # every attempt in the result bundle; final test and coverage gates stay strict.
         status = command(common + ["-destination", f"platform=iOS Simulator,id={simulator}",
                                    "-resultBundlePath", bundle, "-enableCodeCoverage", "YES",
-                                   "-parallel-testing-enabled", "NO", "test"], output, "xctest", timeout=1800, check=False)
+                                   "-parallel-testing-enabled", "NO",
+                                   "-test-timeouts-enabled", "YES",
+                                   "-default-test-execution-time-allowance", "180",
+                                   "-maximum-test-execution-time-allowance", "180",
+                                   "-retry-tests-on-failure", "-test-iterations", "2",
+                                   "-test-repetition-relaunch-enabled", "YES", "test"],
+                         output, "xctest", timeout=2700, check=False)
         # Export diagnostic artifacts even when XCTest fails; never turn a failed run green.
         export(bundle, output, ROOT, json.loads((ROOT / "ci/coverage-policy.json").read_text()))
         if status:

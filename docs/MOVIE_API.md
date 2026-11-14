@@ -147,3 +147,6 @@ calls a service-role-only transaction. Client-supplied metadata and actor IDs ar
 rejected. Browsing Search and details still creates no collection rows.
 
 See [MOVIE_ADD.md](MOVIE_ADD.md) for manual entry, quantity and retry behavior.
+
+See [MOVIE_COVERS.md](MOVIE_COVERS.md) for account-scoped alternate posters,
+validated selection/reset, snapshot compatibility and local permission checks.

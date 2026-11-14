@@ -12,6 +12,30 @@
         private var failSave: Bool
         private var addedMovies: [Movie] = []
         private var requests = Set<String>()
+        private var coverPaths: [Int: String] = [:]
+        static let sampleCovers = [
+            "/pEzNVQfdzYDzVK0XqxERIw2x2se.jpg", "/x2FJsf1ElAgr63Y3PNPtJrcmpoe.jpg",
+            "/3b4fRUYXFaGVDqkb0ikjB4cn7ub.jpg",
+        ].map { path in
+            MovieCover(
+                path: path, url: URL(string: "https://image.tmdb.org/t/p/w342" + path)!,
+                language: "en", width: 1000, height: 1500)
+        }
+        static var cover: MovieCover { sampleCovers[0] }
+        func covers(tmdbID: Int) async throws -> [MovieCover] {
+            if ProcessInfo.processInfo.arguments.contains("-cover-load-error") {
+                throw CollectionFailure.unavailable
+            }
+            return ProcessInfo.processInfo.arguments.contains("-cover-empty")
+                ? [] : Self.sampleCovers
+        }
+        func setCover(tmdbID: Int, path: String?) async throws {
+            if failSave {
+                failSave = false
+                throw CollectionFailure.unavailable
+            }
+            coverPaths[tmdbID] = path
+        }
         private let movie = Movie(
             id: "30000000-0000-0000-0000-000000000001", title: "Arrival", year: 2016, palette: 0,
             synopsis: "First contact", tmdbID: 329865)
@@ -27,6 +51,13 @@
                 ]
             failLoad = ProcessInfo.processInfo.arguments.contains("-collection-load-error")
             failSave = ProcessInfo.processInfo.arguments.contains("-collection-save-error")
+            if ProcessInfo.processInfo.arguments.contains("-cover-owned") {
+                copies = [
+                    OwnedCopy(
+                        id: "cover-copy", libraryID: libraries[0].id,
+                        movieID: movie.id, format: .uhd)
+                ]
+            }
         }
         func load() async throws -> CollectionSnapshot {
             if failLoad {
@@ -34,7 +65,15 @@
                 throw CollectionFailure.unavailable
             }
             return CollectionSnapshot(
-                movies: [movie] + addedMovies, libraries: libraries,
+                movies: ([movie] + addedMovies).map { film in
+                    Movie(
+                        id: film.id, title: film.title, year: film.year, palette: film.palette,
+                        synopsis: film.synopsis, tmdbID: film.tmdbID, director: film.director,
+                        runtimeMinutes: film.runtimeMinutes, genres: film.genres,
+                        posterURL: coverPaths[film.tmdbID ?? -1].flatMap {
+                            URL(string: "https://image.tmdb.org/t/p/w342" + $0)
+                        } ?? film.posterURL)
+                }, libraries: libraries,
                 memberships: libraries.map {
                     LibraryMembership(userID: userID, libraryID: $0.id, role: .owner)
                 },
@@ -71,6 +110,9 @@
                 OwnedCopy(
                     id: UUID().uuidString,
                     libraryID: request.libraryID, movieID: film.id, format: $0)
+            }
+            if let choice = request.coverSelection, let providerID = request.providerID {
+                coverPaths[providerID] = choice.path
             }
         }
         func saveState(_ state: PersonalMovieState) async throws {
