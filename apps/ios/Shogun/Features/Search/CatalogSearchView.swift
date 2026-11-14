@@ -17,7 +17,11 @@ struct CatalogSearchView: View {
                                     title: movie.title, year: movie.releaseYearText,
                                     isOwned: collection.catalog?.ownedMovie(tmdbID: movie.id)
                                         != nil,
-                                    artwork: CatalogPosterView(movie: movie))
+                                    artwork: CatalogPosterView(
+                                        movie: movie,
+                                        preferredURL: collection.catalog?.movies.first {
+                                            $0.tmdbID == movie.id
+                                        }?.posterURL))
                             }.accessibilityIdentifier("discovery.movie.\(movie.id)")
                             Button {
                                 addingMovie = movie

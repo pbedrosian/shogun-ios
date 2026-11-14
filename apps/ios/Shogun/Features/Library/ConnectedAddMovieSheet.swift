@@ -8,6 +8,7 @@ struct ConnectedAddMovieSheet: View {
     @StateObject private var draft: MovieAddDraft
     @State private var selection: CatalogMovie?
     @State private var saving = false
+    @State private var choosingCover = false
     @State private var year = ""
     @State private var runtime = ""
     @State private var genres = ""
@@ -78,6 +79,18 @@ struct ConnectedAddMovieSheet: View {
                         }
                     }
                     if draft.manual || draft.providerID != nil {
+                        if draft.providerID != nil, !draft.loading, draft.error == nil {
+                            Section("Cover") {
+                                PosterView(movie: coverPreview)
+                                    .frame(width: ShogunTheme.Size.detailPosterWidth)
+                                    .frame(maxWidth: .infinity)
+                                    .accessibilityIdentifier("addMovie.coverPreview")
+                                Button("Choose cover") {
+                                    finishEditing()
+                                    choosingCover = true
+                                }.accessibilityIdentifier("addMovie.chooseCover")
+                            }
+                        }
                         metadataFields
                         if draft.loading { ProgressView("Loading movie details…") }
                         if let error = draft.error {
@@ -160,6 +173,13 @@ struct ConnectedAddMovieSheet: View {
                     }
                 }
         }.disabled(saving).interactiveDismissDisabled(saving)
+            .sheet(isPresented: $choosingCover) {
+                if let collection, let tmdbID = draft.providerID {
+                    MovieCoverPicker(movie: coverPreview, tmdbID: tmdbID, collection: collection) {
+                        draft.chooseCover($0)
+                    }
+                }
+            }
             .task(id: selection?.id) {
                 if let selection {
                     await draft.select(selection)
@@ -179,6 +199,21 @@ struct ConnectedAddMovieSheet: View {
         for scene in UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }) {
             scene.windows.forEach { $0.endEditing(true) }
         }
+    }
+    private var coverPreview: Movie {
+        let defaultURL = MovieMetadata.artworkURL(draft.metadata.posterURL)
+        let url: URL?
+        switch draft.coverSelection {
+        case .poster(let path): url = URL(string: "https://image.tmdb.org/t/p/w342" + path)
+        case .defaultCover: url = defaultURL
+        case nil:
+            url =
+                catalog.movies.first { $0.tmdbID == draft.providerID && draft.providerID != nil }?
+                .posterURL ?? defaultURL
+        }
+        return Movie(
+            id: "add-preview", title: draft.metadata.title, year: draft.metadata.year,
+            palette: 0, synopsis: draft.metadata.synopsis, tmdbID: draft.providerID, posterURL: url)
     }
     private var validNumbers: Bool {
         (year.isEmpty || Int(year).map { (1870...9999).contains($0) } == true)

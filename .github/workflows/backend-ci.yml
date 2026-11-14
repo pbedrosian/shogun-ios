@@ -47,6 +47,8 @@ jobs:
         run: npm run backend:test:movie-add
       - name: Catalog gateway authentication checks
         run: npm run backend:test:catalog
+      - name: Private cover selection and isolation checks
+        run: npm run backend:test:covers
       - name: Account deletion security and cascade tests
         run: npm run backend:test:deletion
       - name: Google reauthentication deletion checks

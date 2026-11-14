@@ -35,16 +35,31 @@ struct MovieMetadata: Codable, Equatable {
         posterURL = movie.posterURL?.absoluteString ?? ""
     }
 }
+enum MovieCoverSelection: Equatable {
+    case defaultCover
+    case poster(String)
+    var path: String? {
+        if case .poster(let path) = self { return path }
+        return nil
+    }
+    var isValid: Bool {
+        path.map {
+            $0.range(of: #"^/[a-zA-Z0-9._-]+\.(jpg|png|webp)$"#, options: .regularExpression) != nil
+        } ?? true
+    }
+}
 struct MovieAddRequest: Equatable {
     let id: String
     let libraryID: String
     let providerID: Int?
     let metadata: MovieMetadata
     let formats: [MovieFormat]
+    var coverSelection: MovieCoverSelection? = nil
     var isValid: Bool {
         UUID(uuidString: id) != nil && !libraryID.isEmpty && metadata.isValid
             && (providerID.map { $0 > 0 && $0 <= 2_147_483_647 } ?? true)
             && (1...99).contains(formats.count)
+            && (coverSelection.map { providerID != nil && $0.isValid } ?? true)
     }
 }
 
@@ -54,6 +69,7 @@ struct MovieAddRequest: Equatable {
     @Published var libraryID = ""
     @Published var quantities: [MovieFormat: Int] = [:]
     @Published private(set) var providerID: Int?
+    @Published private(set) var coverSelection: MovieCoverSelection?
     @Published private(set) var loading = false
     @Published private(set) var error: String?
     @Published private(set) var manual = false
@@ -78,23 +94,27 @@ struct MovieAddRequest: Equatable {
     private var request: MovieAddRequest {
         MovieAddRequest(
             id: lastRequest?.id ?? UUID().uuidString, libraryID: libraryID,
-            providerID: providerID, metadata: metadata, formats: formats)
+            providerID: providerID, metadata: metadata, formats: formats,
+            coverSelection: coverSelection)
     }
     func saveIntent() -> MovieAddRequest {
         let next = request
         if let old = lastRequest, old.libraryID == next.libraryID,
             old.providerID == next.providerID,
-            old.providerID != nil || old.metadata == next.metadata, old.formats == next.formats
+            old.providerID != nil || old.metadata == next.metadata, old.formats == next.formats,
+            old.coverSelection == next.coverSelection
         {
             return old
         }
         let value = MovieAddRequest(
             id: UUID().uuidString, libraryID: libraryID,
-            providerID: providerID, metadata: metadata, formats: formats)
+            providerID: providerID, metadata: metadata, formats: formats,
+            coverSelection: coverSelection)
         lastRequest = value
         return value
     }
     func resetSelection() {
+        coverSelection = nil
         providerID = nil
         manual = false
         loading = false
@@ -102,6 +122,7 @@ struct MovieAddRequest: Equatable {
         metadata = MovieMetadata()
     }
     func enterManually(title: String) {
+        coverSelection = nil
         providerID = nil
         manual = true
         loading = false
@@ -110,6 +131,7 @@ struct MovieAddRequest: Equatable {
         metadata.title = title.trimmingCharacters(in: .whitespacesAndNewlines)
     }
     func select(_ movie: CatalogMovie) async {
+        coverSelection = nil
         providerID = movie.id
         manual = false
         loading = true
@@ -128,5 +150,9 @@ struct MovieAddRequest: Equatable {
                 self.error = (error as? DiscoveryFailure ?? .unavailable).localizedDescription
             }
         }
+    }
+    func chooseCover(_ selection: MovieCoverSelection) {
+        guard providerID != nil, selection.isValid else { return }
+        coverSelection = selection
     }
 }

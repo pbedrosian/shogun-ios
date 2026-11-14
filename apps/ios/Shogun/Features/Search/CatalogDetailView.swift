@@ -13,7 +13,11 @@ struct CatalogDetailView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: ShogunTheme.Spacing.large) {
-                CatalogPosterView(movie: detail.movie).frame(
+                CatalogPosterView(
+                    movie: detail.movie,
+                    preferredURL: collection.catalog?.movies.first { $0.tmdbID == detail.movie.id }?
+                        .posterURL
+                ).frame(
                     maxWidth: ShogunTheme.Size.detailPosterWidth
                 )
                 .frame(maxWidth: .infinity)
