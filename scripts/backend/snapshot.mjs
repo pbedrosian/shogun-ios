@@ -19,8 +19,9 @@ export function sourceManifest(directory){
  }
  collect(resolve(directory,'backend/supabase/functions'));
  collect(resolve(directory,'backend/supabase/migrations'));
+ collect(resolve(directory,'backend/supabase/tests'));
  collect(resolve(directory,'scripts/backend'));
- for(const name of ['release-version.json','apps/ios/Configuration/Version.xcconfig','scripts/release-version.mjs','package.json','package-lock.json','backend/supabase/config.toml']){
+ for(const name of ['release-version.json','apps/ios/Configuration/Version.xcconfig','scripts/release-version.mjs','package.json','package-lock.json','backend/supabase/config.toml','backend/supabase/fixtures/scenarios.json','backend/supabase/fixtures/demo-catalog.json']){
   if(existsSync(resolve(directory,name)))files[name]=createHash('sha256').update(readFileSync(resolve(directory,name))).digest('hex');
  }
  const ordered=Object.fromEntries(Object.entries(files).sort(([a],[b])=>a.localeCompare(b)));

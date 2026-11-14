@@ -36,12 +36,28 @@ test('snapshot fingerprints bind tested code and migration IDs while excluding l
   writeFileSync(join(functions,'.env'),'SECRET=never-include');
   const migrations=join(directory,'backend/supabase/migrations');mkdirSync(migrations,{recursive:true});
   writeFileSync(join(migrations,'20261114010000_example.sql'),'select 1;');
+  const sqlTests=join(directory,'backend/supabase/tests/database');mkdirSync(sqlTests,{recursive:true});
+  writeFileSync(join(sqlTests,'permission.test.sql'),'select plan(1);');
+  const fixtures=join(directory,'backend/supabase/fixtures');mkdirSync(fixtures,{recursive:true});
+  writeFileSync(join(fixtures,'scenarios.json'),'{"accounts":[]}');
+  writeFileSync(join(fixtures,'demo-catalog.json'),'[]');
+  writeFileSync(join(fixtures,'accounts.local.json'),'{"token":"SECRET"}');
   const first=sourceManifest(directory);
   assert.deepEqual(first.migrations,['20261114010000']);
   assert.ok(!JSON.stringify(first).includes('SECRET'));
   assert.ok(!Object.keys(first.files).some(p=>p.endsWith('.env')));
+  assert.ok(first.files['backend/supabase/tests/database/permission.test.sql']);
+  assert.ok(first.files['backend/supabase/fixtures/scenarios.json']);
+  assert.ok(first.files['backend/supabase/fixtures/demo-catalog.json']);
+  assert.ok(!first.files['backend/supabase/fixtures/accounts.local.json']);
+  writeFileSync(join(fixtures,'accounts.local.json'),'{"token":"changed"}');
   writeFileSync(join(functions,'.env'),'SECRET=changed');
   assert.equal(sourceManifest(directory).sourceSHA256,first.sourceSHA256);
+  for(const [name,value] of [[join(sqlTests,'permission.test.sql'),'select plan(2);'],[join(fixtures,'scenarios.json'),'{"accounts":[{}]}'],[join(fixtures,'demo-catalog.json'),'[{}]']]){
+   const before=sourceManifest(directory).sourceSHA256;
+   writeFileSync(name,value);
+   assert.notEqual(sourceManifest(directory).sourceSHA256,before);
+  }
   writeFileSync(join(functions,'example.mjs'),'export const example=2;');
   assert.notEqual(sourceManifest(directory).sourceSHA256,first.sourceSHA256);
  }finally{rmSync(directory,{recursive:true,force:true});}
