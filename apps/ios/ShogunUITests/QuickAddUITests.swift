@@ -53,7 +53,7 @@ import XCTest
         let ownership = app.staticTexts["addMovie.alreadyOwned"]
         reveal(ownership)
         XCTAssertTrue(ownership.label.contains("1 copies"))
-        app.buttons["Cancel"].tap()
+        app.navigationBars["Add Movie"].buttons["Cancel"].tap()
         XCTAssertTrue(app.buttons["discovery.movie.329865"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.searchFields["Search movies"].value as? String, "Arrival")
     }
@@ -75,7 +75,7 @@ import XCTest
         let title = app.textFields["addMovie.title"]
         reveal(title)
         XCTAssertEqual(title.value as? String, "Arrival")
-        app.buttons["Cancel"].tap()
+        app.navigationBars["Add Movie"].buttons["Cancel"].tap()
         XCTAssertTrue(app.buttons["discovery.addToLibrary"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons["discovery.owned"].exists)
     }
