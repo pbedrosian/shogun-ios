@@ -4,13 +4,9 @@ import SwiftUI
 struct ShogunIcon: View {
     let systemName: String
     var font: Font = ShogunTheme.Typography.actionIcon
-    // Native toolbar controls provide their own hit target and padding.
-    var includesTouchTarget = true
     var body: some View {
         Image(systemName: systemName).font(font)
-            .frame(
-                width: includesTouchTarget ? ShogunTheme.Size.touchTarget : nil,
-                height: includesTouchTarget ? ShogunTheme.Size.touchTarget : nil)
+            .frame(width: ShogunTheme.Size.touchTarget, height: ShogunTheme.Size.touchTarget)
     }
 }
 
