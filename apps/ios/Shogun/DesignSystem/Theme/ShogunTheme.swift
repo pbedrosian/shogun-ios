@@ -27,6 +27,12 @@ enum ShogunTheme {
         static let aspectRatio: CGFloat = 6
     }
 
+    enum Loading {
+        static let cycleDuration: TimeInterval = 3.6
+        static let sweepFraction: Double = 0.72
+        static let dotSize: CGFloat = 5
+    }
+
     enum Auth {
         static let providerBackground = Color("AuthProviderBackground")
         static let providerInk = Color("AuthProviderInk")

@@ -38,7 +38,8 @@ struct MovieCoverPicker: View {
                     }.accessibilityIdentifier("cover.default")
                         .accessibilityAddTraits(useDefault ? .isSelected : [])
                     if loading {
-                        ProgressView("Loading covers…").accessibilityIdentifier("cover.loading")
+                        ShogunLoadingView("Loading covers…").accessibilityIdentifier(
+                            "cover.loading")
                     } else if let error {
                         Text(error).foregroundStyle(ShogunTheme.error)
                         Button("Try again") { retry += 1 }.accessibilityIdentifier("cover.retry")

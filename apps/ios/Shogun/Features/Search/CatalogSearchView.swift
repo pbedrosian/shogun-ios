@@ -56,13 +56,13 @@ struct CatalogSearchView: View {
                         Button("Load more movies", action: search.loadMore).accessibilityIdentifier(
                             "discovery.more")
                     }
-                    if search.phase == .loadingMore { ProgressView("Loading more movies…") }
+                    if search.phase == .loadingMore { ShogunLoadingView("Loading more movies…") }
 
                 }.listRowBackground(ShogunTheme.surface)
             }
             .overlay {
                 if search.phase == .loading {
-                    ProgressView("Searching movies…").accessibilityIdentifier("discovery.loading")
+                    ShogunLoadingView("Searching movies…").accessibilityIdentifier("discovery.loading")
                 } else if search.phase == .empty {
                     ContentUnavailableView.search(text: search.query).accessibilityIdentifier(
                         "discovery.empty")
