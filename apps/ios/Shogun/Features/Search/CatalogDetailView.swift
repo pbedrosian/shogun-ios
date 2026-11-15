@@ -34,7 +34,7 @@ struct CatalogDetailView: View {
                 MovieOverviewView(
                     title: detail.movie.title, year: detail.movie.releaseYearText,
                     synopsis: detail.movie.synopsis)
-                if detail.isLoading { ProgressView("Loading movie details…") }
+                if detail.isLoading { ShogunLoadingView("Loading movie details…") }
                 if let error = detail.error {
                     Text(error).foregroundStyle(ShogunTheme.error).accessibilityIdentifier(
                         "discovery.detailError")

@@ -45,7 +45,7 @@ struct ConnectedAddMovieSheet: View {
                                     search.search(immediately: true)
                                 }
                                 .onChange(of: search.query) { _, _ in search.search() }
-                            if search.phase == .loading { ProgressView("Searching movies…") }
+                            if search.phase == .loading { ShogunLoadingView("Searching movies…") }
                             ForEach(search.results) { movie in
                                 Button {
                                     searching = false
@@ -67,7 +67,9 @@ struct ConnectedAddMovieSheet: View {
                             if search.canLoadMore {
                                 Button("Load more movies", action: search.loadMore)
                             }
-                            if search.phase == .loadingMore { ProgressView("Loading more movies…") }
+                            if search.phase == .loadingMore {
+                                ShogunLoadingView("Loading more movies…")
+                            }
                             Button("Enter manually") {
                                 searching = false
                                 selection = nil
@@ -92,7 +94,7 @@ struct ConnectedAddMovieSheet: View {
                             }
                         }
                         metadataFields
-                        if draft.loading { ProgressView("Loading movie details…") }
+                        if draft.loading { ShogunLoadingView("Loading movie details…") }
                         if let error = draft.error {
                             Text(error).foregroundStyle(ShogunTheme.error)
                             Button("Retry details") {

@@ -42,7 +42,7 @@ struct ConnectedCollectionTabs: View {
                     NavigationStack {
                         VStack(spacing: ShogunTheme.Spacing.regular) {
                             if collection.isBusy {
-                                ProgressView("Loading your collection…")
+                                ShogunLoadingView("Loading your collection…")
                             } else if collection.error == nil {
                                 ContentUnavailableView(
                                     "No libraries", systemImage: "film.stack",
