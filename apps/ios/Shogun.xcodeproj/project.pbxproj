@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+A56647B1BC9941E188381D45 = {isa = PBXBuildFile; fileRef = 19EE9EE0E47D402B96D6E0D7; };
+60503CD66E5C4BE2BF409842 = {isa = PBXBuildFile; fileRef = 2BB9EDEA1C914943BDE714D9; };
+262D2E3E79174EA788CE7285 = {isa = PBXBuildFile; fileRef = A4E7A0D5FD8C488B8C971A5B; };
 AA0400000000000000000001 = {isa = PBXBuildFile; fileRef = AA0400000000000000000002; };
 AA3600000000000000000003 = {isa = PBXBuildFile; fileRef = AA3600000000000000000004; };
 AA3600000000000000000001 = {isa = PBXBuildFile; fileRef = AA3600000000000000000002; };
@@ -75,6 +78,9 @@ A6A16BBD44BB4CBBB47EA918 = {isa = PBXBuildFile; fileRef = 586BDE4EFD934B2F92EBA2
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+19EE9EE0E47D402B96D6E0D7 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryControls.swift; sourceTree = "<group>"; };
+2BB9EDEA1C914943BDE714D9 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryOrderPreferences.swift; sourceTree = "<group>"; };
+A4E7A0D5FD8C488B8C971A5B = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryMovieTile.swift; sourceTree = "<group>"; };
 AA0400000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickAddUITests.swift; sourceTree = "<group>"; };
 AA3600000000000000000004 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoverPickerUITests.swift; sourceTree = "<group>"; };
 AA3600000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovieCoverPicker.swift; sourceTree = "<group>"; };
@@ -210,6 +216,8 @@ CB0000000000000000000001 /* ShogunUITests.xctest */,
 			isa = PBXGroup;
 			children = (586BDE4EFD934B2F92EBA2C5,C2DD611F60BB4ECEB5E72A8B,E68EE9CD6ECD410B9D9D6551,
 				D6D0BB703081A93A00887AC8 /* LibraryView.swift */,
+19EE9EE0E47D402B96D6E0D7,
+A4E7A0D5FD8C488B8C971A5B,
 				D6D0BB713081A93A00887AC8 /* MovieDetailView.swift */,
 AA3600000000000000000002,
 			);
@@ -263,6 +271,7 @@ C37196369E2546DC8C4CE2FB,
 23E1B675F8E546F7818D7CEC,
 E595731DB5BE47B8A35A3A1F,
 				D6D0BB7A3081A93A00887AC8 /* CatalogStore.swift */,
+2BB9EDEA1C914943BDE714D9,
 				D6D0BB7B3081A93A00887AC8 /* MockCatalog.swift */,
 			);
 			path = Services;
@@ -408,6 +417,9 @@ BF1000000000000000000003,
 
 				AF0000000000000000000000 /* ShogunApp.swift in Sources */,
 				AF0000000000000000000001 /* LibraryView.swift in Sources */,
+A56647B1BC9941E188381D45,
+60503CD66E5C4BE2BF409842,
+262D2E3E79174EA788CE7285,
 				AF0000000000000000000002 /* MovieDetailView.swift in Sources */,
 AA3600000000000000000001,
 				AF0000000000000000000003 /* ProfileView.swift in Sources */,

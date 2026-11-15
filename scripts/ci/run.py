@@ -94,7 +94,7 @@ def main():
                                                             "device": device["name"], "udid": simulator}, indent=2) + "\n")
         command(["xcrun", "swiftc", "-module-cache-path", output / "ModuleCache",
                  "apps/ios/Shogun/Models/Models.swift", "apps/ios/Shogun/Services/MockCatalog.swift",
-                 "apps/ios/Shogun/Services/CatalogStore.swift", "apps/ios/Checks/main.swift", "-o", output / "model-checks"], output, "model-compile")
+                 "apps/ios/Shogun/Services/CatalogStore.swift", "apps/ios/Shogun/Services/LibraryOrderPreferences.swift", "apps/ios/Checks/main.swift", "-o", output / "model-checks"], output, "model-compile")
         command([output / "model-checks"], output, "model-checks", timeout=60)
         common = ["xcodebuild", "-project", "apps/ios/Shogun.xcodeproj", "-scheme", "Shogun",
                   "-derivedDataPath", output / "DerivedData", "CODE_SIGNING_ALLOWED=NO"]
