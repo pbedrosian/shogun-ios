@@ -132,25 +132,27 @@ final class CatalogStore: ObservableObject {
     }
 
     /// Snapshot the whole library, even when the displayed grid is filtered.
-    private func prepareCustomOrder() {
+    @discardableResult private func prepareCustomOrder() -> [String] {
         let available = orderedLibraryMovies(sort: librarySort).map(\.id)
         let order = LibraryCustomOrder.reconcile(
             customOrders[selectedLibraryID] ?? [], available: available)
         customOrders[selectedLibraryID] = order
         orderPreferences.save(customOrders)
+        return order
     }
 
     /// Append arrivals when a snapshot changes, so later arrivals cannot reshuffle them.
     private func reconcileCustomOrders() {
         var changed = false
-        for library in libraries where customOrders[library.id] != nil {
+        for library in libraries {
+            guard let saved = customOrders[library.id] else { continue }
             let owned = Set(copies.filter { $0.libraryID == library.id }.map(\.movieID))
             let available = movies.filter { owned.contains($0.id) }.sorted {
                 let comparison = $0.title.localizedStandardCompare($1.title)
                 return comparison == .orderedSame ? $0.id < $1.id : comparison == .orderedAscending
             }.map(\.id)
             let order = LibraryCustomOrder.reconcile(
-                customOrders[library.id] ?? [], available: available)
+                saved, available: available)
             if customOrders[library.id] != order {
                 customOrders[library.id] = order
                 changed = true
@@ -166,10 +168,10 @@ final class CatalogStore: ObservableObject {
         guard libraries.contains(where: { $0.id == selectedLibraryID }),
             available.contains(movieID), available.contains(targetID)
         else { return }
-        prepareCustomOrder()
+        let prepared = prepareCustomOrder()
         guard
             let order = LibraryCustomOrder.move(
-                movieID, to: targetID, in: customOrders[selectedLibraryID] ?? [])
+                movieID, to: targetID, in: prepared)
         else { return }
         customOrders[selectedLibraryID] = order
         orderPreferences.save(customOrders)

@@ -56,6 +56,8 @@ final class AppFlowTests: XCTestCase {
         add(shot)
         let source = app.descendants(matching: .any).matching(identifier: firstID).firstMatch
         let target = app.descendants(matching: .any).matching(identifier: secondID).firstMatch
+        source.press(forDuration: 0.05, thenDragTo: target)
+        XCTAssertLessThan(source.frame.midX, target.frame.midX)
         source.press(forDuration: 0.8, thenDragTo: target)
         done.tap()
         XCTAssertTrue(app.tabBars.buttons["Library"].waitForExistence(timeout: 5))

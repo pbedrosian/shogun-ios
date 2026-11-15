@@ -32,12 +32,14 @@ sort, and navigation after finishing arrangement.
 - `LibraryView` composes the screen and owns navigation/arranging visibility.
 - `LibraryControls` contains focused heading, selector, search, summary and options
   views; interaction callbacks finish arranging before another control is used.
-- `LibraryMovieTile` owns tile presentation, a native tap/half-second hold adapter
+- `LibraryMovieTile` owns tile presentation, a native tap/quarter-second hold adapter
   and drag/drop intent. It does not implement ordering or preferences storage.
 - `LibraryCustomOrder` in Models contains pure reconciliation/movement rules.
 - `LibraryOrderPreferences` handles account-scoped local serialization only;
   CatalogStore coordinates catalog state with those rules and storage.
 - `ShogunJiggleStyle` owns Reduce Motion-aware visual movement.
 
-The native hold recognizer enters arranging at its began state after 0.5 seconds,
+The native hold recognizer enters arranging at its began state after 0.25 seconds,
 while the finger is still down. Background dismissal listens only while arranging.
+Each drag also requires a 0.25-second hold before movement, including when already
+arranging, so a quick press or scroll does not immediately move a movie.

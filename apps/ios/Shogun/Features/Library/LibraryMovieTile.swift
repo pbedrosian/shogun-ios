@@ -28,8 +28,15 @@ struct LibraryMovieTile: View {
                             )
                         )
                         .highPriorityGesture(
-                            DragGesture(minimumDistance: 8, coordinateSpace: .named("library.grid"))
-                                .onChanged { onDragChanged($0.location) }
+                            LongPressGesture(minimumDuration: 0.25)
+                                .sequenced(
+                                    before: DragGesture(
+                                        minimumDistance: 8, coordinateSpace: .named("library.grid")))
+                                .onChanged { value in
+                                    if case .second(true, let drag?) = value {
+                                        onDragChanged(drag.location)
+                                    }
+                                }
                                 .onEnded { _ in onDragEnded() }
                         )
                         .scaleEffect(isDragging ? 1.03 : 1)
@@ -97,7 +104,7 @@ private struct MoviePressGestureTarget: UIViewRepresentable {
         view.isAccessibilityElement = false
         let hold = UILongPressGestureRecognizer(
             target: context.coordinator, action: #selector(Coordinator.held(_:)))
-        hold.minimumPressDuration = 0.5
+        hold.minimumPressDuration = 0.25
         hold.allowableMovement = 10
         let tap = UITapGestureRecognizer(
             target: context.coordinator, action: #selector(Coordinator.tapped(_:)))
