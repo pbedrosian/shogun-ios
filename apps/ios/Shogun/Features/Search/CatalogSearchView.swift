@@ -11,7 +11,7 @@ struct CatalogSearchView: View {
             List {
                 Group {
                     ForEach(search.results) { movie in
-                        HStack {
+                        HStack(spacing: ShogunTheme.Spacing.large) {
                             NavigationLink(value: movie) {
                                 MovieResultRow(
                                     title: movie.title, year: movie.releaseYearText,
@@ -62,7 +62,8 @@ struct CatalogSearchView: View {
             }
             .overlay {
                 if search.phase == .loading {
-                    ShogunLoadingView("Searching movies…").accessibilityIdentifier("discovery.loading")
+                    ShogunLoadingView("Searching movies…").accessibilityIdentifier(
+                        "discovery.loading")
                 } else if search.phase == .empty {
                     ContentUnavailableView.search(text: search.query).accessibilityIdentifier(
                         "discovery.empty")
