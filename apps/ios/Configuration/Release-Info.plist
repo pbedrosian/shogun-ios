@@ -2,6 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>ShogunAppleAccountManagementEnabled</key>
+	<true/>
+	<key>ShogunAppleSignInEnabled</key>
+	<true/>
+	<key>ShogunGoogleSignInEnabled</key>
+	<true/>
 	<key>ShogunAuthScheme</key>
 	<string>$(SHOGUN_AUTH_SCHEME)</string>
 	<key>ShogunDisplayVersion</key>

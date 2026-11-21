@@ -224,6 +224,20 @@ The recovery integration check expects Mailpit and preserves the fixture passwor
 by verifying rejection of its reuse. It is not an external-inbox test. Ordinary CI
 injects in-memory storage and a Debug-only UI service; normal launches use real Auth.
 
+## Apple and Google sign-in in Release (SHO-32)
+
+Release enables both providers and Apple account management through its bundled
+Info.plist. The Release target signs with the Apple sign-in entitlement. Debug
+keeps its existing flags, preview, entitlement opt-in, and callback scheme.
+
+For the alpha rollout, verify the signed Release entitlement and keep both
+Apple audiences in the hosted Auth provider and server deletion allowlist:
+`com.petebedrosian.shogun.dev` and `com.petebedrosian.shogun`. Keep nonce
+verification enabled. The Google web OAuth client uses the existing Supabase
+callback. Allow the app callback `shogun://auth-callback` in hosted Auth alongside
+the existing Dev callback. Verify login, relaunch, account linking and account
+deletion on a physical iPhone using dedicated test accounts.
+
 ## Google sign-in in Shogun Dev (SHO-32)
 
 The Debug app uses Supabase's official PKCE OAuth flow in an ephemeral system
@@ -241,10 +255,8 @@ its own Shogun account. Treat Supabase authorization/RLS as the data-access boun
 not Google's testing list. No billing account or paid service is needed for this
 configuration. See [Google's testing exception](https://support.google.com/cloud/answer/15549945).
 
-Debug's `ShogunGoogleSignInEnabled` plist flag controls presentation. Release
-forces the feature off regardless of a plist override. Do not enable release
-social login until Apple/equivalent login, explicit account linking, social-only
-account deletion and provider revocation have been implemented and verified.
+The `ShogunGoogleSignInEnabled` plist flag controls presentation. The provider
+uses the same account lifecycle in both builds.
 Same-email Google authentication may automatically link to the existing confirmed
 email/password user; a forwarding alias is not itself a Google account.
 
@@ -256,10 +268,9 @@ Both have mode-specific accessibility labels. Source: https://developers.google.
 
 ## Local Apple sign-in implementation (SHO-32)
 
-Native AuthenticationServices authorization is implemented behind the Debug-only
-`ShogunAppleSignInEnabled` flag, which defaults to false. Release always disables
-Apple presentation. The custom Apple logo-only button appears on sign-in and signup and is absent
-from password recovery. Only email is requested;
+Native AuthenticationServices authorization uses the
+`ShogunAppleSignInEnabled` flag. The Apple logo-only button appears on sign-in and
+signup. Password recovery uses the email form. Only email is requested;
 the app does not require a first-authorization name or merge users by email.
 
 Each attempt creates separate 256-bit random nonce and state values with Security.
@@ -271,10 +282,8 @@ challenge stay in memory and are discarded after completion/cancellation; they a
 never logged or placed in app configuration. Cancellation dismisses the native
 controller and uses the existing store cancellation/session-cleanup path.
 
-Apple authentication stays disabled in normal Dev/Release builds. Dev now shows a
-disabled, dimmed Apple button for layout review, independently of the authentication
-flag; Release ignores this preview and keeps the button absent. The service/store
-authentication guard remains off, so the preview cannot launch Apple authorization.
+When Apple authentication is off, Debug shows a dimmed button for layout review.
+The service and store gate authorization on the sign-in flag.
 
 For validation: local SDK tests intercept all Auth HTTP
 traffic, and `-shogun-auth-ui -shogun-auth-apple` uses a deterministic fixture, not
