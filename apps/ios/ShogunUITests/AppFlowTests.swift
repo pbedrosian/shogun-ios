@@ -58,7 +58,11 @@ final class AppFlowTests: XCTestCase {
         let target = app.descendants(matching: .any).matching(identifier: secondID).firstMatch
         source.press(forDuration: 0.05, thenDragTo: target)
         XCTAssertLessThan(source.frame.midX, target.frame.midX)
-        source.press(forDuration: 0.8, thenDragTo: target)
+        XCTContext.runActivity(named: "Preview destination during held drag") { _ in
+            source.press(
+                forDuration: 0.8, thenDragTo: target, withVelocity: .slow,
+                thenHoldForDuration: 4)
+        }
         done.tap()
         XCTAssertTrue(app.tabBars.buttons["Library"].waitForExistence(timeout: 5))
         XCTAssertEqual(tiles.element(boundBy: 0).identifier, secondID)
@@ -69,6 +73,51 @@ final class AppFlowTests: XCTestCase {
         XCTAssertEqual(tiles.element(boundBy: 0).identifier, secondID)
         tiles.element(boundBy: 0).tap()
         XCTAssertTrue(app.navigationBars["Movie"].waitForExistence(timeout: 5))
+    }
+
+    func testCustomDropPreviewCrossRowInDarkMode() {
+        launch(dark: true)
+        app.buttons["library.viewOptions"].tap()
+        app.buttons["Custom"].tap()
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.55)).tap()
+        let tiles = app.buttons.matching(
+            NSPredicate(format: "identifier BEGINSWITH %@", "library.movie."))
+        let firstID = tiles.element(boundBy: 0).identifier
+        let targetID = tiles.element(boundBy: 3).identifier
+        tiles.element(boundBy: 0).press(forDuration: 0.5)
+        let done = app.buttons["library.arrange.done"]
+        XCTAssertTrue(done.waitForExistence(timeout: 5))
+        let source = app.descendants(matching: .any).matching(identifier: firstID).firstMatch
+        let target = app.descendants(matching: .any).matching(identifier: targetID).firstMatch
+        XCTAssertGreaterThan(target.frame.minY, source.frame.maxY)
+        XCTContext.runActivity(named: "Preview destination across rows in dark mode") { _ in
+            source.press(
+                forDuration: 0.8, thenDragTo: target, withVelocity: .slow,
+                thenHoldForDuration: 4)
+        }
+        done.tap()
+        XCTAssertEqual(tiles.element(boundBy: 3).identifier, firstID)
+        tiles.element(boundBy: 3).tap()
+        XCTAssertTrue(app.navigationBars["Movie"].waitForExistence(timeout: 5))
+    }
+
+    func testCustomDragFromBottomEdgeMovesThePressedMovie() {
+        launch()
+        app.buttons["library.viewOptions"].tap()
+        app.buttons["Custom"].tap()
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.55)).tap()
+        let tiles = app.buttons.matching(
+            NSPredicate(format: "identifier BEGINSWITH %@", "library.movie."))
+        let source = tiles.element(boundBy: 0)
+        let sourceID = source.identifier
+        let target = tiles.element(boundBy: 1)
+        source.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.98))
+            .press(
+                forDuration: 0.8,
+                thenDragTo: target.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)),
+                withVelocity: .fast, thenHoldForDuration: 0.4)
+        app.buttons["library.arrange.done"].tap()
+        XCTAssertEqual(tiles.element(boundBy: 1).identifier, sourceID)
     }
 
     func testCustomGridDoneRequiresOnlyOneTapWithoutDragging() {

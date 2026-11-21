@@ -50,7 +50,7 @@ struct AuthRootView: View {
 
 #if DEBUG
     private struct DemoTabs: View {
-        @StateObject private var catalog = CatalogStore()
+        @StateObject private var catalog = MockCatalog.demoStore()
         @State private var selectedTab: ShogunTab = .library
         @State private var libraryNavigationID = UUID()
         var body: some View {

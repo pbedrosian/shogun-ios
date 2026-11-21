@@ -10,6 +10,7 @@ struct LibraryView: View {
     @State private var draggedMovieID: String?
     @State private var lastDropTargetID: String?
     @State private var dragLocation: CGPoint?
+    @State private var draggedSize: CGSize?
     @State private var tileFrames: [String: CGRect] = [:]
     @State private var pinchStartingColumns: Int?
     @GestureState private var isPinching = false
@@ -27,6 +28,19 @@ struct LibraryView: View {
                 }.padding(.horizontal, ShogunTheme.Spacing.screen).padding(
                     .top, ShogunTheme.Spacing.regular
                 ).padding(.bottom, ShogunTheme.Spacing.large)
+                    .background {
+                        GeometryReader { proxy in
+                            LibraryGridInteraction(
+                                isEnabled: store.librarySort == .custom && !isPinching,
+                                isArranging: isArranging, frames: tileFrames,
+                                anchorOrigin: proxy.frame(in: .named("library.grid")).origin,
+                                onBegin: beginArranging,
+                                onMove: { moveDraggedMovie($0, over: $1, target: $2) },
+                                onEnd: endDragging
+                            )
+                        }
+                        .allowsHitTesting(false)
+                    }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .accessibilityIdentifier("library.scroll")
@@ -35,7 +49,7 @@ struct LibraryView: View {
                 MagnifyGesture(minimumScaleDelta: 0.01)
                     .updating($isPinching) { _, active, _ in active = true }
                     .onChanged { value in
-                        guard !typeSize.isAccessibilitySize else { return }
+                        guard !isArranging, !typeSize.isAccessibilitySize else { return }
                         let startingColumns = pinchStartingColumns ?? store.libraryColumns
                         pinchStartingColumns = startingColumns
                         withAnimation(
@@ -48,14 +62,23 @@ struct LibraryView: View {
                         }
                     }
                     .onEnded { _ in pinchStartingColumns = nil },
-                including: typeSize.isAccessibilitySize ? .subviews : .all
+                including: isArranging || typeSize.isAccessibilitySize ? .subviews : .all
             )
             .coordinateSpace(name: "library.grid")
             .onPreferenceChange(MovieGridFrames.self) { tileFrames = $0 }
+            .overlay(alignment: .topLeading) {
+                if let id = draggedMovieID, let point = dragLocation,
+                    let movie = movies.first(where: { $0.id == id }), let size = draggedSize
+                {
+                    LibraryLiftedMovie(
+                        movie: movie, compact: columnCount >= 4, formats: formats(for: movie),
+                        size: size, location: point)
+                }
+            }
             .simultaneousGesture(
                 SpatialTapGesture(coordinateSpace: .named("library.grid"))
                     .onEnded { tap in
-                        if isArranging
+                        if isArranging && draggedMovieID == nil
                             && !tileFrames.values.contains(where: { $0.contains(tap.location) })
                         {
                             finishArranging()
@@ -71,7 +94,9 @@ struct LibraryView: View {
                 if sort != .custom { finishArranging() }
             }
             .onDisappear { finishArranging() }
-            .refreshable { await collection?.refresh() }
+            .refreshable {
+                if !isArranging { await collection?.refresh() }
+            }
             .shogunCanvas()
             .toolbar(.hidden, for: .navigationBar)
             .toolbar(isArranging ? .hidden : .visible, for: .tabBar)
@@ -129,17 +154,11 @@ struct LibraryView: View {
                 ForEach(movies) { movie in
                     LibraryMovieTile(
                         movie: movie, compact: columnCount >= 4,
-                        formatDescription: MovieFormat.allCases.filter { format in
-                            store.copies(for: movie, libraryID: store.selectedLibraryID).contains {
-                                $0.format == format
-                            }
-                        }.map(\.rawValue).joined(separator: " · "),
+                        formatDescription: formats(for: movie),
                         isCustom: store.librarySort == .custom, isArranging: isArranging,
                         isPinching: isPinching, isDragging: draggedMovieID == movie.id,
-                        dragOffset: dragOffset(for: movie.id),
-                        onBegin: beginArranging, onNavigate: { navigationPath.append(movie) },
-                        onDragChanged: { moveDraggedMovie(movie.id, over: $0) },
-                        onDragEnded: endDragging,
+                        onBegin: beginArranging,
+                        onNavigate: { if !isPinching { navigationPath.append(movie) } },
                         onMoveOffset: { store.moveCustomMovie(movie.id, by: $0) }
                     )
                     .zIndex(draggedMovieID == movie.id ? 1 : 0)
@@ -159,19 +178,22 @@ struct LibraryView: View {
         }
     }
 
-    private func dragOffset(for movieID: String) -> CGSize {
-        guard draggedMovieID == movieID, let point = dragLocation, let frame = tileFrames[movieID]
-        else { return .zero }
-        return CGSize(width: point.x - frame.midX, height: point.y - frame.midY)
+    private func formats(for movie: Movie) -> String {
+        MovieFormat.allCases.filter { format in
+            store.copies(for: movie, libraryID: store.selectedLibraryID).contains {
+                $0.format == format
+            }
+        }.map(\.rawValue).joined(separator: " · ")
     }
-    private func moveDraggedMovie(_ movieID: String, over point: CGPoint) {
+    private func moveDraggedMovie(_ movieID: String, over point: CGPoint, target: String?) {
         guard isArranging, store.librarySort == .custom else { return }
-        if draggedMovieID != movieID { lastDropTargetID = nil }
+        if draggedMovieID != movieID {
+            lastDropTargetID = nil
+            draggedSize = tileFrames[movieID]?.size
+        }
         draggedMovieID = movieID
         dragLocation = point
-        guard let target = tileFrames.first(where: { $0.value.contains(point) })?.key else {
-            return
-        }
+        guard let target else { return }
         if target == movieID {
             lastDropTargetID = nil
             return
@@ -188,6 +210,7 @@ struct LibraryView: View {
     private func clearDrag() {
         draggedMovieID = nil
         dragLocation = nil
+        draggedSize = nil
         lastDropTargetID = nil
     }
     private func beginArranging() {
