@@ -1016,7 +1016,9 @@ final class AppFlowTests: XCTestCase {
         XCTAssertTrue(field.waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons["discovery.movie.329865"].exists)
         XCTAssertFalse(app.staticTexts["discovery.empty"].exists)
-        field.tap(); field.typeText("Arrival")
+        field.tap()
+        field.typeText("Arrival\n")
+        XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 5))
         let arrival = app.buttons["discovery.movie.329865"]
         XCTAssertTrue(arrival.waitForExistence(timeout: 5))
         let more = app.buttons["discovery.more"]; reveal(more); more.tap()
