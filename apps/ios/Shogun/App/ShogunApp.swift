@@ -33,22 +33,17 @@ import SwiftUI
         #endif
         let config = try? AuthConfiguration(
             info: Bundle.main.infoDictionary ?? [:], allowLocalHTTP: allowHTTP)
+        let appleManagement =
+            Bundle.main.object(forInfoDictionaryKey: "ShogunAppleAccountManagementEnabled")
+            as? Bool == true
+        let appleEnabled =
+            Bundle.main.object(forInfoDictionaryKey: "ShogunAppleSignInEnabled") as? Bool == true
+        let googleEnabled =
+            Bundle.main.object(forInfoDictionaryKey: "ShogunGoogleSignInEnabled") as? Bool == true
         #if DEBUG
-            let appleManagement =
-                Bundle.main.object(forInfoDictionaryKey: "ShogunAppleAccountManagementEnabled")
-                as? Bool == true
             let applePreview = true
-            let appleEnabled =
-                Bundle.main.object(forInfoDictionaryKey: "ShogunAppleSignInEnabled") as? Bool
-                == true
-            let googleEnabled =
-                Bundle.main.object(forInfoDictionaryKey: "ShogunGoogleSignInEnabled") as? Bool
-                == true
         #else
-            let appleManagement = false
             let applePreview = false
-            let appleEnabled = false
-            let googleEnabled = false
         #endif
         let service = config.map {
             SupabaseAuthService(
