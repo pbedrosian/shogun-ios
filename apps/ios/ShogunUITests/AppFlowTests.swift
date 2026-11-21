@@ -34,6 +34,156 @@ final class AppFlowTests: XCTestCase {
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.55)).tap()
     }
 
+    func testCustomGridDragRestoresArrangementAfterChangingSort() {
+        launch()
+        app.buttons["library.viewOptions"].tap()
+        app.buttons["Custom"].tap()
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.55)).tap()
+        let tiles = app.buttons.matching(
+            NSPredicate(format: "identifier BEGINSWITH %@", "library.movie."))
+        let visible = tiles.allElementsBoundByIndex.filter(\.isHittable)
+        XCTAssertGreaterThanOrEqual(visible.count, 2)
+        let firstID = visible[0].identifier
+        let secondID = visible[1].identifier
+        visible[0].press(forDuration: 1)
+        let done = app.buttons["library.arrange.done"]
+        XCTAssertTrue(done.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.tabBars.firstMatch.exists)
+        XCTAssertGreaterThan(done.frame.midY, app.frame.height * 0.65)
+        let shot = XCTAttachment(screenshot: app.screenshot())
+        shot.name = "Custom grid arranging with bottom Done"
+        shot.lifetime = .keepAlways
+        add(shot)
+        let source = app.descendants(matching: .any).matching(identifier: firstID).firstMatch
+        let target = app.descendants(matching: .any).matching(identifier: secondID).firstMatch
+        source.press(forDuration: 0.05, thenDragTo: target)
+        XCTAssertLessThan(source.frame.midX, target.frame.midX)
+        XCTContext.runActivity(named: "Preview destination during held drag") { _ in
+            source.press(
+                forDuration: 0.8, thenDragTo: target, withVelocity: .slow,
+                thenHoldForDuration: 4)
+        }
+        done.tap()
+        XCTAssertTrue(app.tabBars.buttons["Library"].waitForExistence(timeout: 5))
+        XCTAssertEqual(tiles.element(boundBy: 0).identifier, secondID)
+        app.buttons["library.viewOptions"].tap()
+        app.buttons["Title Z–A"].tap()
+        app.buttons["Custom"].tap()
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.55)).tap()
+        XCTAssertEqual(tiles.element(boundBy: 0).identifier, secondID)
+        tiles.element(boundBy: 0).tap()
+        XCTAssertTrue(app.navigationBars["Movie"].waitForExistence(timeout: 5))
+    }
+
+    func testCustomDropPreviewCrossRowInDarkMode() {
+        launch(dark: true)
+        app.buttons["library.viewOptions"].tap()
+        app.buttons["Custom"].tap()
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.55)).tap()
+        let tiles = app.buttons.matching(
+            NSPredicate(format: "identifier BEGINSWITH %@", "library.movie."))
+        let firstID = tiles.element(boundBy: 0).identifier
+        let targetID = tiles.element(boundBy: 3).identifier
+        tiles.element(boundBy: 0).press(forDuration: 0.5)
+        let done = app.buttons["library.arrange.done"]
+        XCTAssertTrue(done.waitForExistence(timeout: 5))
+        let source = app.descendants(matching: .any).matching(identifier: firstID).firstMatch
+        let target = app.descendants(matching: .any).matching(identifier: targetID).firstMatch
+        XCTAssertGreaterThan(target.frame.minY, source.frame.maxY)
+        XCTContext.runActivity(named: "Preview destination across rows in dark mode") { _ in
+            source.press(
+                forDuration: 0.8, thenDragTo: target, withVelocity: .slow,
+                thenHoldForDuration: 4)
+        }
+        done.tap()
+        XCTAssertEqual(tiles.element(boundBy: 3).identifier, firstID)
+        tiles.element(boundBy: 3).tap()
+        XCTAssertTrue(app.navigationBars["Movie"].waitForExistence(timeout: 5))
+    }
+
+    func testCustomDragFromBottomEdgeMovesThePressedMovie() {
+        launch()
+        app.buttons["library.viewOptions"].tap()
+        app.buttons["Custom"].tap()
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.55)).tap()
+        let tiles = app.buttons.matching(
+            NSPredicate(format: "identifier BEGINSWITH %@", "library.movie."))
+        let source = tiles.element(boundBy: 0)
+        let sourceID = source.identifier
+        let target = tiles.element(boundBy: 1)
+        source.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.98))
+            .press(
+                forDuration: 0.8,
+                thenDragTo: target.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)),
+                withVelocity: .fast, thenHoldForDuration: 0.4)
+        app.buttons["library.arrange.done"].tap()
+        XCTAssertEqual(tiles.element(boundBy: 1).identifier, sourceID)
+    }
+
+    func testCustomGridDoneRequiresOnlyOneTapWithoutDragging() {
+        launch()
+        app.buttons["library.viewOptions"].tap()
+        app.buttons["Custom"].tap()
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.55)).tap()
+        let tiles = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "library.movie."))
+        tiles.element(boundBy: 0).coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        XCTAssertTrue(app.navigationBars["Movie"].waitForExistence(timeout: 5))
+        app.navigationBars["Movie"].buttons.element(boundBy: 0).tap()
+        XCTAssertTrue(app.buttons["library.viewOptions"].waitForExistence(timeout: 5))
+        tiles.element(boundBy: 0).press(forDuration: 2)
+        let done = app.buttons["library.arrange.done"]
+        XCTAssertTrue(done.waitForExistence(timeout: 5))
+        done.tap()
+        XCTAssertTrue(app.tabBars.buttons["Library"].waitForExistence(timeout: 5))
+        XCTAssertFalse(done.exists)
+        app.buttons["library.viewOptions"].tap()
+        XCTAssertTrue(app.buttons["Title Z–A"].waitForExistence(timeout: 3))
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.55)).tap()
+        XCTAssertFalse(done.exists)
+        tiles.element(boundBy: 0).coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        XCTAssertTrue(app.navigationBars["Movie"].waitForExistence(timeout: 5))
+        app.navigationBars["Movie"].buttons.element(boundBy: 0).tap()
+        XCTAssertTrue(app.buttons["library.viewOptions"].waitForExistence(timeout: 5))
+    }
+
+    func testCustomGridExitsOnBackgroundAndOtherControls() {
+        launch()
+        let menu = app.buttons["library.viewOptions"]
+        menu.tap()
+        app.buttons["Custom"].tap()
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.55)).tap()
+        let tiles = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "library.movie."))
+        let done = app.buttons["library.arrange.done"]
+        tiles.element(boundBy: 0).press(forDuration: 1.2)
+        XCTAssertTrue(done.waitForExistence(timeout: 5))
+        app.staticTexts["6 movies"].tap()
+        XCTAssertTrue(app.tabBars.buttons["Library"].waitForExistence(timeout: 5))
+        XCTAssertFalse(done.exists)
+        tiles.element(boundBy: 0).press(forDuration: 1.2)
+        XCTAssertTrue(done.waitForExistence(timeout: 5))
+        menu.tap()
+        XCTAssertTrue(app.buttons["Title Z–A"].waitForExistence(timeout: 3))
+        XCTAssertFalse(done.exists)
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.55)).tap()
+        XCTAssertTrue(app.tabBars.buttons["Library"].exists)
+    }
+
+    func testOtherSortsDoNotEnterGridArrangingMode() {
+        launch()
+        for sort in ["Recently Added", "Title A–Z", "Title Z–A"] {
+            app.buttons["library.viewOptions"].tap()
+            app.buttons[sort].tap()
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.55)).tap()
+            let tiles = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "library.movie."))
+            tiles.element(boundBy: 0).press(forDuration: 1)
+            XCTAssertFalse(app.buttons["library.arrange.done"].exists)
+            XCTAssertTrue(app.tabBars.buttons["Library"].exists)
+            if app.navigationBars["Movie"].exists {
+                app.navigationBars["Movie"].buttons.element(boundBy: 0).tap()
+            }
+        }
+    }
+
     func testLibrarySearchAndViewingDiaryPersistAcrossTabs() {
         launch()
         let query = app.textFields["Search this library"]
@@ -866,7 +1016,9 @@ final class AppFlowTests: XCTestCase {
         XCTAssertTrue(field.waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons["discovery.movie.329865"].exists)
         XCTAssertFalse(app.staticTexts["discovery.empty"].exists)
-        field.tap(); field.typeText("Arrival")
+        field.tap()
+        field.typeText("Arrival\n")
+        XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 5))
         let arrival = app.buttons["discovery.movie.329865"]
         XCTAssertTrue(arrival.waitForExistence(timeout: 5))
         let more = app.buttons["discovery.more"]; reveal(more); more.tap()

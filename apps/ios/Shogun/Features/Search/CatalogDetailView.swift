@@ -21,10 +21,19 @@ struct CatalogDetailView: View {
                     maxWidth: ShogunTheme.Size.detailPosterWidth
                 )
                 .frame(maxWidth: .infinity)
-                Button(
-                    collection.catalog?.ownedMovie(tmdbID: detail.movie.id) == nil
-                        ? "Add to library" : "Add another copy"
-                ) { addingMovie = detail.movie }
+                Button {
+                    addingMovie = detail.movie
+                } label: {
+                    Label(
+                        collection.catalog?.ownedMovie(tmdbID: detail.movie.id) == nil
+                            ? "Add to library" : "Add another copy",
+                        systemImage: "plus.circle"
+                    )
+                    .frame(maxWidth: .infinity, minHeight: ShogunTheme.Size.touchTarget)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(ShogunTheme.primaryAction)
+                .foregroundStyle(ShogunTheme.onPrimaryAction)
                 .disabled(collection.catalog?.writableLibraries.isEmpty != false)
                 .accessibilityIdentifier("discovery.addToLibrary")
                 if collection.catalog?.writableLibraries.isEmpty != false, !collection.isBusy {

@@ -12,7 +12,7 @@
 - Database changes belong in versioned SQL migrations. Every exposed application table needs explicit grants and RLS. Derive identities from auth.uid(), restrict SECURITY DEFINER helpers and pin their search paths, and run backend:test:db plus backend:test:api for permission changes. See docs/DATABASE.md for the role model and recovery instructions.
 - Persisted fixture posters use procedural SwiftUI artwork. SHO-8 provider search/details use TMDB artwork with procedural fallbacks and required attribution. Keep TMDB credentials server-only; see docs/MOVIE_API.md. Preserve light/dark support, Dynamic Type, accessible labels, and native navigation.
 - Build: xcodebuild -project apps/ios/Shogun.xcodeproj -scheme Shogun -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
-- Run model checks: swiftc apps/ios/Shogun/Models/Models.swift apps/ios/Shogun/Services/MockCatalog.swift apps/ios/Shogun/Services/CatalogStore.swift apps/ios/Checks/main.swift -o /tmp/shogun-model-checks && /tmp/shogun-model-checks
+- Run model checks: swiftc apps/ios/Shogun/Models/Models.swift apps/ios/Shogun/Services/MockCatalog.swift apps/ios/Shogun/Services/CatalogStore.swift apps/ios/Shogun/Services/LibraryOrderPreferences.swift apps/ios/Checks/main.swift -o /tmp/shogun-model-checks && /tmp/shogun-model-checks
 - Validate UI on an iPhone simulator in light/dark appearance, large text, library switching, search, and cross-library rating consistency. Debug fixture edits reset at relaunch; real saved edits must persist.
 
 ## Git workflow

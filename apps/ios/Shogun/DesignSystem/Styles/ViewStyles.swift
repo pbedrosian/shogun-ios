@@ -95,3 +95,19 @@ extension View {
     func shogunAuthContent() -> some View { modifier(ShogunAuthContentStyle()) }
     func shogunListCanvas() -> some View { modifier(ShogunListCanvasStyle()) }
 }
+
+/// Gentle independent tile motion; accessibility settings stop it completely.
+struct ShogunJiggleStyle: ViewModifier {
+    let phase: Double
+    var isEnabled = true
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    func body(content: Content) -> some View {
+        TimelineView(.animation(minimumInterval: 1 / 20, paused: reduceMotion || !isEnabled)) {
+            context in
+            content.rotationEffect(
+                .degrees(
+                    reduceMotion || !isEnabled
+                        ? 0 : sin(context.date.timeIntervalSinceReferenceDate * 18 + phase) * 1.1))
+        }
+    }
+}

@@ -1,6 +1,21 @@
 import Foundation
 
 enum MockCatalog {
+    #if DEBUG
+        static func demoStore() -> CatalogStore {
+            guard ProcessInfo.processInfo.arguments.contains("-shogun-long-grid") else {
+                return CatalogStore()
+            }
+            let movies = (0..<90).map { index in
+                Movie(id: String(format: "scroll-movie-%03d", index),
+                      title: String(format: "Movie %03d", index), year: 2026,
+                      palette: index % 6, synopsis: "Local scrolling test fixture.")
+            }
+            return CatalogStore(movies: movies, copies: movies.map {
+                OwnedCopy(id: $0.id, libraryID: "personal", movieID: $0.id, format: .dvd)
+            })
+        }
+    #endif
     static let userID = "demo-user"
     static let libraries = [
         MovieLibrary(id: "personal", name: "My Library", isShared: false),

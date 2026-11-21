@@ -52,7 +52,7 @@ struct ConnectedCollectionTabs: View {
                                     Task { _ = await collection.restorePersonalLibrary() }
                                 }
                             }
-                            CollectionFeedback(store: collection)
+                            if !collection.isBusy { CollectionFeedback(store: collection) }
                         }.shogunCanvas().navigationTitle("Library")
                     }
                 }
@@ -92,11 +92,12 @@ struct CollectionFeedback: View {
                 Text(error).foregroundStyle(ShogunTheme.error).accessibilityIdentifier(
                     "collection.error")
             }
-            if showsRefreshButton {
+            if store.isBusy {
+                ShogunLoadingView("Updating collection")
+            } else if showsRefreshButton {
                 Button("Refresh collection") { Task { await store.refresh() } }
                     .disabled(store.isBusy).accessibilityIdentifier("collection.refresh")
             }
-            if store.isBusy { ProgressView().accessibilityLabel("Updating collection") }
         }
     }
 }

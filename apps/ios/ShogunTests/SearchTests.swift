@@ -211,4 +211,99 @@ final class SearchTests: XCTestCase {
         }
     }
 
+    private func arrangedStore(preferences: UserDefaults? = nil, user: String = "me")
+        -> CatalogStore
+    {
+        CatalogStore(
+            movies: Fixtures.movies,
+            copies: ["personal", "family"].flatMap { library in
+                Fixtures.movies.map {
+                    OwnedCopy(id: library + $0.id, libraryID: library, movieID: $0.id, format: .dvd)
+                }
+            },
+            libraries: Fixtures.libraries,
+            memberships: ["personal", "family"].map {
+                LibraryMembership(userID: user, libraryID: $0, role: .viewer)
+            }, userID: user, personalStates: [], preferences: preferences)
+    }
+
+    func testCustomArrangementSurvivesOtherSortsAndKeepsCopiesUnchanged() {
+        let store = arrangedStore()
+        let copyIDs = store.copies.map(\.id)
+        store.librarySort = .titleDescending
+        store.selectLibrarySort(.custom)
+        XCTAssertEqual(store.libraryResults.map(\.id), ["unowned", "jaws", "arrival"])
+        store.moveCustomMovie("arrival", to: "unowned")
+        XCTAssertEqual(store.libraryResults.map(\.id), ["arrival", "unowned", "jaws"])
+        store.selectLibrarySort(.titleAscending)
+        XCTAssertEqual(store.libraryResults.map(\.id), ["arrival", "jaws", "unowned"])
+        store.selectLibrarySort(.custom)
+        XCTAssertEqual(store.libraryResults.map(\.id), ["arrival", "unowned", "jaws"])
+        XCTAssertEqual(store.copies.map(\.id), copyIDs)
+    }
+
+    func testCustomArrangementPersistsPerUserAndLibrary() {
+        let suite = "custom-order-\(UUID().uuidString)"
+        let preferences = UserDefaults(suiteName: suite)!
+        defer { preferences.removePersistentDomain(forName: suite) }
+        let store = arrangedStore(preferences: preferences)
+        store.moveCustomMovie("unowned", to: "arrival")
+        store.selectedLibraryID = "family"
+        store.moveCustomMovie("jaws", to: "arrival")
+        let restored = arrangedStore(preferences: preferences)
+        restored.selectLibrarySort(.custom)
+        XCTAssertEqual(restored.libraryResults.map(\.id), ["unowned", "arrival", "jaws"])
+        restored.selectedLibraryID = "family"
+        XCTAssertEqual(restored.libraryResults.map(\.id), ["jaws", "arrival", "unowned"])
+        let other = arrangedStore(preferences: preferences, user: "other")
+        other.selectedLibraryID = "family"
+        other.selectLibrarySort(.custom)
+        XCTAssertEqual(other.libraryResults.map(\.id), ["arrival", "jaws", "unowned"])
+    }
+
+    func testFilteredReorderingPreservesHiddenMoviesAndAccessibleMoves() {
+        let store = arrangedStore()
+        store.selectLibrarySort(.custom)
+        store.libraryQuery = "a"
+        XCTAssertEqual(store.libraryResults.map(\.id), ["arrival", "jaws"])
+        store.moveCustomMovie("jaws", by: -1)
+        store.libraryQuery = ""
+        XCTAssertEqual(store.libraryResults.map(\.id), ["jaws", "arrival", "unowned"])
+        store.libraryFormats = [.vhs]
+        XCTAssertTrue(store.libraryResults.isEmpty)
+        store.selectLibrarySort(.titleDescending)
+        store.selectLibrarySort(.custom)
+        store.libraryFormats = []
+        XCTAssertEqual(store.libraryResults.map(\.id), ["jaws", "arrival", "unowned"])
+        store.moveCustomMovie("not-owned", to: "arrival")
+        XCTAssertEqual(store.libraryResults.map(\.id), ["jaws", "arrival", "unowned"])
+    }
+
+    func testCustomArrangementHandlesRemovedAndNewMoviesAfterRefresh() {
+        let store = arrangedStore()
+        store.moveCustomMovie("unowned", to: "arrival")
+        let newMovie = Movie(id: "new", title: "A new film", year: 2026, palette: 0, synopsis: "")
+        let replacement = CatalogStore(
+            movies: [Fixtures.arrival, Fixtures.unowned, newMovie],
+            copies: [Fixtures.arrival, Fixtures.unowned, newMovie].map {
+                OwnedCopy(id: $0.id, libraryID: "personal", movieID: $0.id, format: .dvd)
+            }, libraries: Fixtures.libraries, memberships: Fixtures.memberships,
+            userID: "me", personalStates: [])
+        store.replaceContents(from: replacement)
+        XCTAssertEqual(store.libraryResults.map(\.id), ["unowned", "arrival", "new"])
+        let later = Movie(
+            id: "later", title: "A film added later", year: 2026, palette: 0, synopsis: "")
+        let secondSnapshot = CatalogStore(
+            movies: [Fixtures.arrival, Fixtures.unowned, newMovie, later],
+            copies: [Fixtures.arrival, Fixtures.unowned, newMovie, later].map {
+                OwnedCopy(id: $0.id, libraryID: "personal", movieID: $0.id, format: .dvd)
+            }, libraries: Fixtures.libraries, memberships: Fixtures.memberships,
+            userID: "me", personalStates: [])
+        store.replaceContents(from: secondSnapshot)
+        XCTAssertEqual(store.libraryResults.map(\.id), ["unowned", "arrival", "new", "later"])
+        store.selectLibrarySort(.custom)
+        store.moveCustomMovie("new", by: -1)
+        XCTAssertEqual(store.libraryResults.map(\.id), ["unowned", "new", "arrival", "later"])
+    }
+
 }
