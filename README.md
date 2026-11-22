@@ -235,7 +235,7 @@ See [CI usage controls](docs/CI.md) for activation and billing limits.
 
 Branch roles, SNAPSHOT/RC labels, promotion and final-tag deployment are documented
 in [Releasing](docs/RELEASING.md). The upcoming dev version is `1.1.0-SNAPSHOT`;
-main carries `1.0.0`; subsequent promotion follows the approved release workflow.
+main carries `1.1.0`; subsequent promotion follows the approved release workflow.
 
 ## Troubleshooting
 
