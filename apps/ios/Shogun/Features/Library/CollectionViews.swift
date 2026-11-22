@@ -53,7 +53,10 @@ struct ConnectedCollectionTabs: View {
                                 }
                             }
                             if !collection.isBusy { CollectionFeedback(store: collection) }
-                        }.shogunCanvas().navigationTitle("Library")
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .shogunCanvas()
+                        .navigationTitle("Library")
                     }
                 }
             }.tabItem { Label("Library", systemImage: "square.grid.2x2") }.tag(ShogunTab.library)
