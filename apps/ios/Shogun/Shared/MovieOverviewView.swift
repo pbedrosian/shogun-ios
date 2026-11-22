@@ -15,9 +15,10 @@ struct MovieOverviewView: View {
 
 struct CatalogPosterView: View {
     let movie: CatalogMovie
+    var preferredURL: URL? = nil
     var body: some View {
         GeometryReader { geometry in
-            AsyncImage(url: movie.posterURL) { phase in
+            AsyncImage(url: preferredURL ?? movie.posterURL) { phase in
                 if case .success(let image) = phase {
                     image.resizable().scaledToFill().frame(
                         width: geometry.size.width, height: geometry.size.height

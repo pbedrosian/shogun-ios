@@ -9,6 +9,16 @@ The approved chrome wordmark uses the conventional chrome S from the user-suppli
 
 Artwork was approved in the SHO-29 chat. Original previews remain outside the asset catalog; the app bundles only its selected wordmark and icon.
 
+## Loading animation — SHO-39
+
+The approved loading treatment uses the existing chrome wordmark with a soft light
+sweep and three steel-blue dots on a 3.6-second cycle. `ShogunLoadingView` renders
+the motion natively for session restoration, collection loading, movie discovery
+and cover discovery. It shows no visible loading text; operation descriptions are
+retained for VoiceOver. Session restoration has no Cancel button. Reduce Motion
+uses a still wordmark and dots. Loading lasts only as long as the operation; the
+temporary five-second review delay has been removed from all builds.
+
 The approved guide palette is implemented in semantic asset colors: Obsidian #111418, Gunmetal #1C2229, Graphite #29313A, Platinum #F3F5F7, Silver #D8DDE3, and appearance-specific steel blue accents. Shared surfaces, navigation, rows, fields, text, ratings and feedback use these tokens.
 
 ## Approved semantic mapping

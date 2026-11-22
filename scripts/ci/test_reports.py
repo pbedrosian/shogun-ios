@@ -78,6 +78,18 @@ class ReportTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             simulator_configuration({"runtimes": []})
 
+    def test_same_version_prefers_standard_runtime_over_device_specific_runtime(self):
+        specialized = {"isAvailable": True, "identifier": "com.apple.CoreSimulator.SimRuntime.iOS-27-2-specific",
+                       "version": "27.2", "supportedDeviceTypes": [{"name": "iPhone Duo", "identifier": "duo"}]}
+        standard = {"isAvailable": True, "identifier": "com.apple.CoreSimulator.SimRuntime.iOS-27-2",
+                    "version": "27.2", "supportedDeviceTypes": [{"name": "iPhone 16", "identifier": "phone"}]}
+        for entries in [[specialized, standard], [standard, specialized]]:
+            chosen, device = simulator_configuration({"runtimes": entries})
+            self.assertEqual(chosen["identifier"], standard["identifier"])
+            self.assertEqual(device["identifier"], "phone")
+        chosen, device = simulator_configuration({"runtimes": [specialized, standard]}, specialized["identifier"])
+        self.assertEqual(device["identifier"], "duo")
+
     def test_failed_test_exports_diagnostics_but_cannot_pass_the_gate(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

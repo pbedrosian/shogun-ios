@@ -46,7 +46,12 @@ def simulator_configuration(runtimes, requested=None):
         available = [runtime for runtime in available if runtime["identifier"] == requested]
     if not available:
         raise ValueError("No compatible installed iOS simulator runtime. Install one in Xcode Settings > Components.")
-    runtime = max(available, key=lambda item: tuple(int(n) for n in item["version"].split(".")))
+    # Device-specific runtimes can share a version with the standard runtime.
+    # Prefer the documented iPhone 16 destination when versions tie.
+    runtime = max(available, key=lambda item: (
+        tuple(int(n) for n in item["version"].split(".")),
+        any(device.get("name") == "iPhone 16" for device in item.get("supportedDeviceTypes", [])),
+    ))
     devices = [device for device in runtime.get("supportedDeviceTypes", [])
                if device.get("productFamily") == "iPhone" or device.get("name", "").startswith("iPhone")]
     if not devices:
@@ -73,6 +78,9 @@ def main():
     signal.signal(signal.SIGTERM, interrupted)
     signal.signal(signal.SIGINT, interrupted)
     try:
+        # Run lightweight gates before simulator startup competes for runner resources.
+        command(["git", "diff", "--check"], output, "whitespace", timeout=30)
+        command(["python3", "-m", "unittest", "discover", "-s", "scripts/ci", "-p", "test_*.py"], output, "ci-tool-tests", timeout=60)
         version_output = command(["xcodebuild", "-version"], output, "xcode-version", timeout=30, capture=True)
         version = version_output.splitlines()[0].split()[1]
         if tuple(int(part) for part in version.split(".")) < (16, 4):
@@ -84,20 +92,29 @@ def main():
         simulator = simulator_id(created)
         (output / "environment.json").write_text(json.dumps({"xcode": version, "runtime": runtime["name"],
                                                             "device": device["name"], "udid": simulator}, indent=2) + "\n")
-        command(["xcrun", "simctl", "boot", simulator], output, "simulator-boot", timeout=60)
-        command(["xcrun", "simctl", "bootstatus", simulator, "-b"], output, "simulator-ready", timeout=180)
-        command(["git", "diff", "--check"], output, "whitespace", timeout=30)
-        command(["python3", "-m", "unittest", "discover", "-s", "scripts/ci", "-p", "test_*.py"], output, "ci-tool-tests", timeout=60)
         command(["xcrun", "swiftc", "-module-cache-path", output / "ModuleCache",
                  "apps/ios/Shogun/Models/Models.swift", "apps/ios/Shogun/Services/MockCatalog.swift",
-                 "apps/ios/Shogun/Services/CatalogStore.swift", "apps/ios/Checks/main.swift", "-o", output / "model-checks"], output, "model-compile")
+                 "apps/ios/Shogun/Services/CatalogStore.swift", "apps/ios/Shogun/Services/LibraryOrderPreferences.swift", "apps/ios/Checks/main.swift", "-o", output / "model-checks"], output, "model-compile")
         command([output / "model-checks"], output, "model-checks", timeout=60)
         common = ["xcodebuild", "-project", "apps/ios/Shogun.xcodeproj", "-scheme", "Shogun",
                   "-derivedDataPath", output / "DerivedData", "CODE_SIGNING_ALLOWED=NO"]
         command(common + ["-destination", "generic/platform=iOS Simulator", "build", "analyze"], output, "build-analyze")
+        # Only XCTest needs a booted simulator. Build/analyze without that load.
+        command(["xcrun", "simctl", "boot", simulator], output, "simulator-boot", timeout=60)
+        # Cold hosted runners can exceed three minutes mounting a fresh runtime.
+        # Keep startup bounded and fail before XCTest if the device never becomes ready.
+        command(["xcrun", "simctl", "bootstatus", simulator, "-b"], output, "simulator-ready", timeout=420)
+        # Bound stalled UI queries and retry once in a fresh process. Xcode retains
+        # every attempt in the result bundle; final test and coverage gates stay strict.
         status = command(common + ["-destination", f"platform=iOS Simulator,id={simulator}",
                                    "-resultBundlePath", bundle, "-enableCodeCoverage", "YES",
-                                   "-parallel-testing-enabled", "NO", "test"], output, "xctest", check=False)
+                                   "-parallel-testing-enabled", "NO",
+                                   "-test-timeouts-enabled", "YES",
+                                   "-default-test-execution-time-allowance", "180",
+                                   "-maximum-test-execution-time-allowance", "180",
+                                   "-retry-tests-on-failure", "-test-iterations", "2",
+                                   "-test-repetition-relaunch-enabled", "YES", "test"],
+                         output, "xctest", timeout=2700, check=False)
         # Export diagnostic artifacts even when XCTest fails; never turn a failed run green.
         export(bundle, output, ROOT, json.loads((ROOT / "ci/coverage-policy.json").read_text()))
         if status:

@@ -28,10 +28,8 @@ struct AuthRootView: View {
     }
     @ViewBuilder private var accountContent: some View {
         if auth.isRestoring {
-            VStack(spacing: ShogunTheme.Spacing.regular) {
-                ProgressView("Restoring your session…")
-                Button("Cancel", action: auth.cancel)
-            }.frame(maxWidth: .infinity, maxHeight: .infinity).shogunCanvas()
+            ShogunLoadingView("Restoring your session…")
+                .frame(maxWidth: .infinity, maxHeight: .infinity).shogunCanvas()
         } else if auth.needsPasswordUpdate {
             PasswordUpdateView()
         } else if let account = auth.account {
@@ -52,7 +50,7 @@ struct AuthRootView: View {
 
 #if DEBUG
     private struct DemoTabs: View {
-        @StateObject private var catalog = CatalogStore()
+        @StateObject private var catalog = MockCatalog.demoStore()
         @State private var selectedTab: ShogunTab = .library
         @State private var libraryNavigationID = UUID()
         var body: some View {

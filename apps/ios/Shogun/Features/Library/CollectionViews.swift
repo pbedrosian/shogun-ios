@@ -42,7 +42,7 @@ struct ConnectedCollectionTabs: View {
                     NavigationStack {
                         VStack(spacing: ShogunTheme.Spacing.regular) {
                             if collection.isBusy {
-                                ProgressView("Loading your collection…")
+                                ShogunLoadingView("Loading your collection…")
                             } else if collection.error == nil {
                                 ContentUnavailableView(
                                     "No libraries", systemImage: "film.stack",
@@ -52,8 +52,11 @@ struct ConnectedCollectionTabs: View {
                                     Task { _ = await collection.restorePersonalLibrary() }
                                 }
                             }
-                            CollectionFeedback(store: collection)
-                        }.shogunCanvas().navigationTitle("Library")
+                            if !collection.isBusy { CollectionFeedback(store: collection) }
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .shogunCanvas()
+                        .navigationTitle("Library")
                     }
                 }
             }.tabItem { Label("Library", systemImage: "square.grid.2x2") }.tag(ShogunTab.library)
@@ -92,11 +95,12 @@ struct CollectionFeedback: View {
                 Text(error).foregroundStyle(ShogunTheme.error).accessibilityIdentifier(
                     "collection.error")
             }
-            if showsRefreshButton {
+            if store.isBusy {
+                ShogunLoadingView("Updating collection")
+            } else if showsRefreshButton {
                 Button("Refresh collection") { Task { await store.refresh() } }
                     .disabled(store.isBusy).accessibilityIdentifier("collection.refresh")
             }
-            if store.isBusy { ProgressView().accessibilityLabel("Updating collection") }
         }
     }
 }

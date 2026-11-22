@@ -52,6 +52,7 @@ enum LibrarySort: String, CaseIterable, Identifiable {
     case recentlyAdded = "Recently Added"
     case titleAscending = "Title A–Z"
     case titleDescending = "Title Z–A"
+    case custom = "Custom"
     var id: String { rawValue }
 }
 
@@ -67,4 +68,24 @@ struct PersonalMovieState {
     let movieID: String
     var watched = false
     var rating: Int? = nil
+}
+
+/// Pure ordering rules, independent of views, storage and copy ownership.
+enum LibraryCustomOrder {
+    static func reconcile(_ saved: [String], available: [String]) -> [String] {
+        let allowed = Set(available)
+        var seen = Set<String>()
+        var order = saved.filter { allowed.contains($0) && seen.insert($0).inserted }
+        order.append(contentsOf: available.filter { seen.insert($0).inserted })
+        return order
+    }
+    static func move(_ movieID: String, to targetID: String, in saved: [String]) -> [String]? {
+        guard movieID != targetID, let source = saved.firstIndex(of: movieID),
+            let target = saved.firstIndex(of: targetID)
+        else { return nil }
+        var order = saved
+        order.remove(at: source)
+        order.insert(movieID, at: min(target, order.count))
+        return order
+    }
 }

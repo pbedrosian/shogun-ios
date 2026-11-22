@@ -27,7 +27,18 @@ enum ShogunTheme {
         static let aspectRatio: CGFloat = 6
     }
 
+    enum Loading {
+        static let cycleDuration: TimeInterval = 3.6
+        static let sweepFraction: Double = 0.72
+        static let dotSize: CGFloat = 5
+    }
+
     enum Auth {
+        static let providerBackground = Color("AuthProviderBackground")
+        static let providerInk = Color("AuthProviderInk")
+        static let providerButtonSize: CGFloat = 48
+        static let providerGlyphSize: CGFloat = 20
+        static let dividerThickness: CGFloat = 1
         static let silver = LinearGradient(
             colors: [
                 authSilverHighlight, Color("AuthSilverMidtone"), Color("AuthSilverSheen"),
@@ -52,6 +63,7 @@ enum ShogunTheme {
         static let large: CGFloat = 24
     }
     enum Radius {
+        static let authPanel: CGFloat = 24
         static let poster: CGFloat = 5
         static let control: CGFloat = 10
     }

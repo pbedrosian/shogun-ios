@@ -6,6 +6,7 @@ struct AccountProfileView: View {
     @EnvironmentObject private var auth: AuthStore
     @Environment(\.collection) private var collection
     @State private var deleting = false
+    @State private var connectingApple = false
     var body: some View {
         NavigationStack {
             List {
@@ -21,6 +22,23 @@ struct AccountProfileView: View {
                             Label(account.libraryName, systemImage: "person").badge("Personal")
                         }
                     }
+                    if auth.appleIdentityLinkingAvailable {
+                        Section("Sign-in methods") {
+                            if account.appleIdentityLinked {
+                                Label("Apple connected", systemImage: "checkmark.circle")
+                                    .accessibilityIdentifier("auth.appleConnected")
+                            } else {
+                                Button("Connect Apple account") {
+                                    auth.clearFeedback()
+                                    connectingApple = true
+                                }
+                                .disabled(auth.isBusy)
+                                .accessibilityIdentifier("auth.connectApple")
+                            }
+                            if auth.isBusy { ProgressView("Connecting Apple…") }
+                            if let message = auth.message { Text(message) }
+                        }
+                    }
                     Section {
                         NavigationLink("About & credits") { ShogunAboutView() }
                     }
@@ -32,11 +50,21 @@ struct AccountProfileView: View {
                         Button("Sign out", role: .destructive, action: auth.signOut).disabled(
                             auth.isBusy
                         ).accessibilityIdentifier("auth.signOut")
-                        Button("Delete account", role: .destructive) {
-                            auth.clearFeedback()
-                            deleting = true
+                    } footer: {
+                        HStack {
+                            Spacer()
+                            Button("Delete account", role: .destructive) {
+                                auth.clearFeedback()
+                                deleting = true
+                            }
+                            .buttonStyle(.plain)
+                            .font(ShogunTheme.Typography.footnote)
+                            .foregroundStyle(ShogunTheme.muted)
+                            .frame(minHeight: ShogunTheme.Size.touchTarget)
+                            .disabled(auth.isBusy).accessibilityIdentifier("auth.deleteAccount")
+                            Spacer()
                         }
-                        .disabled(auth.isBusy).accessibilityIdentifier("auth.deleteAccount")
+                        .textCase(nil)
                     }
 
                 }.listRowBackground(ShogunTheme.surface)
@@ -44,6 +72,14 @@ struct AccountProfileView: View {
                 .toolbar(.visible, for: .navigationBar).scrollContentBackground(.hidden).background(
                     ShogunTheme.canvas
                 )
+                .alert("Connect Apple to this Shogun account?", isPresented: $connectingApple) {
+                    Button("Continue with Apple", action: auth.linkAppleIdentity)
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text(
+                        "Add Apple as a sign-in method for \(account.email). You’ll keep your current library and collection. An Apple identity already used by another Shogun account cannot be moved here."
+                    )
+                }
                 .sheet(isPresented: $deleting) { DeleteAccountView() }
         }
     }

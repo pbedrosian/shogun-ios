@@ -1,3 +1,119 @@
+# Development handoff — November 12, 2026
+
+## Tonight's stopping point
+
+Peter requested a wrap for tonight: commit current work, update this handoff, and
+stop **local** services. Hosted alpha and remote GitHub checks remain available.
+Use the existing /Users/pbedrosian/dev/shogun-ios checkout; no extra worktree.
+
+- Branch: `peterbedrosian/sho-32`; draft [MR #34](https://github.com/pbedrosian/shogun-ios/pull/34) targets dev. Keep it draft/in progress; no merge, tag or release is authorized.
+- `93c122f`: Dev Apple login/account linking, native deletion proof and server revocation/fallback, opt-in signing, tests and updated runbooks.
+- `e73561b`: circular email choice beside Apple/Google. Login/signup hide fields and submit until email is selected; signup still reveals passwords only after a valid email. Recovery stays email-only. Includes regression checks and runbook update.
+- Both implementation commits are pushed. This handoff is committed in a follow-up; obtain its exact SHA from git log.
+- Main remains 1.0.0; current development version is 1.1.0-SNAPSHOT. No main/dev merge, tag or TestFlight upload occurred.
+
+## Validation and GitHub status
+
+- Local backend: 35 tooling/handler checks, 150 SQL assertions, real-JWT permission,
+  collection, movie-add, catalog, password deletion, Google deletion and Apple
+  deletion suites passed. Apple protocol responses are mocked; local GoTrue
+  validation and cascades are real. Temporary test resources were cleaned.
+- Latest email UI: five focused simulator tests passed, including hidden/revealed
+  email form, progressive signup, dark/max-Dynamic-Type recovery, Apple sign-out
+  routing and password login/sign-out. Screenshot attachments in
+  `build/email-selector-tests.xcresult` were exported to
+  `build/email-selector-attachments` and visually reviewed.
+- Updated signed Dev build and Release build passed. The email-selector Dev build
+  is prepared locally, but was **not installed** before tonight's wrap.
+- The earlier Apple-enabled signed Dev build was installed on the iPhone. Its launch
+  was blocked by the locked phone; real Apple signup/linking/revocation acceptance
+  still needs the user.
+- The full local iOS run for the earlier snapshot was deliberately interrupted
+  after the email-selector request superseded it. Do not describe it as a complete
+  green run or invent full-suite coverage.
+- GitHub backend passed for `93c122f`. Its iOS attempt failed before compilation:
+  the hosted runner timed out on git diff --check after simulator startup. This was
+  not an app test assertion failure.
+- Latest `e73561b` PR checks were **still running** at handoff:
+  [iOS run 74](https://github.com/pbedrosian/shogun-ios/actions/runs/43352763571),
+  [backend run 65](https://github.com/pbedrosian/shogun-ios/actions/runs/43352763515).
+  The handoff follow-up push will trigger new runs. Inspect the latest MR head,
+  both push/PR runs and SonarCloud before claiming all GitHub checks passed.
+- Whitespace and changed-source credential checks passed. Private local config,
+  Apple key, build output and rollback artifacts are ignored/not committed.
+
+## Apple and shared-alpha state
+
+Peter chose to keep the single `shogun-alpha` backend and explicitly approved the
+narrow Apple-testing exception to the normal main/tag hosted gate. He is currently
+the only 1.0.0 tester and will use different accounts for 1.1.0 testing.
+
+- Release App ID `com.petebedrosian.shogun` is the Apple primary; explicit Dev ID
+  `com.petebedrosian.shogun.dev` is grouped beneath it.
+- Development profile installed; private Local.xcconfig opts into the checked-in
+  Apple entitlement. Standard automatic signing was validated.
+- Native Apple provider and deletion server allowlist contain **Dev audience only**.
+  Manual linking is enabled; email confirmation stays on, anonymous sign-in off.
+  Google remains enabled. No browser Apple OAuth secret or Services ID configured.
+- User explicitly authorized the private-key transfer. Apple key/team configuration
+  and private signing key are server-only secrets; digest matches verified without
+  disclosure. Do not copy credentials into Git, app, chat, logs or Notion.
+- `delete-account` version 2 is live. Catalog remains version 1; no schema migration.
+  Missing/invalid-auth hosted smoke calls returned 401; no hosted account/data
+  creation/deletion was done for those checks.
+- Previous deletion function source matches tag 1.0.0 and is saved under ignored
+  `build/alpha-delete-account-rollback`. See AUTH.md for the rollback command and
+  caveat: do not strand Apple-linked users without supported deletion.
+- Existing 1.0.0 password deletion remains compatible for **non-Apple-linked**
+  accounts. Keep the protected 1.0.0 account/library unlinked and intact.
+- Debug Apple login/account-management flags are enabled. Release forces social
+  flags off. Real consent, same-account relogin, linking/library preservation,
+  Google device deletion, Apple revocation/deletion and fallback/support acceptance
+  remain pending. Never infer them from mocked tests.
+
+## Documentation, reminder and backlog
+
+The [Notion developer guide](https://app.notion.com/p/3fb08c1af1ec814ab486d8f4cd96be74)
+contains seven developer/help guides and ten validated Mermaid diagrams. It covers
+product flows, architecture, data/RLS, authentication, onboarding, testing,
+releases/operations and user help. Historical Phase 1 checkpoints are marked as
+history. Repository README links to the guide; repository runbooks remain the
+executable technical source.
+
+The six-month `review-apple-oauth-credentials` reminder is active. It reviews
+credential custody and rotates a browser OAuth client secret if that flow is added.
+Current native Apple login has no static six-month secret; server revocation signs
+five-minute JWTs. Do not rotate/revoke keys automatically.
+
+- [SHO-34](https://app.notion.com/p/41708c1af1ec817db642c50b31c706bc):
+  branded animated session-loading indicator; not implemented.
+- [SHO-35](https://app.notion.com/p/41708c1af1ec818e8e7ff3315f88147b):
+  investigate optional no-account mode with durable local storage. **Backlog,
+  discovery only**; owner/target version unset. Investigate manual-only versus
+  online search, persistence/backup, optional account migration, sharing,
+  privacy/security and costs. Do not implement it in SHO-32.
+
+## Local shutdown and resume
+
+Local Supabase was stopped with data preserved. No Swagger listener remained.
+Task-created simulators were shut down/deleted, project ports were checked closed,
+and Docker Desktop was stopped. No local reset or volume deletion occurred.
+Hosted alpha is intentionally still running. Remote GitHub checks do not require
+local services.
+
+Tomorrow:
+1. Read the latest MR34 head/check results and fix failures before any merge.
+2. Start local work with `npm run dev` from the repository root. Preserve ignored
+   config/data; do not reset. Verify current LAN address before regenerating phone config.
+3. Install/review the latest email-selector Dev build if requested. Unlock the phone
+   and perform Apple acceptance using a designated test identity; verify account and
+   library before adding/linking/deleting anything.
+4. Keep the MR draft and production release flags off until acceptance and approval.
+   No extra hosted changes, cleanup, paid service, tester invitation or release
+   action is authorized by this handoff.
+
+---
+
 # Development handoff — October 28, 2026
 
 ## Current work

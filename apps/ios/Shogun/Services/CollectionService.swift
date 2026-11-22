@@ -9,8 +9,22 @@ struct CollectionSnapshot {
     let defaultLibraryID: String?
 }
 
+struct MovieCover: Identifiable, Decodable, Equatable {
+    let path: String
+    let url: URL
+    let language: String?
+    let width: Int
+    let height: Int
+    var id: String { path }
+    var isValid: Bool {
+        path.range(of: #"^/[a-zA-Z0-9._-]+\.(jpg|png|webp)$"#, options: .regularExpression) != nil
+            && url.absoluteString == "https://image.tmdb.org/t/p/w342" + path
+            && width > 0 && height > 0
+    }
+}
+
 enum CollectionFailure: Error, LocalizedError, Equatable {
-    case unavailable, access, expired, invalid, conflict
+    case unavailable, access, expired, invalid, invalidCover, conflict
     var errorDescription: String? {
         switch self {
         case .unavailable:
@@ -24,11 +38,15 @@ enum CollectionFailure: Error, LocalizedError, Equatable {
             return
                 "Copies changed on another device. Refresh your collection, then close and reopen this editor to review them."
         case .invalid: return "Check the library, movie, and format, then try again."
+        case .invalidCover:
+            return "This cover is no longer available. Choose another cover or use the default."
         }
     }
 }
 
 @MainActor protocol CollectionServicing {
+    func covers(tmdbID: Int) async throws -> [MovieCover]
+    func setCover(tmdbID: Int, path: String?) async throws
     func addMovie(_ request: MovieAddRequest) async throws
     func editCopies(
         libraryID: String, movieID: String, expected: [OwnedCopy], formats: [MovieFormat])
@@ -49,6 +67,24 @@ enum CollectionFailure: Error, LocalizedError, Equatable {
         self.rpc = rpc
         self.catalog = catalog
     }
+    func covers(tmdbID: Int) async throws -> [MovieCover] {
+        struct Payload: Decodable { let posters: [MovieCover] }
+        let data = try await catalogCall(["operation": "posters", "movieID": tmdbID])
+        let covers = try JSONDecoder().decode(Payload.self, from: data).posters
+        var known = Set<String>()
+        return covers.filter { $0.isValid && known.insert($0.path).inserted }
+    }
+    func setCover(tmdbID: Int, path: String?) async throws {
+        _ = try await catalogCall([
+            "operation": "set_cover", "movieID": tmdbID, "path": path as Any? ?? NSNull(),
+        ])
+    }
+    private func catalogCall(_ body: [String: Any]) async throws -> Data {
+        guard let catalog else { throw CollectionFailure.unavailable }
+        do { return try await catalog(JSONSerialization.data(withJSONObject: body)) } catch {
+            throw map(error)
+        }
+    }
     func editCopies(
         libraryID: String, movieID: String, expected: [OwnedCopy], formats: [MovieFormat]
     ) async throws {
@@ -67,11 +103,15 @@ enum CollectionFailure: Error, LocalizedError, Equatable {
         if let providerID = request.providerID {
             guard let catalog else { throw CollectionFailure.unavailable }
             do {
+                var body: [String: Any] = [
+                    "operation": "import", "movieID": providerID, "requestID": request.id,
+                    "libraryID": request.libraryID, "formats": request.formats.map(\.rawValue),
+                ]
+                if let cover = request.coverSelection {
+                    body["coverPath"] = cover.path as Any? ?? NSNull()
+                }
                 _ = try await catalog(
-                    JSONSerialization.data(withJSONObject: [
-                        "operation": "import", "movieID": providerID, "requestID": request.id,
-                        "libraryID": request.libraryID, "formats": request.formats.map(\.rawValue),
-                    ]))
+                    JSONSerialization.data(withJSONObject: body))
             } catch { throw map(error) }
         } else {
             let metadata = try JSONSerialization.jsonObject(
@@ -120,6 +160,7 @@ enum CollectionFailure: Error, LocalizedError, Equatable {
         if let failure = error as? CollectionFailure { return failure }
         if (error as? SignInFailure) == .expired { return CollectionFailure.expired }
         if let failure = error as? BackendHTTPError {
+            if failure.code == "invalid_cover" { return CollectionFailure.invalidCover }
             if failure.status == 401 { return CollectionFailure.expired }
             if failure.status == 403 { return CollectionFailure.access }
             if failure.status == 409 { return CollectionFailure.conflict }
@@ -151,6 +192,7 @@ private struct CollectionPayload: Decodable {
         let runtimeMinutes: Int?
         let genres: [String]?
         let posterPath: String?
+        let coverPosterPath: String?
     }
     struct Copy: Decodable {
         let id: String
@@ -184,7 +226,8 @@ private struct CollectionPayload: Decodable {
                     palette: $0.id.utf8.reduce(0) { ($0 + Int($1)) % 8 }, synopsis: $0.synopsis,
                     tmdbID: $0.tmdbId, director: $0.director, runtimeMinutes: $0.runtimeMinutes,
                     genres: $0.genres ?? [],
-                    posterURL: $0.posterPath.flatMap(MovieMetadata.artworkURL))
+                    posterURL: ($0.coverPosterPath ?? $0.posterPath).flatMap(
+                        MovieMetadata.artworkURL))
             },
             libraries: libraries.map {
                 MovieLibrary(id: $0.id, name: $0.name, isShared: $0.isShared)

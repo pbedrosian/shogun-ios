@@ -12,6 +12,16 @@ import XCTest
         var afterLoad: (() -> Void)?
         init(_ snapshot: CollectionSnapshot) { self.snapshot = snapshot }
         var addRequests: [MovieAddRequest] = []
+        var coverWrites: [(Int, String?)] = []
+        var beforeCovers: (() async -> Void)?
+        func covers(tmdbID: Int) async throws -> [MovieCover] {
+            await beforeCovers?()
+            return [CollectionUITestService.cover]
+        }
+        func setCover(tmdbID: Int, path: String?) async throws {
+            if fail { throw CollectionFailure.unavailable }
+            coverWrites.append((tmdbID, path))
+        }
         func editCopies(
             libraryID: String, movieID: String, expected: [OwnedCopy], formats: [MovieFormat]
         ) async throws {
@@ -289,6 +299,24 @@ import XCTest
         XCTAssertNil(store.catalog)
         XCTAssertNil(store.error)
         XCTAssertFalse(store.isBusy)
+    }
+    func testCoverLoadRejectsResponseAfterSignOutAndWritesRequireKnownMovie() async throws {
+        let fake = Fake(fixture())
+        let store = CollectionStore(userID: user, service: fake)
+        await store.refresh()
+        let unknown = await store.setCover(tmdbID: 999999, path: "/alternate.jpg")
+        XCTAssertFalse(unknown)
+        XCTAssertTrue(fake.coverWrites.isEmpty)
+        fake.beforeCovers = { store.invalidate() }
+        do {
+            _ = try await store.covers(tmdbID: 106)
+            XCTFail("Signed-out response published")
+        } catch { XCTAssertTrue(error is CancellationError) }
+        XCTAssertNil(store.catalog)
+        let saved = await store.setCover(tmdbID: 106, path: nil)
+        XCTAssertFalse(saved)
+        XCTAssertTrue(fake.coverWrites.isEmpty)
+        XCTAssertNil(store.error)
     }
 
 }

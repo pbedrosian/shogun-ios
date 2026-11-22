@@ -6,6 +6,9 @@
     "node": ">=22"
   },
   "scripts": {
+    "release:generate": "node scripts/release-version.mjs --write",
+    "release:check": "node scripts/release-version.mjs --check",
+    "backend:snapshot:test": "node scripts/backend/snapshot.mjs",
     "dev": "node scripts/backend/dev.mjs",
     "backend:docs": "node scripts/backend/docs.mjs",
     "backend:doctor": "node scripts/backend/local.mjs doctor",
@@ -24,7 +27,10 @@
     "backend:demo": "node scripts/backend/demo-account.mjs",
     "backend:test:collection": "node scripts/backend/collection-api.mjs",
     "backend:test:movie-add": "node scripts/backend/movie-add-api.mjs",
-    "backend:test:catalog": "node scripts/backend/catalog-api.mjs"
+    "backend:test:catalog": "node scripts/backend/catalog-api.mjs",
+    "backend:test:google-deletion": "node scripts/backend/oauth-delete-account-api.mjs --provider google",
+    "backend:test:apple-deletion": "node scripts/backend/oauth-delete-account-api.mjs --provider apple",
+    "backend:test:covers": "node scripts/backend/covers-api.mjs"
   },
   "devDependencies": {
     "supabase": "2.122.0",

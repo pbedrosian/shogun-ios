@@ -9,6 +9,7 @@ function artwork(path) {
   return typeof path === 'string' && /^\/[a-zA-Z0-9._-]+\.(jpg|png|webp)$/i.test(path)
     ? 'https://image.tmdb.org/t/p/w342'+path : null;
 }
+export const validPosterPath = path => typeof path === 'string' && /^\/[a-zA-Z0-9._-]+\.(jpg|png|webp)$/i.test(path);
 function movie(value) {
   if (!value || !validID(value.id)) throw new CatalogError(502,'provider_unavailable');
   const match = typeof value.release_date === 'string' && value.release_date.match(/^(\d{4})-\d{2}-\d{2}$/);
@@ -38,6 +39,17 @@ export function createTMDBClient(token, request = fetch) {
     try { return await response.json(); } catch { throw new CatalogError(502,'provider_unavailable'); }
   }
   return {
+    async posters(id,signal) {
+      const data = await get('movie/'+id+'/images',{},signal);
+      if (data?.id!==id || !Array.isArray(data.posters)) throw new CatalogError(502,'provider_unavailable');
+      const seen = new Set();
+      return data.posters.filter(p=>validPosterPath(p?.file_path) && Number.isInteger(p.width) && p.width>0
+        && Number.isInteger(p.height) && p.height>0 && !seen.has(p.file_path) && seen.add(p.file_path))
+        .sort((a,b)=> {
+          const rank=p=>p.iso_639_1==='en'?0:p.iso_639_1==null?1:2;
+          return rank(a)-rank(b) || (Number(b.vote_average)||0)-(Number(a.vote_average)||0);
+        }).map(p=>({path:p.file_path,url:artwork(p.file_path),language:typeof p.iso_639_1==='string'?p.iso_639_1:null,width:p.width,height:p.height}));
+    },
     async search(query,page,signal) {
       const data = await get('search/movie',{query,page,include_adult:false,language:'en-US'},signal);
       if (!data || data.page!==page || !Array.isArray(data.results) || !Number.isInteger(data.total_pages) || data.total_pages<0) throw new CatalogError(502,'provider_unavailable');

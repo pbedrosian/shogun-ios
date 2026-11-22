@@ -9,6 +9,8 @@ final class CatalogStore: ObservableObject {
     // Optional storage keeps fixtures/tests isolated; connected accounts inject app defaults.
     private let preferences: UserDefaults?
     private var preferencesKey: String { "library.preferences.v1.\(userID)" }
+    private let orderPreferences: LibraryOrderPreferences
+    @Published private var customOrders: [String: [String]] = [:]
     @Published var libraryColumns = 3 {
         didSet { saveLibraryPreferences() }
     }
@@ -44,6 +46,8 @@ final class CatalogStore: ObservableObject {
         self.userID = userID
         self.personalStates = personalStates
         self.preferences = preferences
+        orderPreferences = LibraryOrderPreferences(userID: userID, defaults: preferences)
+        customOrders = orderPreferences.load()
         if let saved = preferences?.dictionary(forKey: preferencesKey) {
             librarySort =
                 (saved["sort"] as? String).flatMap(LibrarySort.init(rawValue:))
@@ -54,6 +58,7 @@ final class CatalogStore: ObservableObject {
                 libraryColumns = columns
             }
         }
+        reconcileCustomOrders()
     }
 
     private func saveLibraryPreferences() {
@@ -75,35 +80,110 @@ final class CatalogStore: ObservableObject {
         memberships = other.memberships
         personalStates = other.personalStates
         selectedLibraryID = other.selectedLibraryID
+        reconcileCustomOrders()
     }
 
     /// Library search is title-only; global search also matches release years.
     var libraryResults: [Movie] {
+        orderedLibraryMovies(query: libraryQuery, formats: libraryFormats, sort: librarySort)
+    }
+
+    private func orderedLibraryMovies(
+        query: String = "", formats: Set<MovieFormat> = [], sort: LibrarySort
+    ) -> [Movie] {
         guard libraries.contains(where: { $0.id == selectedLibraryID }) else { return [] }
         let libraryCopies = copies.filter { $0.libraryID == selectedLibraryID }
         let copiesByMovie = Dictionary(grouping: libraryCopies, by: \.movieID)
         let newestDates = copiesByMovie.compactMapValues { $0.compactMap(\.createdAt).max() }
+        var ranks: [String: Int] = [:]
+        for (index, id) in (customOrders[selectedLibraryID] ?? []).enumerated()
+        where ranks[id] == nil {
+            ranks[id] = index
+        }
         return movies.filter { movie in
             guard let movieCopies = copiesByMovie[movie.id] else { return false }
             return
-                (libraryQuery.isEmpty
-                || movie.title.localizedCaseInsensitiveContains(libraryQuery))
-                && (libraryFormats.isEmpty
-                    || movieCopies.contains { libraryFormats.contains($0.format) })
+                (query.isEmpty || movie.title.localizedCaseInsensitiveContains(query))
+                && (formats.isEmpty || movieCopies.contains { formats.contains($0.format) })
         }.sorted { lhs, rhs in
-            if librarySort == .recentlyAdded {
+            if sort == .custom {
+                let left = ranks[lhs.id] ?? Int.max
+                let right = ranks[rhs.id] ?? Int.max
+                if left != right { return left < right }
+            }
+            if sort == .recentlyAdded {
                 let left = newestDates[lhs.id]
                 let right = newestDates[rhs.id]
                 if left != right { return (left ?? .distantPast) > (right ?? .distantPast) }
             }
             let titleOrder = lhs.title.localizedStandardCompare(rhs.title)
             if titleOrder != .orderedSame {
-                return librarySort == .titleDescending
+                return sort == .titleDescending
                     ? titleOrder == .orderedDescending : titleOrder == .orderedAscending
             }
             if lhs.year != rhs.year { return (lhs.year ?? Int.max) < (rhs.year ?? Int.max) }
             return lhs.id < rhs.id
         }
+    }
+
+    func selectLibrarySort(_ sort: LibrarySort) {
+        if sort == .custom { prepareCustomOrder() }
+        librarySort = sort
+    }
+
+    /// Snapshot the whole library, even when the displayed grid is filtered.
+    @discardableResult private func prepareCustomOrder() -> [String] {
+        let available = orderedLibraryMovies(sort: librarySort).map(\.id)
+        let order = LibraryCustomOrder.reconcile(
+            customOrders[selectedLibraryID] ?? [], available: available)
+        customOrders[selectedLibraryID] = order
+        orderPreferences.save(customOrders)
+        return order
+    }
+
+    /// Append arrivals when a snapshot changes, so later arrivals cannot reshuffle them.
+    private func reconcileCustomOrders() {
+        var changed = false
+        for library in libraries {
+            guard let saved = customOrders[library.id] else { continue }
+            let owned = Set(copies.filter { $0.libraryID == library.id }.map(\.movieID))
+            let available = movies.filter { owned.contains($0.id) }.sorted {
+                let comparison = $0.title.localizedStandardCompare($1.title)
+                return comparison == .orderedSame ? $0.id < $1.id : comparison == .orderedAscending
+            }.map(\.id)
+            let order = LibraryCustomOrder.reconcile(
+                saved, available: available)
+            if customOrders[library.id] != order {
+                customOrders[library.id] = order
+                changed = true
+            }
+        }
+        if changed { orderPreferences.save(customOrders) }
+    }
+
+    /// Move one tile, preserving the relative order of every other movie.
+    func moveCustomMovie(_ movieID: String, to targetID: String) {
+        guard movieID != targetID else { return }
+        let available = Set(copies.filter { $0.libraryID == selectedLibraryID }.map(\.movieID))
+        guard libraries.contains(where: { $0.id == selectedLibraryID }),
+            available.contains(movieID), available.contains(targetID)
+        else { return }
+        let prepared = prepareCustomOrder()
+        guard
+            let order = LibraryCustomOrder.move(
+                movieID, to: targetID, in: prepared)
+        else { return }
+        customOrders[selectedLibraryID] = order
+        orderPreferences.save(customOrders)
+        librarySort = .custom
+    }
+
+    func moveCustomMovie(_ movieID: String, by offset: Int) {
+        let visible = libraryResults.map(\.id)
+        guard let source = visible.firstIndex(of: movieID),
+            visible.indices.contains(source + offset)
+        else { return }
+        moveCustomMovie(movieID, to: visible[source + offset])
     }
     var searchResults: [Movie] {
         movies.filter {
@@ -161,6 +241,7 @@ final class CatalogStore: ObservableObject {
             OwnedCopy(
                 id: UUID().uuidString, libraryID: libraryID, movieID: movie.id, format: format,
                 createdAt: Date()))
+        reconcileCustomOrders()
         return true
     }
     func update(_ movie: Movie, watched: Bool? = nil, rating: Int? = nil, clearRating: Bool = false)

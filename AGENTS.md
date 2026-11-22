@@ -12,16 +12,18 @@
 - Database changes belong in versioned SQL migrations. Every exposed application table needs explicit grants and RLS. Derive identities from auth.uid(), restrict SECURITY DEFINER helpers and pin their search paths, and run backend:test:db plus backend:test:api for permission changes. See docs/DATABASE.md for the role model and recovery instructions.
 - Persisted fixture posters use procedural SwiftUI artwork. SHO-8 provider search/details use TMDB artwork with procedural fallbacks and required attribution. Keep TMDB credentials server-only; see docs/MOVIE_API.md. Preserve light/dark support, Dynamic Type, accessible labels, and native navigation.
 - Build: xcodebuild -project apps/ios/Shogun.xcodeproj -scheme Shogun -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
-- Run model checks: swiftc apps/ios/Shogun/Models/Models.swift apps/ios/Shogun/Services/MockCatalog.swift apps/ios/Shogun/Services/CatalogStore.swift apps/ios/Checks/main.swift -o /tmp/shogun-model-checks && /tmp/shogun-model-checks
+- Run model checks: swiftc apps/ios/Shogun/Models/Models.swift apps/ios/Shogun/Services/MockCatalog.swift apps/ios/Shogun/Services/CatalogStore.swift apps/ios/Shogun/Services/LibraryOrderPreferences.swift apps/ios/Checks/main.swift -o /tmp/shogun-model-checks && /tmp/shogun-model-checks
 - Validate UI on an iPhone simulator in light/dark appearance, large text, library switching, search, and cross-library rating consistency. Debug fixture edits reset at relaunch; real saved edits must persist.
 
 ## Git workflow
 
 - `main` is the protected release branch. `dev` is the default integration branch and carries the next release's SNAPSHOT version.
 - Feature/fix work starts from latest `dev` and merges back through an MR. Work branches use `<devName>/sho-<ticket-number>` with lowercase `sho` and the matching Notion ticket number.
+- Use the existing primary checkout for Shogun feature work and switch branches there. Do not create additional checkout/worktree folders unless Peter explicitly requests them.
 - Urgent hotfix ticket branches may start from the current release tag only with explicit approval when dev contains unrelated work; return the fix to dev. See docs/RELEASING.md.
 - Release-candidate branches are the explicit exception: cut `release/<version>-rc.<n>` from an approved dev commit, stabilize and validate that frozen candidate, then promote it to main through an MR. While the RC is under test, hold new merges into dev. Cut subsequent candidates from the prior RC and apply approved changes; return accepted changes to dev after the RC is finished, retaining dev's SNAPSHOT label. See docs/RELEASING.md.
 - Approved frozen release candidates may be distributed to TestFlight alpha against the alpha backend. Production deployments use only an approved immutable final version tag on main (for example `1.0.0`). Uploading/distributing a candidate, cutting a final tag, and deploying production each require explicit user authorization; branch creation does not publish anything.
+- Shared hosted backend changes affect alpha immediately, independently of the app's frozen tag. Keep new backend changes local until an explicitly approved main/tag deployment, unless Peter explicitly authorizes an exception for the shared hosted backend.
 - Use `peterbedrosian` as the developer name for this user; for example, ticket SHO-2 uses branch `peterbedrosian/sho-2`. Do not use `feature/`, `fix/`, or `docs/` branch names for new work.
 - Confirm the developer name and ticket number from the task context before creating a branch; ask for any missing value rather than inventing one.
 - Make changes and run appropriate checks, then leave all work uncommitted for the user to review.

@@ -101,7 +101,7 @@ If the job fails early, inspect xcode-version.log, runtimes.log, simulator logs,
 
 Structured Xcode/simulator output is parsed directly from command stdout; diagnostic logs are not read back as configuration. Stderr stays separate from structured stdout, and simulator lifecycle commands accept a validated canonical UUID.
 
-GitHub-hosted macOS runners consume Actions capacity and can incur charges depending on repository visibility, plan, and usage. The workflow has a 35-minute timeout, avoids duplicate obsolete runs, and limits artifact retention. Jenkins requires an available Mac agent and its operating cost. See the current [GitHub billing documentation](https://docs.github.com/en/billing/concepts/product-billing/github-actions) rather than assuming a free allowance.
+GitHub-hosted macOS runners consume Actions capacity and can incur charges depending on repository visibility, plan, and usage. The workflow has a 45-minute timeout (with up to 30 minutes for XCTest), avoids duplicate obsolete runs, and limits artifact retention. Jenkins requires an available Mac agent and its operating cost. See the current [GitHub billing documentation](https://docs.github.com/en/billing/concepts/product-billing/github-actions) rather than assuming a free allowance.
 
 ## SonarQube Cloud activation
 
@@ -113,7 +113,7 @@ Sonar integration is implemented but inactive until configured. It requires an e
 4. Run the workflow. Enabling Sonar without all required settings fails the configuration step. When disabled, the summary explicitly says analysis did not run; tests/core coverage still execute.
 5. Confirm coverage imports and PR decoration in Sonar. The scanner waits up to five minutes for the configured Sonar quality gate and fails if it does not pass. Review the project's new-code definition and quality gate before making it a required MR check.
 
-Sonar credentials are not supplied to fork pull requests. The workflow uses push/pull_request/schedule/workflow_dispatch and has only contents:read permission. Source checkout credentials are not persisted. Official checkout, artifact, and Sonar scan actions are pinned to immutable commits, with Dependabot configured to propose Actions updates into dev.
+Sonar runs for same-repository pull requests and the repository default branch. Feature-branch push/manual runs still execute all build, test, and coverage gates but skip Sonar branch analysis: the current organization plan rejects non-main branch data access. The pull-request analysis remains the feature work’s Sonar gate. Sonar credentials are not supplied to fork pull requests. The workflow uses push/pull_request/schedule/workflow_dispatch and has only contents:read permission. Source checkout credentials are not persisted. Official checkout, artifact, and Sonar scan actions are pinned to immutable commits, with Dependabot configured to propose Actions updates into dev.
 
 ### Set the Sonar new-code target to 85%
 

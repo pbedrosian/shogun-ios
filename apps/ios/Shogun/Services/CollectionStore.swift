@@ -51,7 +51,27 @@ import Foundation
             next.searchQuery = old.searchQuery
             next.libraryColumns = old.libraryColumns
         }
-        if let catalog { catalog.replaceContents(from: next) } else { catalog = next }
+        if let catalog {
+            catalog.replaceContents(from: next)
+            objectWillChange.send()
+        } else {
+            catalog = next
+        }
+    }
+    func covers(tmdbID: Int) async throws -> [MovieCover] {
+        guard active else { throw CancellationError() }
+        let value = try await service.covers(tmdbID: tmdbID)
+        try Task.checkCancellation()
+        guard active else { throw CancellationError() }
+        return value
+    }
+    func setCover(tmdbID: Int, path: String?) async -> Bool {
+        guard active else { return false }
+        guard catalog?.movies.contains(where: { $0.tmdbID == tmdbID }) == true else {
+            error = CollectionFailure.invalid.localizedDescription
+            return false
+        }
+        return await write { try await self.service.setCover(tmdbID: tmdbID, path: path) }
     }
     func editCopies(
         libraryID: String, movieID: String, expected: [OwnedCopy], formats: [MovieFormat]
@@ -114,6 +134,7 @@ import Foundation
         error = nil
         defer { isBusy = false }
         do {
+            try Task.checkCancellation()
             try await action()
             try Task.checkCancellation()
             try await reload()

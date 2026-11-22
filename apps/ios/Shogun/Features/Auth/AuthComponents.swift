@@ -3,7 +3,7 @@ import SwiftUI
 struct AuthHeader: View {
     let title: String
     var body: some View {
-        VStack(spacing: ShogunTheme.Spacing.large) {
+        VStack(spacing: ShogunTheme.Spacing.regular) {
             ViewThatFits(in: .horizontal) {
                 ShogunWordmark(width: ShogunTheme.Brand.authWidth)
                 ShogunWordmark()
@@ -11,7 +11,7 @@ struct AuthHeader: View {
             .accessibilityIdentifier("auth.brand")
             Text(title).font(ShogunTheme.Typography.authTitle).multilineTextAlignment(.center)
                 .accessibilityAddTraits(.isHeader)
-        }.frame(maxWidth: .infinity).padding(.bottom, ShogunTheme.Spacing.small)
+        }.frame(maxWidth: .infinity)
     }
 }
 
