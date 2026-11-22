@@ -26,6 +26,26 @@ struct ShogunWordmark: View {
     }
 }
 
+struct ShogunInlineProgressView: View {
+    private let title: LocalizedStringKey
+
+    init(_ title: LocalizedStringKey) {
+        self.title = title
+    }
+
+    var body: some View {
+        HStack(spacing: ShogunTheme.Spacing.small) {
+            ProgressView()
+                .controlSize(.small)
+            Text(title)
+                .font(ShogunTheme.Typography.footnote)
+                .foregroundStyle(ShogunTheme.muted)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(title))
+    }
+}
+
 /// The approved chrome loading loop, rendered natively at the current appearance.
 struct ShogunLoadingView: View {
     let label: LocalizedStringKey
